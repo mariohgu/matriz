@@ -29,13 +29,25 @@ class MunicipalidadController extends Controller
         return response()->json($municipalidad, 201);
     }
 
-    public function show(Municipalidad $municipalidad)
+    public function show($id)
     {
+        $municipalidad = Municipalidad::where('id_municipalidad', $id)->first();
+
+        if (!$municipalidad) {
+            return response()->json(['message' => 'Municipalidad no encontrada'], 404);
+        }
+
         return response()->json($municipalidad);
     }
 
-    public function update(Request $request, Municipalidad $municipalidad)
+    public function update(Request $request, $id)
     {
+        $municipalidad = Municipalidad::where('id_municipalidad', $id)->first();
+
+        if (!$municipalidad) {
+            return response()->json(['message' => 'Municipalidad no encontrada'], 404);
+        }
+
         $validated = $request->validate([
             'ubigeo' => ['required', 'string', 'max:10', Rule::unique('municipalidades')->ignore($municipalidad->id_municipalidad, 'id_municipalidad')],
             'nombre' => 'required|string',
