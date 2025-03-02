@@ -1,35 +1,91 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import LoginScreen from './components/LoginScreen';
+import Dashboard from './pages/Dashboard';
+import MunicipalidadesList from './components/municipalidades/MunicipalidadesList';
+import Sidebar from './components/common/Sidebar';
+import Header from './components/common/Header';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+// Layout para rutas protegidas
+function ProtectedLayout({ children }) {
+  return (    
+    <div className="min-h-screen flex">
+      <Sidebar />
+      <div className="flex-1 bg-gray-100">
+        <Header />
+        <main className="flex-1 bg-gray-50 p-8 overflow-auto">
+          {children}
+        </main>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+// Componente para rutas protegidas
+function ProtectedRoute({ children }) {
+  const { auth } = useAuth();
+  
+  if (!auth) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <ProtectedLayout>{children}</ProtectedLayout>;
+}
+
+function AppRoutes() {
+  const { auth } = useAuth();
+
+  return (
+    <Routes>
+      {/* Ruta pública */}
+      <Route 
+        path="/login" 
+        element={auth ? <Navigate to="/dashboard" replace /> : <LoginScreen />} 
+      />
+
+      {/* Rutas protegidas */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/municipalidades"
+        element={
+          <ProtectedRoute>
+            <MunicipalidadesList />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Ruta por defecto */}
+      <Route 
+        path="/" 
+        element={<Navigate to={auth ? "/dashboard" : "/login"} replace />} 
+      />
+
+      {/* Ruta 404 */}
+      <Route 
+        path="*" 
+        element={<Navigate to="/" replace />} 
+      />
+    </Routes>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}
+
+export default App;
