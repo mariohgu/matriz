@@ -7,8 +7,8 @@ import Sidebar from './components/common/Sidebar';
 import Header from './components/common/Header';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
-// Layout para rutas protegidas
-function ProtectedLayout({ children }) {
+// Layout para todas las páginas (temporalmente sin protección)
+function MainLayout({ children }) {
   return (    
     <div className="min-h-screen flex">
       <Sidebar />
@@ -22,7 +22,7 @@ function ProtectedLayout({ children }) {
   );
 }
 
-// Componente para rutas protegidas
+/* TODO: Implementar protección de rutas
 function ProtectedRoute({ children }) {
   const { auth } = useAuth();
   
@@ -30,43 +30,46 @@ function ProtectedRoute({ children }) {
     return <Navigate to="/login" replace />;
   }
   
-  return <ProtectedLayout>{children}</ProtectedLayout>;
+  return <MainLayout>{children}</MainLayout>;
 }
+*/
 
 function AppRoutes() {
-  const { auth } = useAuth();
+  // TODO: Implementar lógica de autenticación
+  // const { auth } = useAuth();
 
   return (
     <Routes>
-      {/* Ruta pública */}
+      {/* TODO: Implementar rutas públicas y protegidas
       <Route 
         path="/login" 
         element={auth ? <Navigate to="/dashboard" replace /> : <LoginScreen />} 
       />
+      */}
 
-      {/* Rutas protegidas */}
+      {/* Rutas temporalmente sin protección */}
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <MainLayout>
             <Dashboard />
-          </ProtectedRoute>
+          </MainLayout>
         }
       />
       
       <Route
         path="/municipalidades"
         element={
-          <ProtectedRoute>
+          <MainLayout>
             <MunicipalidadesList />
-          </ProtectedRoute>
+          </MainLayout>
         }
       />
 
       {/* Ruta por defecto */}
       <Route 
         path="/" 
-        element={<Navigate to={auth ? "/dashboard" : "/login"} replace />} 
+        element={<Navigate to="/dashboard" replace />} 
       />
 
       {/* Ruta 404 */}
