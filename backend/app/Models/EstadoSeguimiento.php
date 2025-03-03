@@ -16,6 +16,7 @@ class EstadoSeguimiento extends Model
     
     protected $fillable = [
         'id_evento',
+        'id_contacto',
         'id_tipo_reunion',
         'fecha',
         'estado',
@@ -32,6 +33,12 @@ class EstadoSeguimiento extends Model
     public function evento(): BelongsTo
     {
         return $this->belongsTo(Evento::class, 'id_evento', 'id_evento');
+    }
+
+    // Relación con Contacto
+    public function contacto(): BelongsTo
+    {
+        return $this->belongsTo(Contacto::class, 'id_contacto', 'id_contacto');
     }
 
     // Relación con TipoReunion

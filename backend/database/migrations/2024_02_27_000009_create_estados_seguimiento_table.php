@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('estados_seguimiento', function (Blueprint $table) {
             $table->id('id_estado');
             $table->foreignId('id_evento')->constrained('eventos', 'id_evento')->onDelete('cascade');
+            $table->foreignId('id_contacto')->constrained('contactos', 'id_contacto');
             $table->foreignId('id_tipo_reunion')->constrained('tipos_reunion', 'id_tipo_reunion');
             $table->date('fecha');
             $table->text('estado');

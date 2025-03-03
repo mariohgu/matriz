@@ -23,6 +23,7 @@ class MunicipalidadController extends Controller
             'departamento' => 'required|string|max:50',
             'provincia' => 'required|string|max:50',
             'distrito' => 'required|string|max:50',
+            'region' => 'required|string|max:50',
         ]);
 
         $municipalidad = Municipalidad::create($validated);
@@ -54,6 +55,7 @@ class MunicipalidadController extends Controller
             'departamento' => 'required|string|max:50',
             'provincia' => 'required|string|max:50',
             'distrito' => 'required|string|max:50',
+            'region' => 'required|string|max:50',
         ]);
 
         $municipalidad->update($validated);

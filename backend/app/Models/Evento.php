@@ -16,6 +16,7 @@ class Evento extends Model
     
     protected $fillable = [
         'id_municipalidad',
+        'id_contacto',
         'tipo_acercamiento',
         'lugar',
         'fecha',
@@ -31,6 +32,12 @@ class Evento extends Model
     public function municipalidad(): BelongsTo
     {
         return $this->belongsTo(Municipalidad::class, 'id_municipalidad', 'id_municipalidad');
+    }
+
+    // Relación con Contacto
+    public function contacto(): BelongsTo
+    {
+        return $this->belongsTo(Contacto::class, 'id_contacto', 'id_contacto');
     }
 
     // Relación con Usuario que creó

@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('eventos', function (Blueprint $table) {
             $table->id('id_evento');
             $table->foreignId('id_municipalidad')->constrained('municipalidades', 'id_municipalidad')->onDelete('cascade');
+            $table->foreignId('id_contacto')->constrained('contactos', 'id_contacto');
             $table->text('tipo_acercamiento');
             $table->text('lugar');
             $table->date('fecha');
