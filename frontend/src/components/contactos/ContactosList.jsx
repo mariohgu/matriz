@@ -5,23 +5,24 @@ import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
+import { Dropdown } from 'primereact/dropdown';
 import { FilterMatchMode } from 'primereact/api';
 import axios from 'axios';
 
-export default function MunicipalidadesList() {
+export default function ContactosList() {
+  const [contactos, setContactos] = useState([]);
   const [municipalidades, setMunicipalidades] = useState([]);
   const [editDialogVisible, setEditDialogVisible] = useState(false);
   const [createDialogVisible, setCreateDialogVisible] = useState(false);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
-  const [selectedMunicipalidad, setSelectedMunicipalidad] = useState(null);
+  const [selectedContacto, setSelectedContacto] = useState(null);
   const [editData, setEditData] = useState({
+    id_contacto: '',
     id_municipalidad: '',
-    nombre: '',
-    departamento: '',
-    region: '',
-    provincia: '',
-    distrito: '',
-    ubigeo: '',
+    nombre_completo: '',
+    cargo: '',
+    telefono: '',
+    email: '',
   });
   const [globalFilterValue, setGlobalFilterValue] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,20 +32,36 @@ export default function MunicipalidadesList() {
 
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    nombre: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    region: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    departamento: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    provincia: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    distrito: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    ubigeo: { value: null, matchMode: FilterMatchMode.STARTS_WITH }
+    nombre_completo: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    cargo: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    telefono: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    email: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
 
   useEffect(() => {
+    loadContactos();
     loadMunicipalidades();
   }, []);
 
-  const loadMunicipalidades = async () => {
+  const loadContactos = async () => {
     setLoading(true);
+    try {
+      const response = await axios.get(`${address}api/contactos`);
+      setContactos(response.data || []);
+    } catch (error) {
+      console.error('Error al cargar contactos:', error);
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'No se pudieron cargar los contactos',
+        life: 3000
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMunicipalidades = async () => {
     try {
       const response = await axios.get(`${address}api/municipalidades`);
       setMunicipalidades(response.data || []);
@@ -56,8 +73,6 @@ export default function MunicipalidadesList() {
         detail: 'No se pudieron cargar las municipalidades',
         life: 3000
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -71,41 +86,40 @@ export default function MunicipalidadesList() {
 
   const handleSave = async () => {
     try {
-      if (editData.id_municipalidad) {
-        await axios.put(`${address}api/municipalidades/${editData.id_municipalidad}`, editData);
+      if (editData.id_contacto) {
+        await axios.put(`${address}api/contactos/${editData.id_contacto}`, editData);
         toast.current.show({
           severity: 'success',
           summary: 'Éxito',
-          detail: 'Municipalidad actualizada correctamente',
+          detail: 'Contacto actualizado correctamente',
           life: 3000
         });
       } else {
-        await axios.post(`${address}api/municipalidades`, editData);
+        await axios.post(`${address}api/contactos`, editData);
         toast.current.show({
           severity: 'success',
           summary: 'Éxito',
-          detail: 'Municipalidad creada correctamente',
+          detail: 'Contacto creado correctamente',
           life: 3000
         });
       }
       setEditDialogVisible(false);
       setCreateDialogVisible(false);
       setEditData({
+        id_contacto: '',
         id_municipalidad: '',
-        nombre: '',
-        departamento: '',
-        region: '',
-        provincia: '',
-        distrito: '',
-        ubigeo: '',
+        nombre_completo: '',
+        cargo: '',
+        telefono: '',
+        email: '',
       });
-      loadMunicipalidades();
+      loadContactos();
     } catch (error) {
       console.error('Error al guardar:', error);
       toast.current.show({
         severity: 'error',
         summary: 'Error',
-        detail: 'Error al guardar la municipalidad',
+        detail: 'Error al guardar el contacto',
         life: 3000
       });
     }
@@ -113,20 +127,20 @@ export default function MunicipalidadesList() {
 
   const confirmDelete = async (rowData) => {
     try {
-      await axios.delete(`${address}api/municipalidades/${rowData.id_municipalidad}`);
+      await axios.delete(`${address}api/contactos/${rowData.id_contacto}`);
       toast.current.show({
         severity: 'success',
         summary: 'Éxito',
-        detail: 'Municipalidad eliminada correctamente',
+        detail: 'Contacto eliminado correctamente',
         life: 3000
       });
-      loadMunicipalidades();
+      loadContactos();
     } catch (error) {
       console.error('Error al eliminar:', error);
       toast.current.show({
         severity: 'error',
         summary: 'Error',
-        detail: 'Error al eliminar la municipalidad',
+        detail: 'Error al eliminar el contacto',
         life: 3000
       });
     }
@@ -149,7 +163,7 @@ export default function MunicipalidadesList() {
           rounded
           className="p-button-sm bg-red-500 hover:bg-red-600 border-red-500"
           onClick={() => {
-            setSelectedMunicipalidad(rowData);
+            setSelectedContacto(rowData);
             setDeleteDialogVisible(true);
           }}
         />
@@ -161,20 +175,19 @@ export default function MunicipalidadesList() {
     return (
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-white border-b border-gray-200">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
-          <h2 className="text-2xl font-bold text-gray-800">Municipalidades</h2>
+          <h2 className="text-2xl font-bold text-gray-800">Contactos</h2>
           <Button
-            label="Nueva Municipalidad"
+            label="Nuevo Contacto"
             icon="pi pi-plus"
             className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
             onClick={() => {
               setEditData({
+                id_contacto: '',
                 id_municipalidad: '',
-                nombre: '',
-                departamento: '',
-                region: '',
-                provincia: '',
-                distrito: '',
-                ubigeo: '',
+                nombre_completo: '',
+                cargo: '',
+                telefono: '',
+                email: '',
               });
               setCreateDialogVisible(true);
             }}
@@ -186,7 +199,7 @@ export default function MunicipalidadesList() {
             <InputText
               value={globalFilterValue}
               onChange={onGlobalFilterChange}
-              placeholder="Buscar municipalidad..."
+              placeholder="Buscar contacto..."
               className="w-full sm:w-[300px] rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent px-4 py-2"
             />
           </span>
@@ -194,6 +207,80 @@ export default function MunicipalidadesList() {
       </div>
     );
   };
+
+  const municipalidadBodyTemplate = (rowData) => {
+    const municipalidad = municipalidades.find(m => m.id_municipalidad === rowData.id_municipalidad);
+    return municipalidad ? municipalidad.nombre : '';
+  };
+
+  const dialogContent = (
+    <>
+      <div className="field mb-4">
+        <label htmlFor="municipalidad" className="block text-gray-700 font-medium mb-2">
+          Municipalidad
+        </label>
+        <Dropdown
+          id="municipalidad"
+          value={editData.id_municipalidad}
+          options={municipalidades}
+          onChange={(e) => setEditData({ ...editData, id_municipalidad: e.value })}
+          optionLabel="nombre"
+          optionValue="id_municipalidad"
+          placeholder="Seleccione una municipalidad"
+          className="w-full"
+        />
+      </div>
+      <div className="field mb-4">
+        <label htmlFor="nombre_completo" className="block text-gray-700 font-medium mb-2">
+          Nombre Completo
+        </label>
+        <InputText
+          id="nombre_completo"
+          value={editData.nombre_completo}
+          onChange={(e) => setEditData({ ...editData, nombre_completo: e.target.value })}
+          className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          required
+        />
+      </div>
+      <div className="field mb-4">
+        <label htmlFor="cargo" className="block text-gray-700 font-medium mb-2">
+          Cargo
+        </label>
+        <InputText
+          id="cargo"
+          value={editData.cargo}
+          onChange={(e) => setEditData({ ...editData, cargo: e.target.value })}
+          className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          required
+        />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="field">
+          <label htmlFor="telefono" className="block text-gray-700 font-medium mb-2">
+            Teléfono
+          </label>
+          <InputText
+            id="telefono"
+            value={editData.telefono}
+            onChange={(e) => setEditData({ ...editData, telefono: e.target.value })}
+            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="email" className="block text-gray-700 font-medium mb-2">
+            Email
+          </label>
+          <InputText
+            id="email"
+            value={editData.email}
+            onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            type="email"
+          />
+        </div>
+      </div>
+    </>
+  );
 
   const editDialogFooter = (
     <div className="flex justify-end gap-2 pt-4">
@@ -242,87 +329,11 @@ export default function MunicipalidadesList() {
         icon="pi pi-check"
         className="bg-red-500 hover:bg-red-600 text-white"
         onClick={() => {
-          confirmDelete(selectedMunicipalidad);
+          confirmDelete(selectedContacto);
           setDeleteDialogVisible(false);
         }}
       />
     </div>
-  );
-
-  const dialogContent = (
-    <>
-      <div className="field mb-4">
-        <label htmlFor="nombre" className="block text-gray-700 font-medium mb-2">
-          Nombre
-        </label>
-        <InputText
-          id="nombre"
-          value={editData.nombre}
-          onChange={(e) => setEditData({ ...editData, nombre: e.target.value })}
-          className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          required
-        />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="field">
-          <label htmlFor="region" className="block text-gray-700 font-medium mb-2">
-            Región
-          </label>
-          <InputText
-            id="region"
-            value={editData.region}
-            onChange={(e) => setEditData({ ...editData, region: e.target.value })}
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="departamento" className="block text-gray-700 font-medium mb-2">
-            Departamento
-          </label>
-          <InputText
-            id="departamento"
-            value={editData.departamento}
-            onChange={(e) => setEditData({ ...editData, departamento: e.target.value })}
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-        <div className="field">
-          <label htmlFor="provincia" className="block text-gray-700 font-medium mb-2">
-            Provincia
-          </label>
-          <InputText
-            id="provincia"
-            value={editData.provincia}
-            onChange={(e) => setEditData({ ...editData, provincia: e.target.value })}
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="distrito" className="block text-gray-700 font-medium mb-2">
-            Distrito
-          </label>
-          <InputText
-            id="distrito"
-            value={editData.distrito}
-            onChange={(e) => setEditData({ ...editData, distrito: e.target.value })}
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-      <div className="field mt-4">
-        <label htmlFor="ubigeo" className="block text-gray-700 font-medium mb-2">
-          Ubigeo
-        </label>
-        <InputText
-          id="ubigeo"
-          value={editData.ubigeo}
-          onChange={(e) => setEditData({ ...editData, ubigeo: e.target.value })}
-          className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      </div>
-    </>
   );
 
   return (
@@ -333,24 +344,24 @@ export default function MunicipalidadesList() {
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <DataTable
             ref={dt}
-            value={municipalidades}
+            value={contactos}
             paginator
             rows={10}
             rowsPerPageOptions={[5, 10, 25, 50]}
-            dataKey="id_municipalidad"
+            dataKey="id_contacto"
             filters={filters}
             loading={loading}
-            globalFilterFields={['nombre', 'region', 'departamento', 'provincia', 'distrito', 'ubigeo']}
+            globalFilterFields={['nombre_completo', 'cargo', 'telefono', 'email']}
             header={renderHeader}
-            emptyMessage="No se encontraron municipalidades"
+            emptyMessage="No se encontraron contactos"
             className="p-datatable-responsive-demo"
             responsiveLayout="stack"
             breakpoint="960px"
             stripedRows
           >
             <Column
-              field="nombre"
-              header="Nombre"
+              field="nombre_completo"
+              header="Nombre Completo"
               sortable
               filter
               filterPlaceholder="Buscar por nombre"
@@ -358,48 +369,38 @@ export default function MunicipalidadesList() {
               bodyClassName="p-3"
             />
             <Column
-              field="region"
-              header="Región"
+              field="id_municipalidad"
+              header="Municipalidad"
+              sortable
+              body={municipalidadBodyTemplate}
+              className="min-w-[200px]"
+              bodyClassName="p-3"
+            />
+            <Column
+              field="cargo"
+              header="Cargo"
               sortable
               filter
-              filterPlaceholder="Buscar por región"
+              filterPlaceholder="Buscar por cargo"
               className="min-w-[150px]"
               bodyClassName="p-3"
             />
             <Column
-              field="departamento"
-              header="Departamento"
+              field="telefono"
+              header="Teléfono"
               sortable
               filter
-              filterPlaceholder="Buscar por departamento"
+              filterPlaceholder="Buscar por teléfono"
               className="min-w-[150px]"
               bodyClassName="p-3"
             />
             <Column
-              field="provincia"
-              header="Provincia"
+              field="email"
+              header="Email"
               sortable
               filter
-              filterPlaceholder="Buscar por provincia"
-              className="min-w-[150px]"
-              bodyClassName="p-3"
-            />
-            <Column
-              field="distrito"
-              header="Distrito"
-              sortable
-              filter
-              filterPlaceholder="Buscar por distrito"
-              className="min-w-[150px]"
-              bodyClassName="p-3"
-            />
-            <Column
-              field="ubigeo"
-              header="Ubigeo"
-              sortable
-              filter
-              filterPlaceholder="Buscar por ubigeo"
-              className="min-w-[120px]"
+              filterPlaceholder="Buscar por email"
+              className="min-w-[200px]"
               bodyClassName="p-3"
             />
             <Column
@@ -414,7 +415,7 @@ export default function MunicipalidadesList() {
         <Dialog
           visible={editDialogVisible}
           style={{ width: '95vw', maxWidth: '600px' }}
-          header="Editar Municipalidad"
+          header="Editar Contacto"
           modal
           className="p-fluid rounded-xl overflow-hidden"
           footer={editDialogFooter}
@@ -428,7 +429,7 @@ export default function MunicipalidadesList() {
         <Dialog
           visible={createDialogVisible}
           style={{ width: '95vw', maxWidth: '600px' }}
-          header="Nueva Municipalidad"
+          header="Nuevo Contacto"
           modal
           className="p-fluid rounded-xl overflow-hidden"
           footer={createDialogFooter}
@@ -451,7 +452,7 @@ export default function MunicipalidadesList() {
           <div className="flex items-center gap-4 p-4">
             <i className="pi pi-exclamation-triangle text-yellow-500 text-4xl" />
             <span className="text-gray-600">
-              ¿Está seguro que desea eliminar la municipalidad <span className="font-bold">{selectedMunicipalidad?.nombre}</span>?
+              ¿Está seguro que desea eliminar el contacto <span className="font-bold">{selectedContacto?.nombre_completo}</span>?
             </span>
           </div>
         </Dialog>

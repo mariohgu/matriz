@@ -62,8 +62,14 @@ class MunicipalidadController extends Controller
         return response()->json($municipalidad);
     }
 
-    public function destroy(Municipalidad $municipalidad)
+    public function destroy($id)
     {
+        $municipalidad = Municipalidad::where('id_municipalidad', $id)->first();
+        
+        if (!$municipalidad) {
+            return response()->json(['message' => 'Municipalidad no encontrada'], 404);
+        }
+
         $municipalidad->delete();
         return response()->json(null, 204);
     }

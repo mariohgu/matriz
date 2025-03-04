@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginScreen from './components/LoginScreen';
 import Dashboard from './pages/Dashboard';
 import MunicipalidadesList from './components/municipalidades/MunicipalidadesList';
+import ContactosList from './components/contactos/ContactosList';
 import Sidebar from './components/common/Sidebar';
 import Header from './components/common/Header';
 import { AuthProvider } from './context/AuthContext';
@@ -46,6 +47,14 @@ function AppRoutes() {
         element={
           <MainLayout>
             <MunicipalidadesList />
+          </MainLayout>
+        }
+      />
+      <Route
+        path="/contactos"
+        element={
+          <MainLayout>
+            <ContactosList />
           </MainLayout>
         }
       />

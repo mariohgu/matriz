@@ -64,7 +64,7 @@ class ContactoController extends Controller
 
     public function destroy($id)
     {
-        $contacto = Contacto::find($id);
+        $contacto = Contacto::where('id_contacto', $id)->first();
 
         if (!$contacto) {
             return response()->json(['message' => 'Contacto no encontrado'], 404);

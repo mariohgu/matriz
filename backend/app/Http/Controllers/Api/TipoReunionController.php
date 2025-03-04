@@ -53,7 +53,7 @@ class TipoReunionController extends Controller
 
     public function destroy($id)
     {
-        $tipoReunion = TipoReunion::find($id);
+        $tipoReunion = TipoReunion::where('id_tipo_reunion', $id)->first();
 
         if (!$tipoReunion) {
             return response()->json(['message' => 'Tipo de reunión no encontrado'], 404);

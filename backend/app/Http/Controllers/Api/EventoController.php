@@ -92,7 +92,7 @@ class EventoController extends Controller
     public function destroy($id)
     {
         try {
-            $evento = Evento::find($id);
+            $evento = Evento::where('id_evento', $id)->first();
 
             if (!$evento) {
                 return response()->json(['message' => 'Evento no encontrado'], 404);

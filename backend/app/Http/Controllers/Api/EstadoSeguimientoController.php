@@ -99,7 +99,7 @@ class EstadoSeguimientoController extends Controller
     public function destroy($id)
     {
         try {
-            $estado = EstadoSeguimiento::find($id);
+            $estado = EstadoSeguimiento::where('id_estado_seguimiento', $id)->first();
 
             if (!$estado) {
                 return response()->json(['message' => 'Estado de seguimiento no encontrado'], 404);
