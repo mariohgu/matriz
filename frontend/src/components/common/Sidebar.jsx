@@ -31,12 +31,12 @@ export default function Sidebar({ isOpen, onToggle }) {
       ]
     },
     {
-      href: "/municipalidades",
-      title: "Municipalidades",
+      href: "#",
+      title: "Items de Carga",
       icon: <FaBuilding />,
       subItems: [
-        { href: "/municipalidades", title: "Lista" },
-        { href: "/municipalidades/mapa", title: "Mapa" },
+        { href: "/municipalidades", title: "Municipalidades" },
+        
       ]
     },
     {

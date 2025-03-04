@@ -17,6 +17,7 @@ export default function MunicipalidadesList() {
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
     nombre: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
     departamento: { value: null, matchMode: FilterMatchMode.IN },
+    region: { value: null, matchMode: FilterMatchMode.CONTAINS },
     provincia: { value: null, matchMode: FilterMatchMode.CONTAINS },
     distrito: { value: null, matchMode: FilterMatchMode.CONTAINS },
     ubigeo: { value: null, matchMode: FilterMatchMode.EQUALS }
@@ -25,10 +26,12 @@ export default function MunicipalidadesList() {
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
   const [selectedMunicipalidad, setSelectedMunicipalidad] = useState(null);
   const [editDialogVisible, setEditDialogVisible] = useState(false);
+  const [createDialogVisible, setCreateDialogVisible] = useState(false);
   const [editData, setEditData] = useState({
-    id: '',
+    id_municipalidad: '',
     nombre: '',
     departamento: '',
+    region: '',
     provincia: '',
     distrito: '',
     ubigeo: '',
@@ -39,11 +42,13 @@ export default function MunicipalidadesList() {
   useEffect(() => {
     loadMunicipalidades();
   }, []);
+  const address = "http://127.0.0.1:8000/";
 
   const loadMunicipalidades = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('https://matriz.ddev.site/api/municipalidades');
+      const response = await axios.get(`${address}api/municipalidades`);
+      console.log('Datos recibidos:', response.data);
       setMunicipalidades(response.data || []);
     } catch (error) {
       console.error('Error al cargar municipalidades:', error);
@@ -69,7 +74,7 @@ export default function MunicipalidadesList() {
 
   const handleEdit = async () => {
     try {
-      if (!selectedMunicipalidad?.id) {
+      if (!selectedMunicipalidad?.id_municipalidad) {
         toast.current.show({
           severity: 'error',
           summary: 'Error',
@@ -81,10 +86,10 @@ export default function MunicipalidadesList() {
 
       const updatedData = {
         ...editData,
-        id: selectedMunicipalidad.id
+        id_municipalidad: selectedMunicipalidad.id_municipalidad
       };
 
-      await axios.put(`https://matriz.ddev.site/api/municipalidades/${selectedMunicipalidad.id}`, updatedData);
+      await axios.put(`${address}api/municipalidades/${selectedMunicipalidad.id_municipalidad}`, updatedData);
       toast.current.show({
         severity: 'success',
         summary: 'Éxito',
@@ -104,9 +109,40 @@ export default function MunicipalidadesList() {
     }
   };
 
+  const handleCreate = async () => {
+    try {
+      await axios.post(`${address}api/municipalidades`, editData);
+      toast.current.show({
+        severity: 'success',
+        summary: 'Éxito',
+        detail: 'Municipalidad creada correctamente',
+        life: 3000
+      });
+      setCreateDialogVisible(false);
+      setEditData({
+        id_municipalidad: '',
+        nombre: '',
+        departamento: '',
+        region: '',
+        provincia: '',
+        distrito: '',
+        ubigeo: '',
+      });
+      loadMunicipalidades();
+    } catch (error) {
+      console.error('Error al crear:', error);
+      toast.current.show({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'Error al crear la municipalidad',
+        life: 3000
+      });
+    }
+  };
+
   const handleDelete = async () => {
     try {
-      await axios.delete(`https://matriz.ddev.site/api/municipalidades/${selectedMunicipalidad.id}`);
+      await axios.delete(`${address}api/municipalidades/${selectedMunicipalidad.id_municipalidad}`);
       toast.current.show({
         severity: 'success',
         summary: 'Éxito',
@@ -132,14 +168,15 @@ export default function MunicipalidadesList() {
         <Button
           icon="pi pi-pencil"
           rounded
-          outlined
-          className="mr-2"
+          className="mr-2 bg-blue-500 hover:bg-blue-600 border-blue-500 hover:border-blue-600 text-white"
           onClick={() => {
             setSelectedMunicipalidad(rowData);
+            console.log(rowData.id_municipalidad);
             setEditData({
-              id: rowData.id,
+              id_municipalidad: rowData.id_municipalidad,
               nombre: rowData.nombre,
               departamento: rowData.departamento,
+              region: rowData.region,
               provincia: rowData.provincia,
               distrito: rowData.distrito,
               ubigeo: rowData.ubigeo,
@@ -150,8 +187,7 @@ export default function MunicipalidadesList() {
         <Button
           icon="pi pi-trash"
           rounded
-          outlined
-          severity="danger"
+          className="bg-red-500 hover:bg-red-600 border-red-500 hover:border-red-600 text-white"
           onClick={() => {
             setSelectedMunicipalidad(rowData);
             setDeleteDialogVisible(true);
@@ -164,15 +200,34 @@ export default function MunicipalidadesList() {
   const renderHeader = () => {
     return (
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-        <h2 className="text-xl font-bold">Municipalidades</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-bold">Municipalidades</h2>
+          <Button
+            label="Nueva Municipalidad"
+            icon="pi pi-plus"
+            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md shadow-md hover:shadow-lg transition-all"
+            onClick={() => {
+              setEditData({
+                id_municipalidad: '',
+                nombre: '',
+                departamento: '',
+                region: '',
+                provincia: '',
+                distrito: '',
+                ubigeo: '',
+              });
+              setCreateDialogVisible(true);
+            }}
+          />
+        </div>
         <div className="w-full md:w-auto flex justify-end">
           <span className="p-input-icon-left w-full md:w-auto">
             <i className="pi pi-search" />
             <InputText
               value={globalFilterValue}
               onChange={onGlobalFilterChange}
-              placeholder="Buscar municipalidad..."
-              className="w-full md:w-[300px]"
+              placeholder="     Buscar municipalidad..."
+              className="w-full md:w-[300px] rounded-md border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 px-3 py-2"
             />
           </span>
         </div>
@@ -201,16 +256,53 @@ export default function MunicipalidadesList() {
   };
 
   const editDialogFooter = (
-    <div>
-      <Button label="Cancelar" icon="pi pi-times" outlined onClick={() => setEditDialogVisible(false)} />
-      <Button label="Guardar" icon="pi pi-check" onClick={handleEdit} />
+    <div className="flex gap-2 justify-end">
+      <Button 
+        label="Cancelar" 
+        icon="pi pi-times" 
+        className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md" 
+        onClick={() => setEditDialogVisible(false)} 
+      />
+      <Button 
+        label="Guardar" 
+        icon="pi pi-check" 
+        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md" 
+        onClick={handleEdit} 
+      />
+    </div>
+  );
+
+  const createDialogFooter = (
+    <div className="flex gap-2 justify-end">
+      <Button 
+        label="Cancelar" 
+        icon="pi pi-times" 
+        className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md" 
+        onClick={() => setCreateDialogVisible(false)} 
+      />
+      <Button 
+        label="Guardar" 
+        icon="pi pi-check" 
+        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md" 
+        onClick={handleCreate} 
+      />
     </div>
   );
 
   const deleteDialogFooter = (
-    <div>
-      <Button label="No" icon="pi pi-times" outlined onClick={() => setDeleteDialogVisible(false)} />
-      <Button label="Sí" icon="pi pi-check" severity="danger" onClick={handleDelete} />
+    <div className="flex gap-2 justify-end">
+      <Button 
+        label="No" 
+        icon="pi pi-times" 
+        className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md" 
+        onClick={() => setDeleteDialogVisible(false)} 
+      />
+      <Button 
+        label="Sí" 
+        icon="pi pi-check" 
+        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md" 
+        onClick={handleDelete} 
+      />
     </div>
   );
 
@@ -224,10 +316,10 @@ export default function MunicipalidadesList() {
         paginator
         rows={10}
         rowsPerPageOptions={[5, 10, 25, 50]}
-        dataKey="id"
+        dataKey="id_municipalidad"
         filters={filters}
         loading={loading}
-        globalFilterFields={['nombre', 'departamento', 'provincia', 'distrito', 'ubigeo']}
+        globalFilterFields={['nombre', 'region', 'departamento',  'provincia', 'distrito', 'ubigeo']}
         header={renderHeader}
         emptyMessage="No se encontraron municipalidades"
         className="p-datatable-gridlines"
@@ -249,6 +341,17 @@ export default function MunicipalidadesList() {
           filterMenuStyle={{ width: '14rem' }}
         />
         <Column 
+          key="region"
+          field="region" 
+          header="Región" 
+          sortable 
+          filter 
+          filterPlaceholder="Buscar por región"
+          showFilterMenu={false}
+          filterMenuStyle={{ width: '14rem' }}
+          className="min-w-[150px]"
+        />
+        <Column 
           key="departamento"
           field="departamento" 
           header="Departamento" 
@@ -259,6 +362,7 @@ export default function MunicipalidadesList() {
           filterMenuStyle={{ width: '14rem' }}
           className="min-w-[150px]"
         />
+        
         <Column 
           key="provincia"
           field="provincia" 
@@ -307,51 +411,138 @@ export default function MunicipalidadesList() {
         style={{ width: '90vw', maxWidth: '450px' }}
         header="Editar Municipalidad"
         modal
-        className="p-fluid"
+        className="p-fluid !border !border-gray-200 !rounded-lg !shadow-lg"
         footer={editDialogFooter}
         onHide={() => setEditDialogVisible(false)}
         breakpoints={{ '960px': '75vw', '641px': '90vw' }}
+        closeIcon="pi pi-times"
+        closeButtonClassName="!bg-transparent hover:!bg-gray-100 !rounded-full !p-2 !transition-colors"
       >
         <div className="field">
-          <label htmlFor="nombre">Nombre</label>
+          <label htmlFor="nombre" className="block text-gray-700 mb-2">Nombre</label>
           <InputText
             id="nombre"
             value={editData.nombre}
             onChange={(e) => setEditData({ ...editData, nombre: e.target.value })}
             required
             autoFocus
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
-        <div className="field">
-          <label htmlFor="departamento">Departamento</label>
+        <div className="field mb-4">
+          <label htmlFor="region" className="block text-gray-700 font-medium mb-2">Región</label>
+          <InputText
+            id="region"
+            value={editData.region}
+            onChange={(e) => setEditData({ ...editData, region: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div className="field mb-4">
+          <label htmlFor="departamento" className="block text-gray-700 font-medium mb-2">Departamento</label>
           <InputText
             id="departamento"
             value={editData.departamento}
             onChange={(e) => setEditData({ ...editData, departamento: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
-        <div className="field">
-          <label htmlFor="provincia">Provincia</label>
+        <div className="field mb-4">
+          <label htmlFor="provincia" className="block text-gray-700 font-medium mb-2">Provincia</label>
           <InputText
             id="provincia"
             value={editData.provincia}
             onChange={(e) => setEditData({ ...editData, provincia: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
-        <div className="field">
-          <label htmlFor="distrito">Distrito</label>
+        <div className="field mb-4">
+          <label htmlFor="distrito" className="block text-gray-700 font-medium mb-2">Distrito</label>
           <InputText
             id="distrito"
             value={editData.distrito}
             onChange={(e) => setEditData({ ...editData, distrito: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
-        <div className="field">
-          <label htmlFor="ubigeo">Ubigeo</label>
+        <div className="field mb-4">
+          <label htmlFor="ubigeo" className="block text-gray-700 font-medium mb-2">Ubigeo</label>
           <InputText
             id="ubigeo"
             value={editData.ubigeo}
             onChange={(e) => setEditData({ ...editData, ubigeo: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+      </Dialog>
+
+      {/* Diálogo de Creación */}
+      <Dialog
+        visible={createDialogVisible}
+        style={{ width: '90vw', maxWidth: '450px' }}
+        header="Nueva Municipalidad"
+        modal
+        className="p-fluid !border !border-gray-200 !rounded-lg !shadow-lg"
+        footer={createDialogFooter}
+        onHide={() => setCreateDialogVisible(false)}
+        breakpoints={{ '960px': '75vw', '641px': '90vw' }}
+        closeIcon="pi pi-times"
+        closeButtonClassName="!bg-transparent hover:!bg-gray-100 !rounded-full !p-2 !transition-colors"
+      >
+        <div className="field">
+          <label htmlFor="nombre" className="block text-gray-700 mb-2">Nombre</label>
+          <InputText
+            id="nombre"
+            value={editData.nombre}
+            onChange={(e) => setEditData({ ...editData, nombre: e.target.value })}
+            required
+            autoFocus
+            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <div className="field mb-4">
+          <label htmlFor="region" className="block text-gray-700 font-medium mb-2">Región</label>
+          <InputText
+            id="region"
+            value={editData.region}
+            onChange={(e) => setEditData({ ...editData, region: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div className="field mb-4">
+          <label htmlFor="departamento" className="block text-gray-700 font-medium mb-2">Departamento</label>
+          <InputText
+            id="departamento"
+            value={editData.departamento}
+            onChange={(e) => setEditData({ ...editData, departamento: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div className="field mb-4">
+          <label htmlFor="provincia" className="block text-gray-700 font-medium mb-2">Provincia</label>
+          <InputText
+            id="provincia"
+            value={editData.provincia}
+            onChange={(e) => setEditData({ ...editData, provincia: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div className="field mb-4">
+          <label htmlFor="distrito" className="block text-gray-700 font-medium mb-2">Distrito</label>
+          <InputText
+            id="distrito"
+            value={editData.distrito}
+            onChange={(e) => setEditData({ ...editData, distrito: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div className="field mb-4">
+          <label htmlFor="ubigeo" className="block text-gray-700 font-medium mb-2">Ubigeo</label>
+          <InputText
+            id="ubigeo"
+            value={editData.ubigeo}
+            onChange={(e) => setEditData({ ...editData, ubigeo: e.target.value })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
       </Dialog>
