@@ -10,15 +10,15 @@ import {
   FaQuestionCircle,
   FaCog,
   FaAngleRight,
+  FaTimes
 } from "react-icons/fa";
 import { MdExpandMore, MdExpandLess } from "react-icons/md";
 import Accordion from "./Accordion";
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onToggle }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
 
   const links = [
     {
@@ -76,126 +76,142 @@ export default function Sidebar() {
   const handleNavigation = (href, e) => {
     e.preventDefault();
     navigate(href);
+    if (window.innerWidth < 768) {
+      onToggle();
+    }
   };
 
   const isActive = (href) => location.pathname === href;
 
-  return (
-    <nav
-      className={`sticky top-0 h-screen bg-gray-800 text-white flex flex-col transition-all duration-500 ${
-        collapsed ? "w-20" : "w-72"
-      }`}
-    >
-      <div className="flex items-center justify-between p-4">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-gray-600 rounded-lg flex items-center justify-center">
-            <FaBuilding className="text-2xl" />
-          </div>
-          {!collapsed && (
-            <a href="/dashboard" className="text-xl font-bold">
-              Matriz
-            </a>
-          )}
-        </div>
-        <button
-          className="p-2 bg-white text-gray-800 rounded-full shadow-md"
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          {collapsed ? <MdExpandMore size={24} /> : <MdExpandLess size={24} />}
-        </button>
-      </div>
+  // Clase base para el sidebar
+  const sidebarClasses = `
+    fixed md:sticky top-0 left-0 z-20 h-screen bg-gray-800 text-white 
+    transform transition-transform duration-300 ease-in-out md:transform-none
+    ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+    ${isOpen ? 'w-72' : 'w-20 md:w-20'}
+  `;
 
-      <ul className="flex-1 mt-4 space-y-2 px-3">
-        {links.map((link, index) => (
-          <li key={index}>
-            {link.subItems.length > 0 ? (
-              <Accordion
-                summary={
-                  <div
-                    className={`w-full flex items-center justify-between p-3 rounded-md transition-colors duration-200 hover:bg-gray-700 ${
-                      isActive(link.href) ? "bg-gray-700" : ""
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <span className="text-2xl">{link.icon}</span>
-                      {!collapsed && <span className="text-lg">{link.title}</span>}
-                    </div>
-                    {!collapsed && (
-                      <span className="text-lg">
-                        <FaAngleRight />
-                      </span>
-                    )}
-                  </div>
-                }
-              >
-                {!collapsed && (
-                  <ul className="ml-12 mt-2 space-y-2 border-l-2 border-gray-600">
-                    {link.subItems.map((subItem, subIndex) => (
-                      <li key={subIndex}>
-                        <a
-                          href={subItem.href}
-                          onClick={(e) => handleNavigation(subItem.href, e)}
-                          className={`block py-2 px-4 text-gray-400 hover:text-white transition-colors duration-200 ${
-                            isActive(subItem.href) ? "text-white" : ""
-                          }`}
-                        >
-                          {subItem.title}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </Accordion>
-            ) : (
-              <a
-                href={link.href}
-                onClick={(e) => handleNavigation(link.href, e)}
-                className={`flex items-center gap-4 p-3 rounded-md transition-colors duration-200 hover:bg-gray-700 ${
-                  isActive(link.href) ? "bg-gray-700" : ""
-                }`}
-              >
-                <span className="text-2xl">{link.icon}</span>
-                {!collapsed && <span className="text-lg">{link.title}</span>}
+  // Overlay para móvil
+  const overlayClasses = `
+    fixed inset-0 bg-black bg-opacity-50 z-10 transition-opacity duration-300
+    ${isOpen ? 'opacity-100 md:hidden' : 'opacity-0 pointer-events-none'}
+  `;
+
+  return (
+    <>
+      <div className={overlayClasses} onClick={onToggle}></div>
+      <nav className={sidebarClasses}>
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-gray-600 rounded-lg flex items-center justify-center">
+              <FaBuilding className="text-2xl" />
+            </div>
+            {isOpen && (
+              <a href="/dashboard" className="text-xl font-bold">
+                Matriz
               </a>
             )}
-          </li>
-        ))}
-      </ul>
+          </div>
+          <button
+            className="p-2 bg-white text-gray-800 rounded-full shadow-md"
+            onClick={onToggle}
+          >
+            {isOpen ? <FaTimes size={20} /> : <FaAngleRight size={20} />}
+          </button>
+        </div>
 
-      <div className="mt-auto border-t border-gray-700">
-        <ul className="p-3 space-y-2">
-          {bottomLinks.map((link, index) => (
+        <ul className="flex-1 mt-4 space-y-2 px-3">
+          {links.map((link, index) => (
             <li key={index}>
-              <a
-                href={link.href}
-                onClick={(e) => handleNavigation(link.href, e)}
-                className="flex items-center gap-4 p-3 rounded-md transition-colors duration-200 hover:bg-gray-700"
-              >
-                <span className="text-2xl">{link.icon}</span>
-                {!collapsed && <span className="text-lg">{link.title}</span>}
-              </a>
+              {link.subItems.length > 0 ? (
+                <Accordion
+                  summary={
+                    <div
+                      className={`w-full flex items-center justify-between p-3 rounded-md transition-colors duration-200 hover:bg-gray-700 ${
+                        isActive(link.href) ? "bg-gray-700" : ""
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className="text-2xl">{link.icon}</span>
+                        {isOpen && <span className="text-lg">{link.title}</span>}
+                      </div>
+                      {isOpen && (
+                        <span className="text-lg">
+                          <FaAngleRight />
+                        </span>
+                      )}
+                    </div>
+                  }
+                >
+                  {isOpen && (
+                    <ul className="ml-12 mt-2 space-y-2 border-l-2 border-gray-600">
+                      {link.subItems.map((subItem, subIndex) => (
+                        <li key={subIndex}>
+                          <a
+                            href={subItem.href}
+                            onClick={(e) => handleNavigation(subItem.href, e)}
+                            className={`block py-2 px-4 text-gray-400 hover:text-white transition-colors duration-200 ${
+                              isActive(subItem.href) ? "text-white" : ""
+                            }`}
+                          >
+                            {subItem.title}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Accordion>
+              ) : (
+                <a
+                  href={link.href}
+                  onClick={(e) => handleNavigation(link.href, e)}
+                  className={`flex items-center gap-4 p-3 rounded-md transition-colors duration-200 hover:bg-gray-700 ${
+                    isActive(link.href) ? "bg-gray-700" : ""
+                  }`}
+                >
+                  <span className="text-2xl">{link.icon}</span>
+                  {isOpen && <span className="text-lg">{link.title}</span>}
+                </a>
+              )}
             </li>
           ))}
         </ul>
 
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-4 p-4 border-t border-gray-600 hover:bg-gray-700"
-        >
-          <div className="relative w-12 h-12">
-            <div className="w-full h-full rounded-full bg-gray-600 flex items-center justify-center">
-              <FaUserCircle className="text-3xl" />
+        <div className="mt-auto border-t border-gray-700">
+          <ul className="p-3 space-y-2">
+            {bottomLinks.map((link, index) => (
+              <li key={index}>
+                <a
+                  href={link.href}
+                  onClick={(e) => handleNavigation(link.href, e)}
+                  className="flex items-center gap-4 p-3 rounded-md transition-colors duration-200 hover:bg-gray-700"
+                >
+                  <span className="text-2xl">{link.icon}</span>
+                  {isOpen && <span className="text-lg">{link.title}</span>}
+                </a>
+              </li>
+            ))}
+          </ul>
+
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-4 p-4 border-t border-gray-600 hover:bg-gray-700"
+          >
+            <div className="relative w-12 h-12">
+              <div className="w-full h-full rounded-full bg-gray-600 flex items-center justify-center">
+                <FaUserCircle className="text-3xl" />
+              </div>
+              <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full"></div>
             </div>
-            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full"></div>
-          </div>
-          {!collapsed && (
-            <div className="text-left">
-              <p className="font-bold">Usuario Temporal</p>
-              <p className="text-sm text-gray-400">usuario@ejemplo.com</p>
-            </div>
-          )}
-        </button>
-      </div>
-    </nav>
+            {isOpen && (
+              <div className="text-left">
+                <p className="font-bold">Usuario Temporal</p>
+                <p className="text-sm text-gray-400">usuario@ejemplo.com</p>
+              </div>
+            )}
+          </button>
+        </div>
+      </nav>
+    </>
   );
 }

@@ -1,20 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginScreen from './components/LoginScreen';
 import Dashboard from './pages/Dashboard';
 import MunicipalidadesList from './components/municipalidades/MunicipalidadesList';
 import Sidebar from './components/common/Sidebar';
 import Header from './components/common/Header';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext';
 
 function MainLayout({ children }) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   return (    
     <div className="flex min-h-screen bg-gray-100">
-      <Sidebar />
-      <div className="flex-1">
-        <Header />
-        <main className="p-8">
-          {children}
+      <Sidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
+      <div className="flex-1 flex flex-col">
+        <Header onMenuClick={toggleSidebar} />
+        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-x-auto">
+          <div className="container mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

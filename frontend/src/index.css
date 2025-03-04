@@ -1,3 +1,7 @@
+@import 'primereact/resources/themes/lara-light-blue/theme.css';
+@import 'primereact/resources/primereact.min.css';
+@import 'primeicons/primeicons.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -71,4 +75,37 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+}
+
+.card {
+  @apply bg-white rounded-lg shadow-md p-6;
+}
+
+.field {
+  @apply mb-4;
+}
+
+.field label {
+  @apply block text-gray-700 text-sm font-bold mb-2;
+}
+
+/* PrimeReact DataTable customizations */
+.p-datatable .p-datatable-header {
+  @apply bg-white border-none;
+}
+
+.p-datatable .p-datatable-thead > tr > th {
+  @apply bg-gray-50;
+}
+
+.p-button.p-button-outlined {
+  @apply border border-gray-300;
+}
+
+.p-dialog .p-dialog-header {
+  @apply bg-gray-50;
+}
+
+.p-dialog .p-dialog-content {
+  @apply p-6;
 }
