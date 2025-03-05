@@ -343,88 +343,93 @@ export default function ContactosList() {
       <div className="max-w-[1400px] mx-auto">
         <Toast ref={toast} />
         
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <DataTable
-            ref={dt}
-            value={contactos}
-            dataKey="id_contacto"
-            paginator
-            rows={10}
-            rowsPerPageOptions={[5, 10, 25]}
-            loading={loading}
-            filters={filters}
-            header={renderHeader}
-            emptyMessage="No se encontraron contactos"
-            className="p-datatable-sm"
-            showGridlines
-            removableSort
-            filterDisplay="row"
-            globalFilterFields={['nombre_completo', 'cargo', 'telefono', 'email', 'municipalidad.nombre']}
-            filterIcon="pi pi-filter"
-            filterIconClassName="text-gray-600 hover:text-blue-500"
-          >
-            <Column
-              field="nombre_completo"
-              header="Nombre"
-              sortable
-              filter
-              filterPlaceholder="Buscar por nombre"
-              className="min-w-[200px]"
-              filterClassName="p-column-filter p-fluid p-column-filter-element"
-              filterClearIcon="pi pi-times"
-              filterApplyIcon="pi pi-check"
-            />
-            <Column
-              field="cargo"
-              header="Cargo"
-              sortable
-              filter
-              filterPlaceholder="Buscar por cargo"
-              className="min-w-[150px]"
-              filterClassName="p-column-filter p-fluid p-column-filter-element"
-              filterClearIcon="pi pi-times"
-              filterApplyIcon="pi pi-check"
-            />
-            <Column
-              field="telefono"
-              header="Teléfono"
-              sortable
-              filter
-              filterPlaceholder="Buscar por teléfono"
-              className="min-w-[120px]"
-              filterClassName="p-column-filter p-fluid p-column-filter-element"
-              filterClearIcon="pi pi-times"
-              filterApplyIcon="pi pi-check"
-            />
-            <Column
-              field="email"
-              header="Email"
-              sortable
-              filter
-              filterPlaceholder="Buscar por email"
-              className="min-w-[200px]"
-              filterClassName="p-column-filter p-fluid p-column-filter-element"
-              filterClearIcon="pi pi-times"
-              filterApplyIcon="pi pi-check"
-            />
-            <Column
-              field="municipalidad.nombre"
-              header="Municipalidad"
-              sortable
-              filter
-              filterPlaceholder="Buscar por municipalidad"
-              className="min-w-[200px]"
-              filterClassName="p-column-filter p-fluid p-column-filter-element"
-              filterClearIcon="pi pi-times"
-              filterApplyIcon="pi pi-check"
-            />
-            <Column
-              body={actionBodyTemplate}
-              exportable={false}
-              style={{ minWidth: '8rem' }}
-              className="text-center"
-            />
-          </DataTable>
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden w-full" style={{ width: '100%' }}>
+          {/* Contenedor adicional para forzar el ancho */}
+          <div style={{ width: '100%', overflowX: 'hidden' }}>
+            <DataTable
+              ref={dt}
+              value={contactos}
+              dataKey="id_contacto"
+              paginator
+              rows={10}
+              rowsPerPageOptions={[5, 10, 25]}
+              loading={loading}
+              filters={filters}
+              header={renderHeader}
+              emptyMessage="No se encontraron contactos"
+              className="p-datatable-sm w-full"
+              showGridlines
+              removableSort
+              filterDisplay="row"
+              globalFilterFields={['nombre_completo', 'cargo', 'telefono', 'email', 'municipalidad.nombre']}
+              filterIcon="pi pi-filter"
+              filterIconClassName="text-gray-600 hover:text-blue-500"
+              style={{ width: '100%' }}
+              tableStyle={{ width: '100%', tableLayout: 'fixed' }}
+            >
+              <Column
+                field="nombre_completo"
+                header="Nombre"
+                sortable
+                filter
+                filterPlaceholder="Buscar por nombre"
+                className="min-w-[200px]"
+                filterClassName="p-column-filter p-fluid p-column-filter-element"
+                filterClearIcon="pi pi-times"
+                filterApplyIcon="pi pi-check"
+              />
+              <Column
+                field="cargo"
+                header="Cargo"
+                sortable
+                filter
+                filterPlaceholder="Buscar por cargo"
+                className="min-w-[150px]"
+                filterClassName="p-column-filter p-fluid p-column-filter-element"
+                filterClearIcon="pi pi-times"
+                filterApplyIcon="pi pi-check"
+              />
+              <Column
+                field="telefono"
+                header="Teléfono"
+                sortable
+                filter
+                filterPlaceholder="Buscar por teléfono"
+                className="min-w-[120px]"
+                filterClassName="p-column-filter p-fluid p-column-filter-element"
+                filterClearIcon="pi pi-times"
+                filterApplyIcon="pi pi-check"
+              />
+              <Column
+                field="email"
+                header="Email"
+                sortable
+                filter
+                filterPlaceholder="Buscar por email"
+                className="min-w-[200px]"
+                filterClassName="p-column-filter p-fluid p-column-filter-element"
+                filterClearIcon="pi pi-times"
+                filterApplyIcon="pi pi-check"
+              />
+              <Column
+                field="municipalidad.nombre"
+                header="Municipalidad"
+                sortable
+                filter
+                filterPlaceholder="Buscar por municipalidad"
+                className="min-w-[200px]"
+                filterClassName="p-column-filter p-fluid p-column-filter-element"
+                filterClearIcon="pi pi-times"
+                filterApplyIcon="pi pi-check"
+              />
+              <Column
+                body={actionBodyTemplate}
+                exportable={false}
+                style={{ minWidth: '8rem' }}
+                className="text-center"
+              />
+            </DataTable>
+          </div>
         </div>
 
         <Dialog

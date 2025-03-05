@@ -311,79 +311,87 @@ export default function EventosList() {
   return (
     <div className="card w-full p-4">
       <Toast ref={toast} />
-      <DataTable
-        ref={dt}
-        value={eventos}
-        selection={selectedEvento}
-        onSelectionChange={(e) => setSelectedEvento(e.value)}
-        dataKey="id_evento"
-        paginator
-        rows={10}
-        filters={filters}
-        filterDisplay="row"
-        loading={loading}
-        responsiveLayout="scroll"
-        globalFilterFields={['municipalidad.nombre', 'contacto.nombre_completo', 'tipo_acercamiento', 'lugar', 'fecha']}
-        header={renderHeader()}
-        emptyMessage="No se encontraron eventos"
-        className="p-datatable-sm"
-        showGridlines
-        removableSort
-        resizableColumns
-        columnResizeMode="fit"
-      >
-        <Column 
-          field="municipalidad.nombre" 
-          header="Municipalidad" 
-          sortable 
-          filter 
-          filterPlaceholder="Buscar por municipalidad"
-          showFilterMenu={false}
-          style={{ minWidth: '200px' }}
-        />
-        <Column 
-          field="contacto.nombre_completo" 
-          header="Contacto" 
-          sortable 
-          filter 
-          filterPlaceholder="Buscar por contacto"
-          showFilterMenu={false}
-          style={{ minWidth: '200px' }}
-        />
-        <Column 
-          field="tipo_acercamiento" 
-          header="Tipo de Acercamiento" 
-          sortable 
-          filter 
-          filterPlaceholder="Buscar por tipo"
-          showFilterMenu={false}
-          style={{ minWidth: '200px' }}
-        />
-        <Column 
-          field="lugar" 
-          header="Lugar" 
-          sortable 
-          filter 
-          filterPlaceholder="Buscar por lugar"
-          showFilterMenu={false}
-          style={{ minWidth: '150px' }}
-        />
-        <Column 
-          field="fecha" 
-          header="Fecha" 
-          sortable 
-          filter 
-          filterPlaceholder="Buscar por fecha"
-          body={dateBodyTemplate}
-          showFilterMenu={false}
-          style={{ minWidth: '150px' }}
-        />
-        <Column 
-          body={actionBodyTemplate} 
-          exportable={false} 
-          style={{ minWidth: '100px', textAlign: 'center' }}
-        />
-      </DataTable>
+      
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden w-full" style={{ width: '100%' }}>
+        {/* Contenedor adicional para forzar el ancho */}
+        <div style={{ width: '100%', overflowX: 'hidden' }}>
+          <DataTable
+            ref={dt}
+            value={eventos}
+            selection={selectedEvento}
+            onSelectionChange={(e) => setSelectedEvento(e.value)}
+            dataKey="id_evento"
+            paginator
+            rows={10}
+            filters={filters}
+            filterDisplay="row"
+            loading={loading}
+            responsiveLayout="scroll"
+            globalFilterFields={['municipalidad.nombre', 'contacto.nombre_completo', 'tipo_acercamiento', 'lugar', 'fecha']}
+            header={renderHeader()}
+            emptyMessage="No se encontraron eventos"
+            className="p-datatable-sm w-full"
+            showGridlines
+            removableSort
+            resizableColumns
+            columnResizeMode="expand"
+            style={{ width: '100%' }}
+            tableStyle={{ width: '100%', tableLayout: 'fixed' }}
+          >
+            <Column 
+              field="municipalidad.nombre" 
+              header="Municipalidad" 
+              sortable 
+              filter 
+              filterPlaceholder="Buscar por municipalidad"
+              showFilterMenu={false}
+              style={{ minWidth: '200px' }}
+            />
+            <Column 
+              field="contacto.nombre_completo" 
+              header="Contacto" 
+              sortable 
+              filter 
+              filterPlaceholder="Buscar por contacto"
+              showFilterMenu={false}
+              style={{ minWidth: '200px' }}
+            />
+            <Column 
+              field="tipo_acercamiento" 
+              header="Tipo de Acercamiento" 
+              sortable 
+              filter 
+              filterPlaceholder="Buscar por tipo"
+              showFilterMenu={false}
+              style={{ minWidth: '200px' }}
+            />
+            <Column 
+              field="lugar" 
+              header="Lugar" 
+              sortable 
+              filter 
+              filterPlaceholder="Buscar por lugar"
+              showFilterMenu={false}
+              style={{ minWidth: '150px' }}
+            />
+            <Column 
+              field="fecha" 
+              header="Fecha" 
+              sortable 
+              filter 
+              filterPlaceholder="Buscar por fecha"
+              body={dateBodyTemplate}
+              showFilterMenu={false}
+              style={{ minWidth: '150px' }}
+            />
+            <Column 
+              body={actionBodyTemplate} 
+              exportable={false} 
+              style={{ minWidth: '100px', textAlign: 'center' }}
+            />
+          </DataTable>
+        </div>
+      </div>
 
       <Dialog
         visible={editDialogVisible || createDialogVisible}
