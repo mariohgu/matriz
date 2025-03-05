@@ -20,6 +20,7 @@ class EstadoSeguimiento extends Model
         'id_tipo_reunion',
         'fecha',
         'estado',
+        'descripcion',
         'compromiso',
         'fecha_compromiso',
         'creado_por',

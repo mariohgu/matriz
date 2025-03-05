@@ -230,6 +230,8 @@ export default function ContactosList() {
           optionValue="id_municipalidad"
           placeholder="Seleccione una municipalidad"
           className="w-full"
+          filter
+          showClear
         />
       </div>
       <div className="field mb-4">

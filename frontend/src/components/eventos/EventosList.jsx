@@ -443,6 +443,8 @@ export default function EventosList() {
               optionValue="id_municipalidad"
               placeholder="Seleccione una municipalidad"
               className="w-full"
+              filter
+              showClear
             />
           </div>
 
@@ -460,6 +462,8 @@ export default function EventosList() {
               placeholder="Seleccione un contacto"
               className="w-full"
               disabled={!editData.id_municipalidad}
+              filter
+              showClear
             />
           </div>
 

@@ -76,3 +76,44 @@
 .p-column-filter-value {
     width: 100% !important;
 }
+
+/* Estilos para limitar el ancho de los menús desplegables */
+.p-dropdown-panel {
+    max-width: 300px !important;
+    width: auto !important;
+}
+
+.p-dropdown-items-wrapper {
+    max-width: 100% !important;
+}
+
+.p-dropdown-item {
+    white-space: normal !important;
+    word-break: break-word !important;
+    padding: 0.5rem 1rem !important;
+}
+
+/* Estilos para el diálogo de creación/edición */
+.p-dialog .p-dropdown {
+    width: 100% !important;
+}
+
+.p-dialog .p-dropdown-panel {
+    max-width: 100% !important;
+    width: auto !important;
+}
+
+/* Ajuste para los menús de filtro en modo móvil */
+@media screen and (max-width: 960px) {
+    .p-column-filter-menu-button {
+        margin-left: auto !important;
+    }
+    
+    .p-column-filter-overlay {
+        min-width: 200px !important;
+        max-width: 300px !important;
+        width: auto !important;
+        left: auto !important;
+        right: 0 !important;
+    }
+}

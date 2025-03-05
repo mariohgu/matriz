@@ -28,6 +28,7 @@ class EstadoSeguimientoController extends Controller
                 'id_tipo_reunion' => 'required|exists:tipos_reunion,id_tipo_reunion',
                 'fecha' => 'required|date',
                 'estado' => 'required',
+                'descripcion' => 'nullable',
                 'compromiso' => 'nullable',
                 'fecha_compromiso' => 'nullable|date',
             ]);
@@ -80,6 +81,7 @@ class EstadoSeguimientoController extends Controller
                 'id_tipo_reunion' => 'required|exists:tipos_reunion,id_tipo_reunion',
                 'fecha' => 'required|date',
                 'estado' => 'required',
+                'descripcion' => 'nullable',
                 'compromiso' => 'nullable',
                 'fecha_compromiso' => 'nullable|date',
             ]);
