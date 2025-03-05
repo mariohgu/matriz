@@ -36,6 +36,7 @@ export default function ContactosList() {
     cargo: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
     telefono: { value: null, matchMode: FilterMatchMode.CONTAINS },
     email: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    'municipalidad.nombre': { value: null, matchMode: FilterMatchMode.CONTAINS }
   });
 
   useEffect(() => {
@@ -345,67 +346,68 @@ export default function ContactosList() {
           <DataTable
             ref={dt}
             value={contactos}
+            filters={filters}
+            filterDisplay="row"
+            loading={loading}
             paginator
             rows={10}
             rowsPerPageOptions={[5, 10, 25, 50]}
             dataKey="id_contacto"
-            filters={filters}
-            loading={loading}
-            globalFilterFields={['nombre_completo', 'cargo', 'telefono', 'email']}
-            header={renderHeader}
+            globalFilterFields={['nombre_completo', 'cargo', 'telefono', 'email', 'municipalidad.nombre']}
             emptyMessage="No se encontraron contactos"
             className="p-datatable-responsive-demo"
             responsiveLayout="stack"
             breakpoint="960px"
             stripedRows
           >
-            <Column
-              field="nombre_completo"
-              header="Nombre Completo"
-              sortable
-              filter
+            <Column 
+              field="nombre_completo" 
+              header="Nombre Completo" 
+              sortable 
+              filter 
               filterPlaceholder="Buscar por nombre"
               className="min-w-[200px]"
               bodyClassName="p-3"
             />
-            <Column
-              field="id_municipalidad"
-              header="Municipalidad"
-              sortable
-              body={municipalidadBodyTemplate}
-              className="min-w-[200px]"
-              bodyClassName="p-3"
-            />
-            <Column
-              field="cargo"
-              header="Cargo"
-              sortable
-              filter
+            <Column 
+              field="cargo" 
+              header="Cargo" 
+              sortable 
+              filter 
               filterPlaceholder="Buscar por cargo"
               className="min-w-[150px]"
               bodyClassName="p-3"
             />
-            <Column
-              field="telefono"
-              header="Teléfono"
-              sortable
-              filter
+            <Column 
+              field="telefono" 
+              header="Teléfono" 
+              sortable 
+              filter 
               filterPlaceholder="Buscar por teléfono"
               className="min-w-[150px]"
               bodyClassName="p-3"
             />
-            <Column
-              field="email"
-              header="Email"
-              sortable
-              filter
+            <Column 
+              field="email" 
+              header="Email" 
+              sortable 
+              filter 
               filterPlaceholder="Buscar por email"
               className="min-w-[200px]"
               bodyClassName="p-3"
             />
-            <Column
-              body={actionBodyTemplate}
-              exportable={false}
+            <Column 
+              field="municipalidad.nombre" 
+              header="Municipalidad" 
+              sortable 
+              filter 
+              filterPlaceholder="Buscar por municipalidad"
+              className="min-w-[200px]"
+              bodyClassName="p-3"
+            />
+            <Column 
+              body={actionBodyTemplate} 
+              exportable={false} 
               className="min-w-[130px] text-center"
               bodyClassName="p-3"
             />
