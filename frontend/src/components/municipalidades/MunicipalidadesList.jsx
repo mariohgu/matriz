@@ -357,8 +357,6 @@ export default function MunicipalidadesList() {
                 field="nombre"
                 header="Nombre"
                 sortable
-                filter
-                filterPlaceholder="Buscar por nombre"
                 className="min-w-[200px]"
                 bodyClassName="p-3"
               />
@@ -366,8 +364,6 @@ export default function MunicipalidadesList() {
                 field="region"
                 header="Región"
                 sortable
-                filter
-                filterPlaceholder="Buscar por región"
                 className="min-w-[150px]"
                 bodyClassName="p-3"
               />
@@ -375,8 +371,6 @@ export default function MunicipalidadesList() {
                 field="departamento"
                 header="Departamento"
                 sortable
-                filter
-                filterPlaceholder="Buscar por departamento"
                 className="min-w-[150px]"
                 bodyClassName="p-3"
               />
@@ -384,8 +378,6 @@ export default function MunicipalidadesList() {
                 field="provincia"
                 header="Provincia"
                 sortable
-                filter
-                filterPlaceholder="Buscar por provincia"
                 className="min-w-[150px]"
                 bodyClassName="p-3"
               />
@@ -393,8 +385,6 @@ export default function MunicipalidadesList() {
                 field="distrito"
                 header="Distrito"
                 sortable
-                filter
-                filterPlaceholder="Buscar por distrito"
                 className="min-w-[150px]"
                 bodyClassName="p-3"
               />
@@ -402,8 +392,6 @@ export default function MunicipalidadesList() {
                 field="ubigeo"
                 header="Ubigeo"
                 sortable
-                filter
-                filterPlaceholder="Buscar por ubigeo"
                 className="min-w-[120px]"
                 bodyClassName="p-3"
               />

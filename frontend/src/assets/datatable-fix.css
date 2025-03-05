@@ -28,3 +28,51 @@
 .p-datatable-table.p-datatable-sm {
   min-width: 100% !important;
 }
+
+/* Estilos para mejorar la apariencia del menú de filtros */
+.p-column-filter-menu {
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    padding: 10px !important;
+}
+
+.p-column-filter-menu .p-column-filter-row {
+    padding: 8px !important;
+}
+
+.p-column-filter-menu-button {
+    border-radius: 4px !important;
+}
+
+.p-column-filter-overlay {
+    background-color: #ffffff !important;
+    border: 1px solid #e6e6e6 !important;
+    width: 250px !important;
+    z-index: 1000 !important;
+}
+
+.p-column-filter-buttonbar {
+    padding: 10px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    border-top: 1px solid #f0f0f0 !important;
+    margin-top: 8px !important;
+}
+
+.p-column-filter-buttonbar button {
+    font-weight: 500 !important;
+    padding: 0.5rem 1rem !important;
+}
+
+.p-column-filter-constraint {
+    margin-bottom: 8px !important;
+}
+
+.p-column-filter-matchmode-dropdown {
+    width: 100% !important;
+    margin-bottom: 8px !important;
+}
+
+.p-column-filter-value {
+    width: 100% !important;
+}
