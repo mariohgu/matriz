@@ -7,6 +7,7 @@ import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { FilterMatchMode } from 'primereact/api';
 import axios from 'axios';
+import { ADDRESS } from '../../utils.jsx';
 
 export default function MunicipalidadesList() {
   const [municipalidades, setMunicipalidades] = useState([]);
@@ -27,7 +28,7 @@ export default function MunicipalidadesList() {
   const [loading, setLoading] = useState(false);
   const toast = useRef(null);
   const dt = useRef(null);
-  const address = "http://127.0.0.1:8000/";
+  //const address = "http://127.0.0.1:8000/";
 
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -46,7 +47,7 @@ export default function MunicipalidadesList() {
   const loadMunicipalidades = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${address}api/municipalidades`);
+      const response = await axios.get(`${ADDRESS}api/municipalidades`);
       setMunicipalidades(response.data || []);
     } catch (error) {
       console.error('Error al cargar municipalidades:', error);
@@ -72,7 +73,7 @@ export default function MunicipalidadesList() {
   const handleSave = async () => {
     try {
       if (editData.id_municipalidad) {
-        await axios.put(`${address}api/municipalidades/${editData.id_municipalidad}`, editData);
+        await axios.put(`${ADDRESS}api/municipalidades/${editData.id_municipalidad}`, editData);
         toast.current.show({
           severity: 'success',
           summary: 'Éxito',
@@ -80,7 +81,7 @@ export default function MunicipalidadesList() {
           life: 3000
         });
       } else {
-        await axios.post(`${address}api/municipalidades`, editData);
+        await axios.post(`${ADDRESS}api/municipalidades`, editData);
         toast.current.show({
           severity: 'success',
           summary: 'Éxito',
@@ -113,7 +114,7 @@ export default function MunicipalidadesList() {
 
   const confirmDelete = async (rowData) => {
     try {
-      await axios.delete(`${address}api/municipalidades/${rowData.id_municipalidad}`);
+      await axios.delete(`${ADDRESS}api/municipalidades/${rowData.id_municipalidad}`);
       toast.current.show({
         severity: 'success',
         summary: 'Éxito',
@@ -330,85 +331,90 @@ export default function MunicipalidadesList() {
       <div className="max-w-[1400px] mx-auto">
         <Toast ref={toast} />
         
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <DataTable
-            ref={dt}
-            value={municipalidades}
-            paginator
-            rows={10}
-            rowsPerPageOptions={[5, 10, 25, 50]}
-            dataKey="id_municipalidad"
-            filters={filters}
-            loading={loading}
-            globalFilterFields={['nombre', 'region', 'departamento', 'provincia', 'distrito', 'ubigeo']}
-            header={renderHeader}
-            emptyMessage="No se encontraron municipalidades"
-            className="p-datatable-responsive-demo"
-            responsiveLayout="stack"
-            breakpoint="960px"
-            stripedRows
-          >
-            <Column
-              field="nombre"
-              header="Nombre"
-              sortable
-              filter
-              filterPlaceholder="Buscar por nombre"
-              className="min-w-[200px]"
-              bodyClassName="p-3"
-            />
-            <Column
-              field="region"
-              header="Región"
-              sortable
-              filter
-              filterPlaceholder="Buscar por región"
-              className="min-w-[150px]"
-              bodyClassName="p-3"
-            />
-            <Column
-              field="departamento"
-              header="Departamento"
-              sortable
-              filter
-              filterPlaceholder="Buscar por departamento"
-              className="min-w-[150px]"
-              bodyClassName="p-3"
-            />
-            <Column
-              field="provincia"
-              header="Provincia"
-              sortable
-              filter
-              filterPlaceholder="Buscar por provincia"
-              className="min-w-[150px]"
-              bodyClassName="p-3"
-            />
-            <Column
-              field="distrito"
-              header="Distrito"
-              sortable
-              filter
-              filterPlaceholder="Buscar por distrito"
-              className="min-w-[150px]"
-              bodyClassName="p-3"
-            />
-            <Column
-              field="ubigeo"
-              header="Ubigeo"
-              sortable
-              filter
-              filterPlaceholder="Buscar por ubigeo"
-              className="min-w-[120px]"
-              bodyClassName="p-3"
-            />
-            <Column
-              body={actionBodyTemplate}
-              exportable={false}
-              className="min-w-[130px] text-center"
-              bodyClassName="p-3"
-            />
-          </DataTable>
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden w-full" style={{ width: '100%' }}>
+          {/* Contenedor adicional para forzar el ancho */}
+          <div style={{ width: '100%', overflowX: 'hidden' }}>
+            <DataTable
+              ref={dt}
+              value={municipalidades}
+              paginator
+              rows={10}
+              rowsPerPageOptions={[5, 10, 25, 50]}
+              dataKey="id_municipalidad"
+              filters={filters}
+              loading={loading}
+              globalFilterFields={['nombre', 'region', 'departamento', 'provincia', 'distrito', 'ubigeo']}
+              header={renderHeader}
+              emptyMessage="No se encontraron municipalidades"
+              className="p-datatable-responsive-demo w-full"
+              responsiveLayout="stack"
+              breakpoint="960px"
+              stripedRows
+              style={{ width: '100%' }}
+              tableStyle={{ width: '100%', tableLayout: 'fixed' }}
+            >
+              <Column
+                field="nombre"
+                header="Nombre"
+                sortable
+                filter
+                filterPlaceholder="Buscar por nombre"
+                className="min-w-[200px]"
+                bodyClassName="p-3"
+              />
+              <Column
+                field="region"
+                header="Región"
+                sortable
+                filter
+                filterPlaceholder="Buscar por región"
+                className="min-w-[150px]"
+                bodyClassName="p-3"
+              />
+              <Column
+                field="departamento"
+                header="Departamento"
+                sortable
+                filter
+                filterPlaceholder="Buscar por departamento"
+                className="min-w-[150px]"
+                bodyClassName="p-3"
+              />
+              <Column
+                field="provincia"
+                header="Provincia"
+                sortable
+                filter
+                filterPlaceholder="Buscar por provincia"
+                className="min-w-[150px]"
+                bodyClassName="p-3"
+              />
+              <Column
+                field="distrito"
+                header="Distrito"
+                sortable
+                filter
+                filterPlaceholder="Buscar por distrito"
+                className="min-w-[150px]"
+                bodyClassName="p-3"
+              />
+              <Column
+                field="ubigeo"
+                header="Ubigeo"
+                sortable
+                filter
+                filterPlaceholder="Buscar por ubigeo"
+                className="min-w-[120px]"
+                bodyClassName="p-3"
+              />
+              <Column
+                body={actionBodyTemplate}
+                exportable={false}
+                className="min-w-[130px] text-center"
+                bodyClassName="p-3"
+              />
+            </DataTable>
+          </div>
         </div>
 
         <Dialog

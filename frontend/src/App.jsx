@@ -4,6 +4,8 @@ import LoginScreen from './components/LoginScreen';
 import Dashboard from './pages/Dashboard';
 import MunicipalidadesList from './components/municipalidades/MunicipalidadesList';
 import ContactosList from './components/contactos/ContactosList';
+import TipoReunionList from './components/tipos-reunion/TipoReunionList';
+import EventosList from './components/eventos/EventosList';
 import Sidebar from './components/common/Sidebar';
 import Header from './components/common/Header';
 import { AuthProvider } from './context/AuthContext';
@@ -20,8 +22,8 @@ function MainLayout({ children }) {
       <Sidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
       <div className="flex-1 flex flex-col">
         <Header onMenuClick={toggleSidebar} />
-        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-x-auto">
-          <div className="container mx-auto">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-x-auto w-full">
+          <div className="container mx-auto w-full">
             {children}
           </div>
         </main>
@@ -55,6 +57,23 @@ function AppRoutes() {
         element={
           <MainLayout>
             <ContactosList />
+          </MainLayout>
+        }
+      />
+      <Route
+        path="/tipos-reunion"
+        element={
+          <MainLayout>
+            <TipoReunionList />
+          </MainLayout>
+        }
+      />
+
+      <Route
+        path="/eventos"
+        element={
+          <MainLayout>
+            <EventosList />
           </MainLayout>
         }
       />

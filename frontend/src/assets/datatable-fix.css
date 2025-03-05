@@ -1,0 +1,30 @@
+/* Estilos para forzar que las tablas DataTable de PrimeReact ocupen todo el ancho disponible */
+
+.p-datatable {
+  width: 100% !important;
+}
+
+.p-datatable-wrapper {
+  width: 100% !important;
+}
+
+.p-datatable-table {
+  width: 100% !important;
+  table-layout: fixed !important;
+}
+
+.p-datatable .p-datatable-thead > tr > th,
+.p-datatable .p-datatable-tbody > tr > td {
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+/* Aseguramos que todos los contenedores tengan el ancho completo */
+.p-component {
+  width: 100% !important;
+}
+
+/* Estilo específico para cuando hay pocas columnas */
+.p-datatable-table.p-datatable-sm {
+  min-width: 100% !important;
+}

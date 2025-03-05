@@ -8,6 +8,7 @@ import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
 import { FilterMatchMode } from 'primereact/api';
 import axios from 'axios';
+import { ADDRESS } from '../../utils.jsx';
 
 export default function ContactosList() {
   const [contactos, setContactos] = useState([]);
@@ -28,7 +29,7 @@ export default function ContactosList() {
   const [loading, setLoading] = useState(false);
   const toast = useRef(null);
   const dt = useRef(null);
-  const address = "http://127.0.0.1:8000/";
+  //const address = "http://127.0.0.1:8000/";
 
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
@@ -47,7 +48,7 @@ export default function ContactosList() {
   const loadContactos = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${address}api/contactos`);
+      const response = await axios.get(`${ADDRESS}api/contactos`);
       setContactos(response.data || []);
     } catch (error) {
       console.error('Error al cargar contactos:', error);
@@ -64,7 +65,7 @@ export default function ContactosList() {
 
   const loadMunicipalidades = async () => {
     try {
-      const response = await axios.get(`${address}api/municipalidades`);
+      const response = await axios.get(`${ADDRESS}api/municipalidades`);
       setMunicipalidades(response.data || []);
     } catch (error) {
       console.error('Error al cargar municipalidades:', error);
@@ -88,7 +89,7 @@ export default function ContactosList() {
   const handleSave = async () => {
     try {
       if (editData.id_contacto) {
-        await axios.put(`${address}api/contactos/${editData.id_contacto}`, editData);
+        await axios.put(`${ADDRESS}api/contactos/${editData.id_contacto}`, editData);
         toast.current.show({
           severity: 'success',
           summary: 'Éxito',
@@ -96,7 +97,7 @@ export default function ContactosList() {
           life: 3000
         });
       } else {
-        await axios.post(`${address}api/contactos`, editData);
+        await axios.post(`${ADDRESS}api/contactos`, editData);
         toast.current.show({
           severity: 'success',
           summary: 'Éxito',
@@ -128,7 +129,7 @@ export default function ContactosList() {
 
   const confirmDelete = async (rowData) => {
     try {
-      await axios.delete(`${address}api/contactos/${rowData.id_contacto}`);
+      await axios.delete(`${ADDRESS}api/contactos/${rowData.id_contacto}`);
       toast.current.show({
         severity: 'success',
         summary: 'Éxito',
@@ -346,70 +347,82 @@ export default function ContactosList() {
           <DataTable
             ref={dt}
             value={contactos}
-            filters={filters}
-            filterDisplay="row"
-            loading={loading}
+            dataKey="id_contacto"
             paginator
             rows={10}
-            rowsPerPageOptions={[5, 10, 25, 50]}
-            dataKey="id_contacto"
-            globalFilterFields={['nombre_completo', 'cargo', 'telefono', 'email', 'municipalidad.nombre']}
+            rowsPerPageOptions={[5, 10, 25]}
+            loading={loading}
+            filters={filters}
+            header={renderHeader}
             emptyMessage="No se encontraron contactos"
-            className="p-datatable-responsive-demo"
-            responsiveLayout="stack"
-            breakpoint="960px"
-            stripedRows
+            className="p-datatable-sm"
+            showGridlines
+            removableSort
+            filterDisplay="row"
+            globalFilterFields={['nombre_completo', 'cargo', 'telefono', 'email', 'municipalidad.nombre']}
+            filterIcon="pi pi-filter"
+            filterIconClassName="text-gray-600 hover:text-blue-500"
           >
-            <Column 
-              field="nombre_completo" 
-              header="Nombre Completo" 
-              sortable 
-              filter 
+            <Column
+              field="nombre_completo"
+              header="Nombre"
+              sortable
+              filter
               filterPlaceholder="Buscar por nombre"
               className="min-w-[200px]"
-              bodyClassName="p-3"
+              filterClassName="p-column-filter p-fluid p-column-filter-element"
+              filterClearIcon="pi pi-times"
+              filterApplyIcon="pi pi-check"
             />
-            <Column 
-              field="cargo" 
-              header="Cargo" 
-              sortable 
-              filter 
+            <Column
+              field="cargo"
+              header="Cargo"
+              sortable
+              filter
               filterPlaceholder="Buscar por cargo"
               className="min-w-[150px]"
-              bodyClassName="p-3"
+              filterClassName="p-column-filter p-fluid p-column-filter-element"
+              filterClearIcon="pi pi-times"
+              filterApplyIcon="pi pi-check"
             />
-            <Column 
-              field="telefono" 
-              header="Teléfono" 
-              sortable 
-              filter 
+            <Column
+              field="telefono"
+              header="Teléfono"
+              sortable
+              filter
               filterPlaceholder="Buscar por teléfono"
-              className="min-w-[150px]"
-              bodyClassName="p-3"
+              className="min-w-[120px]"
+              filterClassName="p-column-filter p-fluid p-column-filter-element"
+              filterClearIcon="pi pi-times"
+              filterApplyIcon="pi pi-check"
             />
-            <Column 
-              field="email" 
-              header="Email" 
-              sortable 
-              filter 
+            <Column
+              field="email"
+              header="Email"
+              sortable
+              filter
               filterPlaceholder="Buscar por email"
               className="min-w-[200px]"
-              bodyClassName="p-3"
+              filterClassName="p-column-filter p-fluid p-column-filter-element"
+              filterClearIcon="pi pi-times"
+              filterApplyIcon="pi pi-check"
             />
-            <Column 
-              field="municipalidad.nombre" 
-              header="Municipalidad" 
-              sortable 
-              filter 
+            <Column
+              field="municipalidad.nombre"
+              header="Municipalidad"
+              sortable
+              filter
               filterPlaceholder="Buscar por municipalidad"
               className="min-w-[200px]"
-              bodyClassName="p-3"
+              filterClassName="p-column-filter p-fluid p-column-filter-element"
+              filterClearIcon="pi pi-times"
+              filterApplyIcon="pi pi-check"
             />
-            <Column 
-              body={actionBodyTemplate} 
-              exportable={false} 
-              className="min-w-[130px] text-center"
-              bodyClassName="p-3"
+            <Column
+              body={actionBodyTemplate}
+              exportable={false}
+              style={{ minWidth: '8rem' }}
+              className="text-center"
             />
           </DataTable>
         </div>

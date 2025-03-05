@@ -37,6 +37,7 @@ export default function Sidebar({ isOpen, onToggle }) {
       subItems: [
         { href: "/municipalidades", title: "Municipalidades" },
         { href: "/contactos", title: "Contactos" },
+        { href: "/tipos-reunion", title: "Tipos de Reunión" },
       ]
     },
     {
@@ -45,7 +46,6 @@ export default function Sidebar({ isOpen, onToggle }) {
       icon: <FaCalendarAlt />,
       subItems: [
         { href: "/eventos", title: "Lista" },
-        { href: "/eventos/calendario", title: "Calendario" },
       ]
     },
     {
