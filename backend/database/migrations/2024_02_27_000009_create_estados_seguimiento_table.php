@@ -16,6 +16,7 @@ return new class extends Migration
             $table->date('fecha');
             $table->text('estado');
             $table->text('compromiso')->nullable();
+            $table->date('fecha_compromiso')->nullable();
             $table->foreignId('creado_por')->constrained('users', 'id');
             $table->foreignId('actualizado_por')->constrained('users', 'id');
             $table->timestamps();

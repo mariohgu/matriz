@@ -21,12 +21,14 @@ class EstadoSeguimiento extends Model
         'fecha',
         'estado',
         'compromiso',
+        'fecha_compromiso',
         'creado_por',
         'actualizado_por'
     ];
 
     protected $casts = [
-        'fecha' => 'date'
+        'fecha' => 'date',
+        'fecha_compromiso' => 'date'
     ];
 
     // Relación con Evento

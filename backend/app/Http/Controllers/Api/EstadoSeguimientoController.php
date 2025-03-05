@@ -29,6 +29,7 @@ class EstadoSeguimientoController extends Controller
                 'fecha' => 'required|date',
                 'estado' => 'required',
                 'compromiso' => 'nullable',
+                'fecha_compromiso' => 'nullable|date',
             ]);
 
             // Agregar usuario actual como creador y actualizador
@@ -80,6 +81,7 @@ class EstadoSeguimientoController extends Controller
                 'fecha' => 'required|date',
                 'estado' => 'required',
                 'compromiso' => 'nullable',
+                'fecha_compromiso' => 'nullable|date',
             ]);
 
             // Actualizar el usuario que modifica

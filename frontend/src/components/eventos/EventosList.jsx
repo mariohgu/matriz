@@ -245,8 +245,8 @@ export default function EventosList() {
             <InputText
               value={globalFilterValue}
               onChange={onGlobalFilterChange}
-              placeholder="Buscar..."
-              className="w-full"
+              placeholder="Buscar evento..."
+              className="w-full sm:w-[300px] rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent px-4 py-2"
             />
           </span>
         </div>
@@ -323,6 +323,7 @@ export default function EventosList() {
             dataKey="id_evento"
             paginator
             rows={10}
+            rowsPerPageOptions={[5, 10, 25]}
             filters={filters}
             filterDisplay="row"
             loading={loading}
@@ -336,6 +337,8 @@ export default function EventosList() {
             removableSort
             resizableColumns
             columnResizeMode="expand"
+            filterIcon="pi pi-filter"
+            filterIconClassName="text-gray-600 hover:text-blue-500"
             style={{ width: '100%' }}
             tableStyle={{ width: '100%', tableLayout: 'fixed' }}
           >
@@ -345,8 +348,10 @@ export default function EventosList() {
               sortable 
               filter 
               filterPlaceholder="Buscar por municipalidad"
-              showFilterMenu={false}
-              style={{ minWidth: '200px' }}
+              className="min-w-[200px]"
+              filterClassName="p-column-filter p-fluid p-column-filter-element"
+              filterClearIcon="pi pi-times"
+              filterApplyIcon="pi pi-check"
             />
             <Column 
               field="contacto.nombre_completo" 
@@ -354,8 +359,10 @@ export default function EventosList() {
               sortable 
               filter 
               filterPlaceholder="Buscar por contacto"
-              showFilterMenu={false}
-              style={{ minWidth: '200px' }}
+              className="min-w-[200px]"
+              filterClassName="p-column-filter p-fluid p-column-filter-element"
+              filterClearIcon="pi pi-times"
+              filterApplyIcon="pi pi-check"
             />
             <Column 
               field="tipo_acercamiento" 
@@ -363,8 +370,10 @@ export default function EventosList() {
               sortable 
               filter 
               filterPlaceholder="Buscar por tipo"
-              showFilterMenu={false}
-              style={{ minWidth: '200px' }}
+              className="min-w-[200px]"
+              filterClassName="p-column-filter p-fluid p-column-filter-element"
+              filterClearIcon="pi pi-times"
+              filterApplyIcon="pi pi-check"
             />
             <Column 
               field="lugar" 
@@ -372,8 +381,10 @@ export default function EventosList() {
               sortable 
               filter 
               filterPlaceholder="Buscar por lugar"
-              showFilterMenu={false}
-              style={{ minWidth: '150px' }}
+              className="min-w-[150px]"
+              filterClassName="p-column-filter p-fluid p-column-filter-element"
+              filterClearIcon="pi pi-times"
+              filterApplyIcon="pi pi-check"
             />
             <Column 
               field="fecha" 
@@ -382,13 +393,17 @@ export default function EventosList() {
               filter 
               filterPlaceholder="Buscar por fecha"
               body={dateBodyTemplate}
-              showFilterMenu={false}
-              style={{ minWidth: '150px' }}
+              className="min-w-[150px]"
+              filterClassName="p-column-filter p-fluid p-column-filter-element"
+              filterClearIcon="pi pi-times"
+              filterApplyIcon="pi pi-check"
             />
             <Column 
               body={actionBodyTemplate} 
               exportable={false} 
-              style={{ minWidth: '100px', textAlign: 'center' }}
+              className="min-w-[100px]"
+              headerClassName="text-center"
+              bodyClassName="text-center"
             />
           </DataTable>
         </div>
