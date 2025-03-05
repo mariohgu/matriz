@@ -235,11 +235,12 @@ export default function TipoReunionList() {
             filters={filters}
             filterDisplay="row"
             loading={loading}
-            responsiveLayout="scroll"
+            responsiveLayout="stack"
+            breakpoint="960px"
             globalFilterFields={['descripcion']}
             header={renderHeader()}
             emptyMessage="No se encontraron tipos de reunión"
-            className="p-datatable-sm w-full"
+            className="p-datatable-responsive-demo w-full"
             showGridlines
             removableSort
             resizableColumns

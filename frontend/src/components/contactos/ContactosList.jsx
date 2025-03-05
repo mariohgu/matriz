@@ -357,7 +357,9 @@ export default function ContactosList() {
               filters={filters}
               header={renderHeader}
               emptyMessage="No se encontraron contactos"
-              className="p-datatable-sm w-full"
+              className="p-datatable-responsive-demo w-full"
+              responsiveLayout="stack"
+              breakpoint="960px"
               showGridlines
               removableSort
               filterDisplay="row"

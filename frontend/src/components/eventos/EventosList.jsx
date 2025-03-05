@@ -326,11 +326,12 @@ export default function EventosList() {
             filters={filters}
             filterDisplay="row"
             loading={loading}
-            responsiveLayout="scroll"
+            responsiveLayout="stack"
+            breakpoint="960px"
             globalFilterFields={['municipalidad.nombre', 'contacto.nombre_completo', 'tipo_acercamiento', 'lugar', 'fecha']}
             header={renderHeader()}
             emptyMessage="No se encontraron eventos"
-            className="p-datatable-sm w-full"
+            className="p-datatable-responsive-demo w-full"
             showGridlines
             removableSort
             resizableColumns
