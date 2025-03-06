@@ -53,7 +53,7 @@ export default function Sidebar({ isOpen, onToggle }) {
       title: "Seguimiento",
       icon: <FaClipboardList />,
       subItems: [
-        { href: "/seguimiento", title: "Estado" },
+        { href: "/estado-seguimiento", title: "Lista" },
         { href: "/seguimiento/historial", title: "Historial" },
       ]
     },

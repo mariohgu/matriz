@@ -6,6 +6,7 @@ import MunicipalidadesList from './components/municipalidades/MunicipalidadesLis
 import ContactosList from './components/contactos/ContactosList';
 import TipoReunionList from './components/tipos-reunion/TipoReunionList';
 import EventosList from './components/eventos/EventosList';
+import EstadoSeguimientosList from './components/estado-seguimiento/EstadoSeguimientosList';
 import Sidebar from './components/common/Sidebar';
 import Header from './components/common/Header';
 import { AuthProvider } from './context/AuthContext';
@@ -74,6 +75,14 @@ function AppRoutes() {
         element={
           <MainLayout>
             <EventosList />
+          </MainLayout>
+        }
+      />
+      <Route
+        path="/estado-seguimiento"
+        element={
+          <MainLayout>
+            <EstadoSeguimientosList />
           </MainLayout>
         }
       />
