@@ -6,10 +6,10 @@ import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { Dropdown } from 'primereact/dropdown';
-import { Calendar } from 'primereact/calendar';
 import { FilterMatchMode, addLocale } from 'primereact/api';
 import axios from 'axios';
 import { ADDRESS } from '../../utils.jsx';
+import { Fragment } from 'react';
 
 // Configuración del locale español
 addLocale('es', {
@@ -308,6 +308,182 @@ export default function EventosList() {
     </div>
   );
 
+  // Componente de calendario personalizado con Tailwind CSS
+  const TailwindCalendar = ({ selectedDate, onChange, id, className }) => {
+    const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
+    const [isOpen, setIsOpen] = useState(false);
+    const calendarRef = useRef(null);
+
+    const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const months = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+          setIsOpen(false);
+        }
+      };
+      
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, []);
+
+    const getDaysInMonth = (year, month) => {
+      return new Date(year, month + 1, 0).getDate();
+    };
+
+    const getFirstDayOfMonth = (year, month) => {
+      return new Date(year, month, 1).getDay();
+    };
+
+    const handleDateClick = (day) => {
+      const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+      onChange({ value: newDate });
+      setIsOpen(false);
+    };
+
+    const handlePrevMonth = () => {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    };
+
+    const handleNextMonth = () => {
+      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    };
+
+    const formatDate = (date) => {
+      if (!date) return '';
+      return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+    };
+
+    const renderCalendarDays = () => {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const daysInMonth = getDaysInMonth(year, month);
+      const firstDay = getFirstDayOfMonth(year, month);
+      
+      const days = [];
+      
+      // Agregar días vacíos al principio del mes
+      for (let i = 0; i < firstDay; i++) {
+        days.push(<div key={`empty-${i}`} className="h-8 w-8"></div>);
+      }
+      
+      // Agregar los días del mes
+      for (let day = 1; day <= daysInMonth; day++) {
+        const isSelected = selectedDate && 
+                          selectedDate.getDate() === day && 
+                          selectedDate.getMonth() === month && 
+                          selectedDate.getFullYear() === year;
+        
+        const isToday = new Date().getDate() === day && 
+                        new Date().getMonth() === month && 
+                        new Date().getFullYear() === year;
+        
+        days.push(
+          <button
+            key={day}
+            onClick={() => handleDateClick(day)}
+            className={`h-8 w-8 rounded-full flex items-center justify-center text-sm transition-colors
+                      ${isSelected ? 'bg-blue-500 text-white' : ''}
+                      ${isToday && !isSelected ? 'border border-blue-500 text-blue-500' : ''}
+                      ${!isSelected && !isToday ? 'hover:bg-gray-100' : ''}`}
+          >
+            {day}
+          </button>
+        );
+      }
+      
+      return days;
+    };
+
+    return (
+      <div className={`relative ${className}`} ref={calendarRef}>
+        <div 
+          className="flex items-center border border-gray-300 rounded-md p-2 cursor-pointer"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <input
+            id={id}
+            type="text"
+            className="flex-grow outline-none cursor-pointer"
+            value={formatDate(selectedDate)}
+            readOnly
+            placeholder="Seleccione una fecha"
+          />
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+          </svg>
+        </div>
+
+        {isOpen && (
+          <div className="absolute mt-1 z-50 bg-white rounded-md shadow-lg p-4 border border-gray-200 w-64">
+            <div className="flex justify-between items-center mb-4">
+              <button 
+                onClick={handlePrevMonth}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </button>
+              <div className="font-semibold">
+                {months[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </div>
+              <button 
+                onClick={handleNextMonth}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {daysOfWeek.map(day => (
+                <div key={day} className="h-8 w-8 flex items-center justify-center text-xs text-gray-500">
+                  {day}
+                </div>
+              ))}
+            </div>
+            
+            <div className="grid grid-cols-7 gap-1">
+              {renderCalendarDays()}
+            </div>
+            
+            <div className="mt-4 flex justify-between">
+              <button 
+                onClick={() => {
+                  const today = new Date();
+                  setCurrentDate(today);
+                  onChange({ value: today });
+                  setIsOpen(false);
+                }}
+                className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Hoy
+              </button>
+              <button 
+                onClick={() => {
+                  onChange({ value: null });
+                  setIsOpen(false);
+                }}
+                className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+              >
+                Limpiar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="card w-full p-4">
       <Toast ref={toast} />
@@ -483,21 +659,11 @@ export default function EventosList() {
             <label htmlFor="fecha" className="block text-sm font-medium text-gray-700 mb-1">
               Fecha
             </label>
-            <Calendar
+            <TailwindCalendar
               id="fecha"
-              value={editData.fecha ? new Date(editData.fecha) : null}
+              selectedDate={editData.fecha ? new Date(editData.fecha) : null}
               onChange={(e) => setEditData(prev => ({ ...prev, fecha: e.value }))}
-              dateFormat="dd/mm/yy"
-              showIcon
-              locale="es"
               className="w-full"
-              showButtonBar
-              panelClassName="p-4 bg-white rounded-lg shadow-lg border border-gray-200"
-              inputClassName="w-full p-2 border rounded-md"
-              nextIcon="pi pi-chevron-right"
-              prevIcon="pi pi-chevron-left"
-              todayButtonClassName="px-3 py-1.5 bg-blue-500 text-white rounded hover:bg-blue-600 mr-2"
-              clearButtonClassName="px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
             />
           </div>
 
