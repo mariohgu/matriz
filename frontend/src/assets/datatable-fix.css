@@ -180,3 +180,69 @@ body > .p-datepicker {
     box-shadow: 0 0 0 1px #93c5fd !important;
     border-color: #3b82f6 !important;
 }
+
+/* Estilos para mejorar la apariencia del diálogo de confirmación de eliminación */
+.delete-confirmation-dialog {
+  max-width: 400px !important;
+  margin: auto !important;
+}
+
+.delete-confirmation-dialog .p-dialog-content {
+  padding: 1rem 1.5rem !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  background-color: #ffffff !important;
+}
+
+.delete-confirmation-dialog .p-dialog-footer {
+  padding: 0.5rem 1.5rem 1.25rem !important;
+  border-top: none !important;
+  text-align: center !important;
+  display: flex !important;
+  justify-content: center !important;
+  background-color: #ffffff !important;
+}
+
+.delete-confirmation-dialog .p-dialog-header {
+  padding: 1rem 1.5rem 0 !important;
+  background-color: #ffffff !important;
+  color: #374151 !important;
+  font-weight: 600 !important;
+  border-bottom: none !important;
+  border-top-left-radius: 6px !important;
+  border-top-right-radius: 6px !important;
+}
+
+.delete-confirmation-dialog .p-dialog-header-icon {
+  color: #6b7280 !important;
+  margin-right: -0.5rem !important;
+}
+
+.delete-confirmation-dialog .p-dialog-header-icon:hover {
+  background-color: #f3f4f6 !important;
+  color: #4b5563 !important;
+}
+
+.delete-confirmation-dialog .p-button.p-button-text {
+  background-color: #f3f4f6 !important;
+  border: 1px solid #e5e7eb !important;
+  color: #4b5563 !important;
+  padding: 0.5rem 1rem !important;
+  font-weight: 500 !important;
+}
+
+.delete-confirmation-dialog .p-button.p-button-text:hover {
+  background-color: #e5e7eb !important;
+  color: #1f2937 !important;
+}
+
+.delete-confirmation-dialog .p-button.bg-red-500 {
+  border: none !important;
+  font-weight: 500 !important;
+  padding: 0.5rem 1rem !important;
+}
+
+.delete-confirmation-dialog .p-dialog-mask {
+  background-color: rgba(0, 0, 0, 0.4) !important;
+}
