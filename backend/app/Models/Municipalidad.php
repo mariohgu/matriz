@@ -19,6 +19,7 @@ class Municipalidad extends Model
         'departamento',
         'provincia',
         'distrito',
-        'region'
+        'region',
+        'nivel'
     ];
 }

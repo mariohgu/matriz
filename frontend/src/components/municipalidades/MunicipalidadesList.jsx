@@ -18,6 +18,7 @@ export default function MunicipalidadesList() {
     provincia: '',
     distrito: '',
     ubigeo: '',
+    nivel: ''
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,7 +33,8 @@ export default function MunicipalidadesList() {
     departamento: '',
     provincia: '',
     distrito: '',
-    ubigeo: ''
+    ubigeo: '',
+    nivel: ''
   });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -152,7 +154,8 @@ export default function MunicipalidadesList() {
       municipalidad.departamento,
       municipalidad.provincia,
       municipalidad.distrito,
-      municipalidad.ubigeo
+      municipalidad.ubigeo,
+      municipalidad.nivel
     ];
     
     const matchesSearch = searchQuery === '' || 
@@ -179,8 +182,11 @@ export default function MunicipalidadesList() {
     const matchesUbigeo = columnFilters.ubigeo === '' || 
       (municipalidad.ubigeo && municipalidad.ubigeo.toLowerCase().includes(columnFilters.ubigeo.toLowerCase()));
     
+    const matchesNivel = columnFilters.nivel === '' || 
+      (municipalidad.nivel && municipalidad.nivel.toLowerCase().includes(columnFilters.nivel.toLowerCase()));
+    
     return matchesSearch && matchesNombre && matchesRegion && matchesDepartamento && 
-           matchesProvincia && matchesDistrito && matchesUbigeo;
+           matchesProvincia && matchesDistrito && matchesUbigeo && matchesNivel;
   });
 
   // Pagination
@@ -284,6 +290,30 @@ export default function MunicipalidadesList() {
                       type="text"
                       value={columnFilters.nombre}
                       onChange={(e) => setColumnFilters({...columnFilters, nombre: e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              <th 
+                scope="col" 
+                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : 'w-1/6'}`}
+                onClick={() => handleSort('nivel')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Nivel</span>
+                  {sortField === 'nivel' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters.nivel}
+                      onChange={(e) => setColumnFilters({...columnFilters, nivel: e.target.value})}
                       placeholder="Filtrar..."
                       className="w-full px-2 py-1 text-xs border rounded"
                       onClick={(e) => e.stopPropagation()}
@@ -439,6 +469,7 @@ export default function MunicipalidadesList() {
               paginatedData.map((municipalidad) => (
                 <tr key={municipalidad.id_municipalidad} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 break-words">{municipalidad.nombre}</td>
+                  <td className={`px-6 py-4 break-words ${isMobile ? 'hidden md:table-cell' : ''}`}>{municipalidad.nivel}</td>
                   <td className={`px-6 py-4 break-words ${isMobile ? 'hidden md:table-cell' : ''}`}>{municipalidad.region}</td>
                   <td className={`px-6 py-4 break-words ${isMobile ? 'hidden md:table-cell' : ''}`}>{municipalidad.departamento}</td>
                   <td className={`px-6 py-4 break-words ${isMobile ? 'hidden md:table-cell' : ''}`}>{municipalidad.provincia}</td>
@@ -651,6 +682,10 @@ export default function MunicipalidadesList() {
                     <p className="mt-1 text-sm text-gray-900">{selectedMunicipalidad.nombre}</p>
                   </div>
                   <div>
+                    <p className="text-sm font-medium text-gray-500">Nivel</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedMunicipalidad.nivel}</p>
+                  </div>
+                  <div>
                     <p className="text-sm font-medium text-gray-500">Región</p>
                     <p className="mt-1 text-sm text-gray-900">{selectedMunicipalidad.region}</p>
                   </div>
@@ -727,6 +762,22 @@ export default function MunicipalidadesList() {
                       required
                     />
                   </div>
+                  <div>
+                  <label htmlFor="nivel" className="block text-sm font-medium text-gray-700">
+                    Nivel
+                  </label>
+                  <select
+                    id="nivel"
+                    value={editData.nivel}
+                    onChange={(e) => setEditData({ ...editData, nivel: e.target.value })}
+                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Seleccionar nivel</option>
+                    <option value="GL">GL</option>
+                    <option value="GR">GR</option>
+                    <option value="GP">GP</option>
+                  </select>
+                </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="region" className="block text-sm font-medium text-gray-700">
