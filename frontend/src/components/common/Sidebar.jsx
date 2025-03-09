@@ -37,6 +37,7 @@ export default function Sidebar({ isOpen, onToggle }) {
       subItems: [
         { href: "/municipalidades", title: "Municipalidades" },
         { href: "/oficios", title: "Oficios" },
+        { href: "/convenios", title: "Convenios" },
         { href: "/contactos", title: "Contactos" },
         { href: "/tipos-reunion", title: "Tipos de Reunión" },
       ]
