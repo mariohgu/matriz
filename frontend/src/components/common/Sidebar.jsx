@@ -36,6 +36,7 @@ export default function Sidebar({ isOpen, onToggle }) {
       icon: <FaBuilding />,
       subItems: [
         { href: "/municipalidades", title: "Municipalidades" },
+        { href: "/oficios", title: "Oficios" },
         { href: "/contactos", title: "Contactos" },
         { href: "/tipos-reunion", title: "Tipos de Reunión" },
       ]

@@ -1,18 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
-import { Toast } from 'primereact/toast';
-import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
-import { Dropdown } from 'primereact/dropdown';
-import { FilterMatchMode } from 'primereact/api';
-import { InputTextarea } from 'primereact/inputtextarea';
-import { FiSearch, FiPlus, FiTrash2, FiEdit, FiEye } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiEye, FiChevronUp, FiChevronDown, FiPlus, FiCalendar } from 'react-icons/fi';
 import axios from 'axios';
 import { ADDRESS } from '../../utils.jsx';
-import { Menu, Transition } from '@headlessui/react';
-import { Fragment } from 'react';
 
 export default function EstadoSeguimientosList() {
   const [estadosSeguimiento, setEstadosSeguimiento] = useState([]);
@@ -35,10 +24,22 @@ export default function EstadoSeguimientosList() {
     compromiso: '',
     fecha_compromiso: null
   });
-  const [globalFilterValue, setGlobalFilterValue] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const toast = useRef(null);
-  const dt = useRef(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [sortField, setSortField] = useState('fecha');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [toastMessage, setToastMessage] = useState(null);
+  const [columnFilters, setColumnFilters] = useState({
+    'evento.municipalidad.nombre': '',
+    'contacto.nombre': '',
+    'tipoReunion.descripcion': '',
+    fecha: '',
+    estado: '',
+    fecha_compromiso: ''
+  });
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const estadoOptions = [
     { label: 'Pendiente', value: 'Pendiente' },
@@ -47,33 +48,82 @@ export default function EstadoSeguimientosList() {
     { label: 'Cancelado', value: 'Cancelado' }
   ];
 
-  const [filters, setFilters] = useState({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    'evento.municipalidad.nombre': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    'tipoReunion.nombre': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    fecha: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    estado: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    fecha_compromiso: { value: null, matchMode: FilterMatchMode.CONTAINS }
-  });
-
   useEffect(() => {
     loadEstadosSeguimiento();
     loadEventos();
     loadTiposReunion();
+    
+    // Añadir listener para detectar cambios en el tamaño de la ventana
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
+
+  // Toast message auto-hide
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => {
+        setToastMessage(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
 
   const loadEstadosSeguimiento = async () => {
     setLoading(true);
     try {
       const response = await axios.get(`${ADDRESS}api/estados-seguimiento`);
-      setEstadosSeguimiento(response.data || []);
+      const estadosSeguimientoData = response.data || [];
+      
+      // Cargar datos completos para cada estado de seguimiento
+      const estadosCompletos = await Promise.all(
+        estadosSeguimientoData.map(async (estado) => {
+          try {
+            // Cargar evento relacionado si existe
+            if (estado.id_evento) {
+              const eventoResponse = await axios.get(`${ADDRESS}api/eventos/${estado.id_evento}`);
+              estado.evento = eventoResponse.data;
+              
+              // Cargar municipalidad relacionada si existe
+              if (estado.evento && estado.evento.id_municipalidad) {
+                const municipalidadResponse = await axios.get(`${ADDRESS}api/municipalidades/${estado.evento.id_municipalidad}`);
+                estado.evento.municipalidad = municipalidadResponse.data;
+              }
+            }
+            
+            // Cargar contacto relacionado si existe
+            if (estado.id_contacto) {
+              const contactoResponse = await axios.get(`${ADDRESS}api/contactos/${estado.id_contacto}`);
+              estado.contacto = contactoResponse.data;
+            }
+            
+            // Cargar tipo de reunión relacionado si existe
+            if (estado.id_tipo_reunion) {
+              const tipoReunionResponse = await axios.get(`${ADDRESS}api/tipos-reunion/${estado.id_tipo_reunion}`);
+              estado.tipoReunion = tipoReunionResponse.data;
+            }
+            
+            return estado;
+          } catch (error) {
+            console.error(`Error al cargar datos relacionados para estado ${estado.id_estado}:`, error);
+            return estado;
+          }
+        })
+      );
+      
+      setEstadosSeguimiento(estadosCompletos);
     } catch (error) {
       console.error('Error al cargar estados de seguimiento:', error);
-      toast.current.show({
+      setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'No se pudieron cargar los estados de seguimiento',
-        life: 3000
+        detail: 'No se pudieron cargar los estados de seguimiento'
       });
     } finally {
       setLoading(false);
@@ -86,11 +136,10 @@ export default function EstadoSeguimientosList() {
       setEventos(response.data || []);
     } catch (error) {
       console.error('Error al cargar eventos:', error);
-      toast.current.show({
+      setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'No se pudieron cargar los eventos',
-        life: 3000
+        detail: 'No se pudieron cargar los eventos'
       });
     }
   };
@@ -98,15 +147,13 @@ export default function EstadoSeguimientosList() {
   const loadTiposReunion = async () => {
     try {
       const response = await axios.get(`${ADDRESS}api/tipos-reunion`);
-      console.log('Tipos de reunión cargados:', response.data);
       setTiposReunion(response.data || []);
     } catch (error) {
       console.error('Error al cargar tipos de reunión:', error);
-      toast.current.show({
+      setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'No se pudieron cargar los tipos de reunión',
-        life: 3000
+        detail: 'No se pudieron cargar los tipos de reunión'
       });
     }
   };
@@ -120,27 +167,22 @@ export default function EstadoSeguimientosList() {
       if (evento && evento.id_municipalidad) {
         // Luego cargamos los contactos de esa municipalidad
         const response = await axios.get(`${ADDRESS}api/municipalidades/${evento.id_municipalidad}/contactos`);
-        setContactos(response.data || []);
+        // Filtrar los contactos que pertenecen a la municipalidad seleccionada
+        const contactosFiltrados = response.data.filter(
+          contacto => contacto.id_municipalidad === parseInt(evento.id_municipalidad)
+        );
+        setContactos(contactosFiltrados);
       } else {
         setContactos([]);
       }
     } catch (error) {
       console.error('Error al cargar contactos:', error);
-      toast.current.show({
+      setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'No se pudieron cargar los contactos',
-        life: 3000
+        detail: 'No se pudieron cargar los contactos'
       });
     }
-  };
-
-  const onGlobalFilterChange = (e) => {
-    const value = e.target.value;
-    let _filters = { ...filters };
-    _filters['global'].value = value;
-    setFilters(_filters);
-    setGlobalFilterValue(value);
   };
 
   const handleSave = async () => {
@@ -157,27 +199,19 @@ export default function EstadoSeguimientosList() {
         dataToSend.fecha_compromiso = dataToSend.fecha_compromiso.toISOString().split('T')[0];
       }
       
-      console.log('Datos a enviar:', dataToSend);
-      
       if (dataToSend.id_estado) {
-        // Asegurarse de que el ID existe y es válido
-        const id = dataToSend.id_estado;
-        console.log('Editando estado con ID:', id);
-        
-        await axios.put(`${ADDRESS}api/estados-seguimiento/${id}`, dataToSend);
-        toast.current.show({
+        await axios.put(`${ADDRESS}api/estados-seguimiento/${dataToSend.id_estado}`, dataToSend);
+        setToastMessage({
           severity: 'success',
           summary: 'Éxito',
-          detail: 'Estado de seguimiento actualizado correctamente',
-          life: 3000
+          detail: 'Estado de seguimiento actualizado correctamente'
         });
       } else {
         await axios.post(`${ADDRESS}api/estados-seguimiento`, dataToSend);
-        toast.current.show({
+        setToastMessage({
           severity: 'success',
           summary: 'Éxito',
-          detail: 'Estado de seguimiento creado correctamente',
-          life: 3000
+          detail: 'Estado de seguimiento creado correctamente'
         });
       }
       
@@ -197,11 +231,10 @@ export default function EstadoSeguimientosList() {
       loadEstadosSeguimiento();
     } catch (error) {
       console.error('Error al guardar:', error);
-      toast.current.show({
+      setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'Error al guardar el estado de seguimiento',
-        life: 3000
+        detail: 'Error al guardar el estado de seguimiento'
       });
     }
   };
@@ -209,85 +242,362 @@ export default function EstadoSeguimientosList() {
   const confirmDelete = async (rowData) => {
     try {
       await axios.delete(`${ADDRESS}api/estados-seguimiento/${rowData.id_estado}`);
-      toast.current.show({
+      setToastMessage({
         severity: 'success',
         summary: 'Éxito',
-        detail: 'Estado de seguimiento eliminado correctamente',
-        life: 3000
+        detail: 'Estado de seguimiento eliminado correctamente'
       });
       loadEstadosSeguimiento();
     } catch (error) {
       console.error('Error al eliminar:', error);
-      toast.current.show({
+      setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'Error al eliminar el estado de seguimiento',
-        life: 3000
+        detail: 'Error al eliminar el estado de seguimiento'
       });
     }
   };
 
-  const actionBodyTemplate = (rowData) => {
+  // Función para formatear fechas
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  };
+
+  // Sorting function
+  const handleSort = (field) => {
+    const isAsc = sortField === field && sortOrder === 'asc';
+    setSortOrder(isAsc ? 'desc' : 'asc');
+    setSortField(field);
+  };
+
+  // Filtering functions
+  const filteredEstadosSeguimiento = estadosSeguimiento.filter(estado => {
+    // Filtro de búsqueda general
+    const searchFields = [
+      estado.evento?.municipalidad?.nombre,
+      estado.contacto?.nombre,
+      estado.tipoReunion?.descripcion,
+      estado.estado,
+      estado.descripcion,
+      estado.compromiso,
+      formatDate(estado.fecha),
+      formatDate(estado.fecha_compromiso)
+    ];
+    
+    const matchesSearch = searchQuery === '' || 
+      searchFields.some(field => 
+        field && field.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    
+    // Filtros por columna
+    const matchesMunicipalidad = columnFilters['evento.municipalidad.nombre'] === '' || 
+      (estado.evento?.municipalidad?.nombre && 
+       estado.evento.municipalidad.nombre.toLowerCase().includes(columnFilters['evento.municipalidad.nombre'].toLowerCase()));
+    
+    const matchesContacto = columnFilters['contacto.nombre'] === '' || 
+      (estado.contacto?.nombre && 
+       estado.contacto.nombre.toLowerCase().includes(columnFilters['contacto.nombre'].toLowerCase()));
+    
+    const matchesTipoReunion = columnFilters['tipoReunion.descripcion'] === '' || 
+      (estado.tipoReunion?.descripcion && 
+       estado.tipoReunion.descripcion.toLowerCase().includes(columnFilters['tipoReunion.descripcion'].toLowerCase()));
+    
+    const matchesFecha = columnFilters.fecha === '' || 
+      (estado.fecha && 
+       formatDate(estado.fecha).toLowerCase().includes(columnFilters.fecha.toLowerCase()));
+    
+    const matchesEstado = columnFilters.estado === '' || 
+      (estado.estado && 
+       estado.estado.toLowerCase().includes(columnFilters.estado.toLowerCase()));
+    
+    const matchesFechaCompromiso = columnFilters.fecha_compromiso === '' || 
+      (estado.fecha_compromiso && 
+       formatDate(estado.fecha_compromiso).toLowerCase().includes(columnFilters.fecha_compromiso.toLowerCase()));
+    
+    return matchesSearch && matchesMunicipalidad && matchesContacto && matchesTipoReunion && 
+           matchesFecha && matchesEstado && matchesFechaCompromiso;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredEstadosSeguimiento.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+
+  // Sorting
+  const sortedData = [...filteredEstadosSeguimiento].sort((a, b) => {
+    let aValue, bValue;
+    
+    // Manejar campos anidados
+    if (sortField.includes('.')) {
+      const parts = sortField.split('.');
+      aValue = parts.reduce((obj, key) => obj && obj[key], a) || '';
+      bValue = parts.reduce((obj, key) => obj && obj[key], b) || '';
+    } else {
+      aValue = a[sortField] || '';
+      bValue = b[sortField] || '';
+    }
+    
+    // Manejar fechas
+    if (sortField === 'fecha' || sortField === 'fecha_compromiso') {
+      return sortOrder === 'asc' 
+        ? new Date(aValue) - new Date(bValue)
+        : new Date(bValue) - new Date(aValue);
+    }
+    
+    // Manejar strings
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      return sortOrder === 'asc'
+        ? aValue.localeCompare(bValue, undefined, { numeric: true })
+        : bValue.localeCompare(aValue, undefined, { numeric: true });
+    }
+    
+    // Manejar otros tipos
+    return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
+  });
+
+  const paginatedData = sortedData.slice(startIndex, endIndex);
+
+  const goToPage = (page) => {
+    setCurrentPage(page);
+  };
+
+  // Componente de calendario personalizado con Tailwind CSS
+  const TailwindCalendar = ({ selectedDate, onChange, id, className }) => {
+    const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
+    const [isOpen, setIsOpen] = useState(false);
+    const calendarRef = useRef(null);
+    
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+          setIsOpen(false);
+        }
+      };
+      
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, []);
+    
+    const handleDateSelect = (date) => {
+      onChange(date);
+      setIsOpen(false);
+    };
+    
+    const navigateMonth = (step) => {
+      const newDate = new Date(currentDate);
+      newDate.setMonth(newDate.getMonth() + step);
+      setCurrentDate(newDate);
+    };
+    
+    const monthNames = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    
+    const renderCalendarDays = () => {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      
+      // Primer día del mes (0-6, donde 0 es domingo)
+      const firstDayOfMonth = new Date(year, month, 1).getDay();
+      
+      // Número de días en el mes
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      
+      // Crear array para los días
+      const days = [];
+      
+      // Añadir espacios vacíos para los días anteriores al primer día del mes
+      for (let i = 0; i < firstDayOfMonth; i++) {
+        days.push(
+          <div key={`empty-${i}`} className="h-8 w-8"></div>
+        );
+      }
+      
+      // Añadir los días del mes
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month, day);
+        const isToday = new Date().toDateString() === date.toDateString();
+        const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
+        
+        days.push(
+          <button
+            key={`day-${day}`}
+            type="button"
+            onClick={() => handleDateSelect(date)}
+            className={`h-8 w-8 rounded-full flex items-center justify-center text-sm ${
+              isSelected
+                ? 'bg-blue-500 text-white'
+                : isToday
+                  ? 'bg-blue-100 text-blue-800'
+                  : 'hover:bg-gray-100'
+            }`}
+          >
+            {day}
+          </button>
+        );
+      }
+      
+      return days;
+    };
+    
     return (
-      <div className="flex justify-center gap-2">
-        <Button
-          icon="pi pi-eye"
-          rounded
-          className="p-button-sm bg-purple-500 hover:bg-purple-600 border-purple-500"
-          onClick={() => {
-            setSelectedEstadoSeguimiento(rowData);
-            setViewDialogVisible(true);
-          }}
-        />
-        <Button
-          icon="pi pi-pencil"
-          rounded
-          className="p-button-sm bg-blue-500 hover:bg-blue-600 border-blue-500"
-          onClick={() => {
-            // Asegurarse de que todas las propiedades del objeto rowData se copien correctamente
-            const editableData = {
-              id_estado: rowData.id_estado,
-              id_evento: rowData.id_evento,
-              id_contacto: rowData.id_contacto,
-              id_tipo_reunion: rowData.id_tipo_reunion,
-              fecha: rowData.fecha ? new Date(rowData.fecha) : null,
-              estado: rowData.estado,
-              descripcion: rowData.descripcion || '',
-              compromiso: rowData.compromiso || '',
-              fecha_compromiso: rowData.fecha_compromiso ? new Date(rowData.fecha_compromiso) : null
-            };
+      <div className="relative" ref={calendarRef}>
+        <div className={`relative ${className}`}>
+          <input
+            id={id}
+            type="text"
+            readOnly
+            value={selectedDate ? formatDate(selectedDate) : ''}
+            placeholder="Seleccionar fecha"
+            onClick={() => setIsOpen(!isOpen)}
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+          />
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+            <FiCalendar className="h-5 w-5 text-gray-400" />
+          </div>
+        </div>
+        
+        {isOpen && (
+          <div className="absolute z-10 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-64">
+            <div className="flex justify-between items-center mb-4">
+              <button
+                type="button"
+                onClick={() => navigateMonth(-1)}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <div className="font-semibold">
+                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </div>
+              <button
+                type="button"
+                onClick={() => navigateMonth(1)}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
             
-            console.log('Datos para editar:', editableData);
-            setEditData(editableData);
-            setEditDialogVisible(true);
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {dayNames.map(day => (
+                <div key={day} className="h-8 w-8 flex items-center justify-center text-xs text-gray-500">
+                  {day}
+                </div>
+              ))}
+            </div>
             
-            if (rowData.id_evento) {
-              loadContactosPorEvento(rowData.id_evento);
-            }
-          }}
-        />
-        <Button
-          icon="pi pi-trash"
-          rounded
-          className="p-button-sm bg-red-500 hover:bg-red-600 border-red-500"
-          onClick={() => {
-            setSelectedEstadoSeguimiento(rowData);
-            setDeleteDialogVisible(true);
-          }}
-        />
+            <div className="grid grid-cols-7 gap-1">
+              {renderCalendarDays()}
+            </div>
+            
+            <div className="mt-4 flex justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  handleDateSelect(new Date());
+                }}
+                className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
+              >
+                Hoy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(null);
+                  setIsOpen(false);
+                }}
+                className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
+              >
+                Limpiar
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
-  const renderHeader = () => {
-    return (
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-white border-b border-gray-200">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+  // Funciones para renderizar datos relacionados
+  const eventoBodyTemplate = (estado) => {
+    if (estado.evento && estado.evento.municipalidad) {
+      return estado.evento.municipalidad.nombre || 'Sin municipalidad';
+    }
+    
+    // Fallback usando la búsqueda en eventos
+    const evento = eventos.find(e => e.id_evento === estado.id_evento);
+    if (evento && evento.municipalidad) {
+      return evento.municipalidad.nombre || 'Sin municipalidad';
+    }
+    
+    return 'N/A';
+  };
+
+  const contactoBodyTemplate = (estado) => {
+    if (estado.contacto) {
+      return estado.contacto.nombre_completo || 'Sin nombre';
+    }
+    
+    // Fallback usando la búsqueda en contactos
+    const contacto = contactos.find(c => c.id_contacto === estado.id_contacto);
+    if (contacto) {
+      return contacto.nombre_completo || 'Sin nombre';
+    }
+    
+    return 'N/A';
+  };
+
+  const tipoReunionBodyTemplate = (estado) => {
+    if (estado.tipoReunion) {
+      return estado.tipoReunion.descripcion || 'Sin descripción';
+    }
+    
+    // Fallback usando la búsqueda en tiposReunion
+    const tipoReunion = tiposReunion.find(tr => tr.id_tipo_reunion === estado.id_tipo_reunion);
+    if (tipoReunion) {
+      return tipoReunion.descripcion || 'Sin descripción';
+    }
+    
+    return 'N/A';
+  };
+
+  return (
+    <div className="p-6 bg-white rounded-lg shadow w-full max-w-full">
+      {/* Toast Message */}
+      {toastMessage && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border border-gray-200 ${
+          toastMessage.severity === 'success' ? 'bg-green-100 border-l-4 border-green-500 text-green-700' :
+          toastMessage.severity === 'error' ? 'bg-red-100 border-l-4 border-red-500 text-red-700' :
+          toastMessage.severity === 'warning' ? 'bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700' :
+          'bg-blue-100 border-l-4 border-blue-500 text-blue-700'
+        }`}>
+          <div className="flex items-center">
+            <div className="font-bold">{toastMessage.summary}</div>
+            <div className="ml-2">{toastMessage.detail}</div>
+          </div>
+        </div>
+      )}
+      
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center">
           <h2 className="text-2xl font-bold text-gray-800">Estados de Seguimiento</h2>
-          <Button
-            label="Nuevo Estado"
-            icon="pi pi-plus"
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
+          <button
             onClick={() => {
               setEditData({
                 id_estado: '',
@@ -302,664 +612,683 @@ export default function EstadoSeguimientosList() {
               });
               setCreateDialogVisible(true);
             }}
-          />
+            className="ml-4 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+          >
+            <FiPlus className="w-5 h-5" />
+            <span>Nuevo Estado</span>
+          </button>
         </div>
-        <div className="w-full sm:w-auto">
-          <span className="p-input-icon-left w-full">
-            <i className="pi pi-search" />
-            <InputText
-              value={globalFilterValue}
-              onChange={onGlobalFilterChange}
-              placeholder="Buscar estado..."
-              className="w-full sm:w-[300px] rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent px-4 py-2"
-            />
-          </span>
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar estado..."
+            className="w-full px-4 py-2 pr-10 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
         </div>
       </div>
-    );
-  };
-
-  const formatDate = (value) => {
-    if (!value) return '';
-    const date = new Date(value);
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
-  const dateBodyTemplate = (rowData) => {
-    return formatDate(rowData.fecha);
-  };
-
-  const fechaCompromisoBodyTemplate = (rowData) => {
-    return formatDate(rowData.fecha_compromiso);
-  };
-
-  const eventoBodyTemplate = (rowData) => {
-    const evento = eventos.find(e => e.id_evento === rowData.id_evento);
-    if (!evento) return '';
-    
-    const municipalidad = evento.municipalidad?.nombre || '';
-    const fecha = formatDate(evento.fecha);
-    
-    return `${municipalidad} - ${fecha}`;
-  };
-
-  const tipoReunionBodyTemplate = (rowData) => {
-    const tipoReunion = tiposReunion.find(tr => tr.id_tipo_reunion === rowData.id_tipo_reunion);
-    return tipoReunion ? tipoReunion.descripcion : '';
-  };
-
-  const estadoBodyTemplate = (rowData) => {
-    return (
-      <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${getEstadoClass(rowData.estado)}`}>
-        {rowData.estado}
-      </span>
-    );
-  };
-
-  const getEstadoClass = (estado) => {
-    switch (estado) {
-      case 'Pendiente':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'En Proceso':
-        return 'bg-blue-100 text-blue-800';
-      case 'Completado':
-        return 'bg-green-100 text-green-800';
-      case 'Cancelado':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const TailwindCalendar = ({ selectedDate, onChange, id, className }) => {
-    const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
-    const [isOpen, setIsOpen] = useState(false);
-    const calendarRef = useRef(null);
-
-    const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    const months = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
-
-    useEffect(() => {
-      const handleClickOutside = (event) => {
-        if (calendarRef.current && !calendarRef.current.contains(event.target)) {
-          setIsOpen(false);
-        }
-      };
       
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }, []);
-
-    const getDaysInMonth = (year, month) => {
-      return new Date(year, month + 1, 0).getDate();
-    };
-
-    const getFirstDayOfMonth = (year, month) => {
-      return new Date(year, month, 1).getDay();
-    };
-
-    const handleDateClick = (day) => {
-      const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-      onChange({ value: newDate });
-      setIsOpen(false);
-    };
-
-    const handlePrevMonth = () => {
-      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-    };
-
-    const handleNextMonth = () => {
-      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-    };
-
-    const formatDate = (date) => {
-      if (!date) return '';
-      return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
-    };
-
-    const renderCalendarDays = () => {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      const daysInMonth = getDaysInMonth(year, month);
-      const firstDay = getFirstDayOfMonth(year, month);
-      
-      const days = [];
-      
-      // Agregar días vacíos al principio del mes
-      for (let i = 0; i < firstDay; i++) {
-        days.push(<div key={`empty-${i}`} className="h-8 w-8"></div>);
-      }
-      
-      // Agregar los días del mes
-      for (let day = 1; day <= daysInMonth; day++) {
-        const isSelected = selectedDate && 
-                           selectedDate.getDate() === day && 
-                           selectedDate.getMonth() === month && 
-                           selectedDate.getFullYear() === year;
-        
-        const isToday = new Date().getDate() === day && 
-                        new Date().getMonth() === month && 
-                        new Date().getFullYear() === year;
-        
-        days.push(
-          <button
-            key={day}
-            onClick={() => handleDateClick(day)}
-            className={`h-8 w-8 rounded-full flex items-center justify-center text-sm transition-colors
-                      ${isSelected ? 'bg-blue-500 text-white' : ''}
-                      ${isToday && !isSelected ? 'border border-blue-500 text-blue-500' : ''}
-                      ${!isSelected && !isToday ? 'hover:bg-gray-100' : ''}`}
-          >
-            {day}
-          </button>
-        );
-      }
-      
-      return days;
-    };
-
-    return (
-      <div className={`relative ${className}`} ref={calendarRef}>
-        <div 
-          className="flex items-center border border-gray-300 rounded-md p-2 cursor-pointer"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          <input
-            id={id}
-            type="text"
-            className="flex-grow outline-none cursor-pointer"
-            value={formatDate(selectedDate)}
-            readOnly
-            placeholder="Seleccione una fecha"
-          />
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-          </svg>
-        </div>
-
-        {isOpen && (
-          <div className="absolute mt-1 z-50 bg-white rounded-md shadow-lg p-4 border border-gray-200 w-64">
-            <div className="flex justify-between items-center mb-4">
-              <button 
-                onClick={handlePrevMonth}
-                className="p-1 rounded-full hover:bg-gray-100"
+      {/* Table */}
+      <div className="overflow-x-auto w-full">
+        <table className="min-w-full w-full divide-y divide-gray-200 table-fixed">
+          <thead className="bg-gray-50">
+            <tr>
+              <th 
+                scope="col" 
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                onClick={() => handleSort('evento.municipalidad.nombre')}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                <div className="flex items-center space-x-1">
+                  <span>Municipalidad</span>
+                  {sortField === 'evento.municipalidad.nombre' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters['evento.municipalidad.nombre']}
+                      onChange={(e) => setColumnFilters({...columnFilters, 'evento.municipalidad.nombre': e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              
+              <th 
+                scope="col" 
+                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : ''}`}
+                onClick={() => handleSort('contacto.nombre')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Contacto</span>
+                  {sortField === 'contacto.nombre' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters['contacto.nombre']}
+                      onChange={(e) => setColumnFilters({...columnFilters, 'contacto.nombre': e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              
+              <th 
+                scope="col" 
+                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : ''}`}
+                onClick={() => handleSort('tipoReunion.descripcion')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Tipo Reunión</span>
+                  {sortField === 'tipoReunion.descripcion' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters['tipoReunion.descripcion']}
+                      onChange={(e) => setColumnFilters({...columnFilters, 'tipoReunion.descripcion': e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              
+              <th 
+                scope="col" 
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                onClick={() => handleSort('fecha')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Fecha</span>
+                  {sortField === 'fecha' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters.fecha}
+                      onChange={(e) => setColumnFilters({...columnFilters, fecha: e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              
+              <th 
+                scope="col" 
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                onClick={() => handleSort('estado')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Estado</span>
+                  {sortField === 'estado' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters.estado}
+                      onChange={(e) => setColumnFilters({...columnFilters, estado: e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              
+              <th 
+                scope="col" 
+                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : ''}`}
+                onClick={() => handleSort('fecha_compromiso')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Fecha Compromiso</span>
+                  {sortField === 'fecha_compromiso' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters.fecha_compromiso}
+                      onChange={(e) => setColumnFilters({...columnFilters, fecha_compromiso: e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              
+              <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Acciones
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+          {loading ? (
+              <tr>
+                <td colSpan="7" className="px-6 py-4 text-center">
+                  <div className="flex justify-center">
+                    <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                </td>
+              </tr>
+            ) : paginatedData.length === 0 ? (
+              <tr>
+                <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
+                  No se encontraron estados de seguimiento
+                </td>
+              </tr>
+            ) : (
+              paginatedData.map(estado => (
+                <tr key={estado.id_estado} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-normal">
+                    <div className="text-sm font-medium text-gray-900">
+                      {eventoBodyTemplate(estado)}
+                    </div>
+                  </td>
+                  
+                  {!isMobile && (
+                    <td className="px-6 py-4 whitespace-normal">
+                      <div className="text-sm text-gray-900">
+                        {contactoBodyTemplate(estado)}
+                      </div>
+                    </td>
+                  )}
+                  
+                  {!isMobile && (
+                    <td className="px-6 py-4 whitespace-normal">
+                      <div className="text-sm text-gray-900">
+                        {tipoReunionBodyTemplate(estado)}
+                      </div>
+                    </td>
+                  )}
+                  
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {formatDate(estado.fecha)}
+                    </div>
+                  </td>
+                  
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                      estado.estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                      estado.estado === 'En Proceso' ? 'bg-blue-100 text-blue-800' :
+                      estado.estado === 'Completado' ? 'bg-green-100 text-green-800' :
+                      estado.estado === 'Cancelado' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {estado.estado || 'N/A'}
+                    </span>
+                  </td>
+                  
+                  {!isMobile && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {formatDate(estado.fecha_compromiso)}
+                      </div>
+                    </td>
+                  )}
+                  
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <div className="flex justify-center space-x-2">
+                      <button
+                        onClick={() => {
+                          setSelectedEstadoSeguimiento(estado);
+                          setViewDialogVisible(true);
+                        }}
+                        className="text-purple-600 hover:text-purple-900 focus:outline-none"
+                      >
+                        <FiEye className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          const editableData = {
+                            id_estado: estado.id_estado,
+                            id_evento: estado.id_evento,
+                            id_contacto: estado.id_contacto,
+                            id_tipo_reunion: estado.id_tipo_reunion,
+                            fecha: estado.fecha ? new Date(estado.fecha) : null,
+                            estado: estado.estado,
+                            descripcion: estado.descripcion || '',
+                            compromiso: estado.compromiso || '',
+                            fecha_compromiso: estado.fecha_compromiso ? new Date(estado.fecha_compromiso) : null
+                          };
+                          
+                          setEditData(editableData);
+                          setEditDialogVisible(true);
+                          
+                          if (estado.id_evento) {
+                            loadContactosPorEvento(estado.id_evento);
+                          }
+                        }}
+                        className="text-blue-600 hover:text-blue-900 focus:outline-none"
+                      >
+                        <FiEdit className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedEstadoSeguimiento(estado);
+                          setDeleteDialogVisible(true);
+                        }}
+                        className="text-red-600 hover:text-red-900 focus:outline-none"
+                      >
+                        <FiTrash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      
+      {/* Paginación */}
+      <div className="px-6 py-3 flex items-center justify-between border-t border-gray-200">
+        <div className="flex-1 flex justify-between sm:hidden">
+          <button 
+            onClick={() => goToPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
+              currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            Anterior
+          </button>
+          <button 
+            onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages || totalPages === 0}
+            className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md ${
+              currentPage === totalPages || totalPages === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            Siguiente
+          </button>
+        </div>
+        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-gray-700">
+              Mostrando <span className="font-medium">{paginatedData.length > 0 ? startIndex + 1 : 0}</span> a <span className="font-medium">{Math.min(endIndex, filteredEstadosSeguimiento.length)}</span> de <span className="font-medium">{filteredEstadosSeguimiento.length}</span> resultados
+            </p>
+          </div>
+          {totalPages > 1 && (
+            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+              <button
+                onClick={() => goToPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 ${
+                  currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <span className="sr-only">Anterior</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               </button>
-              <div className="font-semibold">
-                {months[currentDate.getMonth()]} {currentDate.getFullYear()}
-              </div>
-              <button 
-                onClick={handleNextMonth}
-                className="p-1 rounded-full hover:bg-gray-100"
+              
+              {[...Array(totalPages)].map((_, index) => {
+                const pageNumber = index + 1;
+                return (
+                  <button
+                    key={pageNumber}
+                    onClick={() => goToPage(pageNumber)}
+                    className={`relative inline-flex items-center px-4 py-2 border ${
+                      currentPage === pageNumber
+                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                    } text-sm font-medium`}
+                  >
+                    {pageNumber}
+                  </button>
+                );
+              })}
+              
+              <button
+                onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 ${
+                  currentPage === totalPages || totalPages === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-500 hover:bg-gray-50'
+                }`}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <span className="sr-only">Siguiente</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                 </svg>
               </button>
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {daysOfWeek.map(day => (
-                <div key={day} className="h-8 w-8 flex items-center justify-center text-xs text-gray-500">
-                  {day}
-                </div>
-              ))}
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1">
-              {renderCalendarDays()}
-            </div>
-            
-            <div className="mt-4 flex justify-between">
-              <button 
-                onClick={() => {
-                  const today = new Date();
-                  setCurrentDate(today);
-                  onChange({ value: today });
-                  setIsOpen(false);
-                }}
-                className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                Hoy
-              </button>
-              <button 
-                onClick={() => {
-                  onChange({ value: null });
-                  setIsOpen(false);
-                }}
-                className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-              >
-                Limpiar
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const dialogContent = (
-    <>
-      <div className="field mb-4">
-        <label htmlFor="evento" className="block text-gray-700 font-medium mb-2">
-          Evento (Municipalidad)
-        </label>
-        <Dropdown
-          id="evento"
-          value={editData.id_evento}
-          options={eventos}
-          onChange={(e) => {
-            setEditData({ ...editData, id_evento: e.value, id_contacto: '' });
-            if (e.value) {
-              loadContactosPorEvento(e.value);
-            } else {
-              setContactos([]);
-            }
-          }}
-          optionLabel={(option) => {
-            const municipalidad = option.municipalidad?.nombre || '';
-            const fecha = formatDate(option.fecha);
-            return `${municipalidad} - ${fecha}`;
-          }}
-          optionValue="id_evento"
-          placeholder="Seleccione un evento"
-          className="w-full border border-gray-300 rounded-lg"
-          filter
-          showClear
-        />
-      </div>
-      <div className="field mb-4">
-        <label htmlFor="contacto" className="block text-gray-700 font-medium mb-2">
-          Contacto
-        </label>
-        <Dropdown
-          id="contacto"
-          value={editData.id_contacto}
-          options={contactos}
-          onChange={(e) => setEditData({ ...editData, id_contacto: e.value })}
-          optionLabel="nombre_completo"
-          optionValue="id_contacto"
-          placeholder="Seleccione un contacto"
-          className="w-full border border-gray-300 rounded-lg"
-          disabled={!editData.id_evento}
-          filter
-          showClear
-        />
-      </div>
-      <div className="field mb-4">
-        <label htmlFor="tipoReunion" className="block text-gray-700 font-medium mb-2">
-          Tipo de Reunión
-        </label>
-        <Dropdown
-          id="tipoReunion"
-          value={editData.id_tipo_reunion}
-          options={tiposReunion}
-          onChange={(e) => setEditData({ ...editData, id_tipo_reunion: e.value })}
-          optionLabel="descripcion"
-          optionValue="id_tipo_reunion"
-          placeholder="Seleccione un tipo de reunión"
-          className="w-full border border-gray-300 rounded-lg"
-          filter
-          showClear
-          itemTemplate={(option) => (
-            <div className="dropdown-item-container">
-              <span>{option.descripcion || 'Sin nombre'}</span>
-            </div>
+            </nav>
           )}
-        />
-      </div>
-      
-        <div className="field mb-4">
-          <label htmlFor="fecha" className="block text-gray-700 font-medium mb-2">
-            Fecha
-          </label>
-          <TailwindCalendar
-            id="fecha"
-            selectedDate={editData.fecha ? new Date(editData.fecha) : null}
-            onChange={(e) => setEditData({ ...editData, fecha: e.value })}
-            className="w-full"
-          />
-        </div>        
-      
-      <div className="field mb-4">
-        <label htmlFor="descripcion" className="block text-gray-700 font-medium mb-2">
-          Descripción
-        </label>
-        <InputTextarea
-          id="descripcion"
-          value={editData.descripcion}
-          onChange={(e) => setEditData({ ...editData, descripcion: e.target.value })}
-          rows={3}
-          className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      </div>
-      <div className="field mb-4">
-        <label htmlFor="compromiso" className="block text-gray-700 font-medium mb-2">
-          Compromiso
-        </label>
-        <InputTextarea
-          id="compromiso"
-          value={editData.compromiso}
-          onChange={(e) => setEditData({ ...editData, compromiso: e.target.value })}
-          rows={3}
-          className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="field mb-4">
-          <label htmlFor="fechaCompromiso" className="block text-gray-700 font-medium mb-2">
-            Fecha de Compromiso
-          </label>
-          <TailwindCalendar
-            id="fechaCompromiso"
-            selectedDate={editData.fecha_compromiso ? new Date(editData.fecha_compromiso) : null}
-            onChange={(e) => setEditData({ ...editData, fecha_compromiso: e.value })}
-            className="w-full"
-          />
-        </div>
-        <div className="field mb-4">
-            <label htmlFor="estado" className="block text-gray-700 font-medium mb-2">
-              Estado
-            </label>
-            <Dropdown
-              id="estado"
-              value={editData.estado}
-              options={estadoOptions}
-              onChange={(e) => setEditData({ ...editData, estado: e.value })}
-              placeholder="Seleccione un estado"
-              className="w-full border border-gray-300 rounded-lg"
-            />
-          </div>
-      </div>
-    </>
-  );
-
-  const editDialogFooter = (
-    <div className="flex justify-end gap-2 pt-4">
-      <Button
-        label="Cancelar"
-        icon="pi pi-times"
-        className="p-button-text text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-        onClick={() => setEditDialogVisible(false)}
-      />
-      <Button
-        label="Guardar"
-        icon="pi pi-check"
-        className="bg-green-500 hover:bg-green-600 text-white"
-        onClick={handleSave}
-      />
-    </div>
-  );
-
-  const createDialogFooter = (
-    <div className="flex justify-end gap-2 pt-4">
-      <Button
-        label="Cancelar"
-        icon="pi pi-times"
-        className="p-button-text text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-        onClick={() => setCreateDialogVisible(false)}
-      />
-      <Button
-        label="Crear"
-        icon="pi pi-check"
-        className="bg-green-500 hover:bg-green-600 text-white"
-        onClick={handleSave}
-      />
-    </div>
-  );
-
-  const deleteDialogFooter = (
-    <div className="flex justify-center gap-3 w-full">
-      <Button
-        label="No"
-        icon="pi pi-times"
-        className="p-button-text text-gray-600 hover:text-gray-800 hover:bg-gray-100 px-4"
-        onClick={() => setDeleteDialogVisible(false)}
-      />
-      <Button
-        label="Sí"
-        icon="pi pi-check"
-        className="bg-red-500 hover:bg-red-600 text-white px-4"
-        onClick={() => {
-          confirmDelete(selectedEstadoSeguimiento);
-          setDeleteDialogVisible(false);
-        }}
-      />
-    </div>
-  );
-
-  const viewDialogContent = selectedEstadoSeguimiento && (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="col-span-1 md:col-span-2">
-        <h3 className="text-lg font-bold text-gray-800 mb-4">Información del Seguimiento</h3>
-      </div>
-      
-      <div className="field">
-        <label className="block text-gray-700 font-medium mb-1">Evento (Municipalidad)</label>
-        <p className="text-gray-800">{eventoBodyTemplate(selectedEstadoSeguimiento)}</p>
-      </div>
-      
-      <div className="field">
-        <label className="block text-gray-700 font-medium mb-1">Tipo de Reunión</label>
-        <p className="text-gray-800">{tipoReunionBodyTemplate(selectedEstadoSeguimiento)}</p>
-      </div>
-      
-      <div className="field">
-        <label className="block text-gray-700 font-medium mb-1">Contacto</label>
-        <p className="text-gray-800">
-          {contactos.find(c => c.id_contacto === selectedEstadoSeguimiento.id_contacto)?.nombre_completo || ''}
-        </p>
-      </div>
-      
-      <div className="field">
-        <label className="block text-gray-700 font-medium mb-1">Fecha</label>
-        <p className="text-gray-800">{formatDate(selectedEstadoSeguimiento.fecha)}</p>
-      </div>
-      
-      <div className="field">
-        <label className="block text-gray-700 font-medium mb-1">Estado</label>
-        <p className="text-gray-800">{estadoBodyTemplate(selectedEstadoSeguimiento)}</p>
-      </div>
-      
-      <div className="field">
-        <label className="block text-gray-700 font-medium mb-1">Fecha de Compromiso</label>
-        <p className="text-gray-800">{formatDate(selectedEstadoSeguimiento.fecha_compromiso)}</p>
-      </div>
-      
-      <div className="field col-span-1 md:col-span-2">
-        <label className="block text-gray-700 font-medium mb-1">Descripción</label>
-        <p className="text-gray-800 whitespace-pre-line">{selectedEstadoSeguimiento.descripcion}</p>
-      </div>
-      
-      <div className="field col-span-1 md:col-span-2">
-        <label className="block text-gray-700 font-medium mb-1">Compromiso</label>
-        <p className="text-gray-800 whitespace-pre-line">{selectedEstadoSeguimiento.compromiso}</p>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="flex-1 p-4 bg-gray-50 min-h-screen">
-      <div className="max-w-[1400px] mx-auto">
-        <Toast ref={toast} />
-        
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden w-full" style={{ width: '100%' }}>
-          {/* Contenedor adicional para forzar el ancho */}
-          <div style={{ width: '100%', overflowX: 'hidden' }}>
-            <DataTable
-              ref={dt}
-              value={estadosSeguimiento}
-              dataKey="id_estado"
-              paginator
-              rows={10}
-              rowsPerPageOptions={[5, 10, 25]}
-              loading={loading}
-              filters={filters}
-              header={renderHeader}
-              emptyMessage="No se encontraron estados de seguimiento"
-              className="p-datatable-responsive-demo w-full"
-              responsiveLayout="stack"
-              breakpoint="960px"
-              showGridlines
-              removableSort
-              filterDisplay="row"
-              globalFilterFields={['evento.municipalidad.nombre', 'tipoReunion.nombre', 'fecha', 'estado', 'fecha_compromiso']}
-              filterIcon="pi pi-filter"
-              filterIconClassName="text-gray-600 hover:text-blue-500"
-              style={{ width: '100%' }}
-              tableStyle={{ width: '100%', tableLayout: 'fixed' }}
-            >
-              <Column
-                field="evento.municipalidad.nombre"
-                header="Evento (Municipalidad)"
-                body={eventoBodyTemplate}
-                sortable
-                filter
-                filterPlaceholder="Buscar por municipalidad"
-                className="min-w-[200px]"
-                filterClassName="p-column-filter p-fluid p-column-filter-element"
-                filterClearIcon="pi pi-times"
-                filterApplyIcon="pi pi-check"
-              />
-              <Column
-                field="tipoReunion.nombre"
-                header="Tipo de Reunión"
-                body={tipoReunionBodyTemplate}
-                sortable
-                filter
-                filterPlaceholder="Buscar por tipo"
-                className="min-w-[150px]"
-                filterClassName="p-column-filter p-fluid p-column-filter-element"
-                filterClearIcon="pi pi-times"
-                filterApplyIcon="pi pi-check"
-              />
-              <Column
-                field="fecha"
-                header="Fecha"
-                body={dateBodyTemplate}
-                sortable
-                filter
-                filterPlaceholder="Buscar por fecha"
-                className="min-w-[120px]"
-                filterClassName="p-column-filter p-fluid p-column-filter-element"
-                filterClearIcon="pi pi-times"
-                filterApplyIcon="pi pi-check"
-              />
-              <Column
-                field="estado"
-                header="Estado"
-                body={estadoBodyTemplate}
-                sortable
-                filter
-                filterPlaceholder="Buscar por estado"
-                className="min-w-[120px]"
-                filterClassName="p-column-filter p-fluid p-column-filter-element"
-                filterClearIcon="pi pi-times"
-                filterApplyIcon="pi pi-check"
-              />
-              <Column
-                field="fecha_compromiso"
-                header="Fecha Compromiso"
-                body={fechaCompromisoBodyTemplate}
-                sortable
-                filter
-                filterPlaceholder="Buscar por fecha"
-                className="min-w-[150px]"
-                filterClassName="p-column-filter p-fluid p-column-filter-element"
-                filterClearIcon="pi pi-times"
-                filterApplyIcon="pi pi-check"
-              />
-              <Column
-                body={actionBodyTemplate}
-                header="Acciones"
-                headerClassName="text-center"
-                bodyClassName="text-center"
-                className="min-w-[120px]"
-              />
-            </DataTable>
-          </div>
         </div>
       </div>
+      
+      {/* Modal de visualización */}
+      {viewDialogVisible && selectedEstadoSeguimiento && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="text-lg font-medium text-gray-900">Detalles del Estado de Seguimiento</h3>
+              <button
+                onClick={() => setViewDialogVisible(false)}
+                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="field">
+                  <label className="block text-gray-700 font-medium mb-1">Municipalidad</label>
+                  <p className="text-gray-800">{eventoBodyTemplate(selectedEstadoSeguimiento)}</p>
+                </div>
+                
+                <div className="field">
+                  <label className="block text-gray-700 font-medium mb-1">Tipo de Reunión</label>
+                  <p className="text-gray-800">{tipoReunionBodyTemplate(selectedEstadoSeguimiento)}</p>
+                </div>
+                
+                <div className="field">
+                  <label className="block text-gray-700 font-medium mb-1">Contacto</label>
+                  <p className="text-gray-800">{contactoBodyTemplate(selectedEstadoSeguimiento)}</p>
+                </div>
+                
+                <div className="field">
+                  <label className="block text-gray-700 font-medium mb-1">Fecha</label>
+                  <p className="text-gray-800">{formatDate(selectedEstadoSeguimiento.fecha)}</p>
+                </div>
 
-      <Dialog
-        header="Editar Estado de Seguimiento"
-        visible={editDialogVisible}
-        style={{ width: '90%', maxWidth: '700px' }}
-        onHide={() => setEditDialogVisible(false)}
-        footer={editDialogFooter}
-        modal
-        className="p-fluid"
-        blockScroll={false}
-      >
-        {dialogContent}
-      </Dialog>
-
-      <Dialog
-        header="Nuevo Estado de Seguimiento"
-        visible={createDialogVisible}
-        style={{ width: '90%', maxWidth: '700px' }}
-        onHide={() => setCreateDialogVisible(false)}
-        footer={createDialogFooter}
-        modal
-        className="p-fluid"
-        blockScroll={false}
-      >
-        {dialogContent}
-      </Dialog>
-
-      <Dialog
-        header="Confirmar Eliminación"
-        visible={deleteDialogVisible}
-        style={{ width: '400px', maxWidth: '90%' }}
-        onHide={() => setDeleteDialogVisible(false)}
-        footer={deleteDialogFooter}
-        modal
-        blockScroll={false}
-        className="delete-confirmation-dialog"
-        showHeader={true}
-        closable={true}
-        closeOnEscape={true}
-        dismissableMask={true}
-      >
-        <div className="flex items-center justify-center p-4">
-          <div className="flex flex-col items-center text-center">
-            <i className="pi pi-exclamation-triangle text-yellow-500 text-4xl mb-3" />
-            <span className="text-gray-800 font-medium">¿Está seguro de que desea eliminar este estado de seguimiento?</span>
+                <div className="field col-span-1 md:col-span-2">
+                  <label className="block text-gray-700 font-medium mb-1">Descripción</label>
+                  <p className="text-gray-800 whitespace-pre-line">{selectedEstadoSeguimiento.descripcion || 'N/A'}</p>
+                </div>
+                
+                <div className="field">
+                  <label className="block text-gray-700 font-medium mb-1">Estado</label>
+                  <p className="text-gray-800">
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                      selectedEstadoSeguimiento.estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                      selectedEstadoSeguimiento.estado === 'En Proceso' ? 'bg-blue-100 text-blue-800' :
+                      selectedEstadoSeguimiento.estado === 'Completado' ? 'bg-green-100 text-green-800' :
+                      selectedEstadoSeguimiento.estado === 'Cancelado' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {selectedEstadoSeguimiento.estado || 'N/A'}
+                    </span>
+                  </p>
+                </div>
+                
+                <div className="field">
+                  <label className="block text-gray-700 font-medium mb-1">Fecha de Compromiso</label>
+                  <p className="text-gray-800">{formatDate(selectedEstadoSeguimiento.fecha_compromiso)}</p>
+                </div>
+                
+                <div className="field col-span-1 md:col-span-2">
+                  <label className="block text-gray-700 font-medium mb-1">Compromiso</label>
+                  <p className="text-gray-800 whitespace-pre-line">{selectedEstadoSeguimiento.compromiso || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end p-4 border-t">
+              <button
+                onClick={() => setViewDialogVisible(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
-      </Dialog>
+      )}
+      
+      {/* Modal de edición/creación */}
+      {(editDialogVisible || createDialogVisible) && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white z-10">
+              <h3 className="text-lg font-medium text-gray-900">
+                {editDialogVisible ? 'Editar Estado de Seguimiento' : 'Nuevo Estado de Seguimiento'}
+              </h3>
+              <button
+                onClick={() => {
+                  setEditDialogVisible(false);
+                  setCreateDialogVisible(false);
+                }}
+                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="field">
+                  <label htmlFor="evento" className="block text-gray-700 font-medium mb-2">
+                    Evento (Municipalidad)
+                  </label>
+                  <select
+                    id="evento"
+                    value={editData.id_evento || ''}
+                    onChange={(e) => {
+                      setEditData({ ...editData, id_evento: e.target.value, id_contacto: '' });
+                      if (e.target.value) {
+                        loadContactosPorEvento(e.target.value);
+                      } else {
+                        setContactos([]);
+                      }
+                    }}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Seleccione un evento</option>
+                    {eventos.map(evento => (
+                      <option key={evento.id_evento} value={evento.id_evento}>
+                        {evento.municipalidad?.nombre || 'Sin municipalidad'} - {formatDate(evento.fecha)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="field">
+                  <label htmlFor="contacto" className="block text-gray-700 font-medium mb-2">
+                    Contacto
+                  </label>
+                  <select
+                    id="contacto"
+                    value={editData.id_contacto || ''}
+                    onChange={(e) => setEditData({ ...editData, id_contacto: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={!editData.id_evento}
+                  >
+                    <option value="">Seleccione un contacto</option>
+                    {contactos.map(contacto => (
+                      <option key={contacto.id_contacto} value={contacto.id_contacto}>
+                        {contacto.nombre_completo || 'Sin nombre'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="field">
+                  <label htmlFor="tipoReunion" className="block text-gray-700 font-medium mb-2">
+                    Tipo de Reunión
+                  </label>
+                  <select
+                    id="tipoReunion"
+                    value={editData.id_tipo_reunion || ''}
+                    onChange={(e) => setEditData({ ...editData, id_tipo_reunion: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Seleccione un tipo de reunión</option>
+                    {tiposReunion.map(tipo => (
+                      <option key={tipo.id_tipo_reunion} value={tipo.id_tipo_reunion}>
+                        {tipo.descripcion || 'Sin descripción'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="field">
+                  <label htmlFor="fecha" className="block text-gray-700 font-medium mb-2">
+                    Fecha
+                  </label>
+                  <TailwindCalendar
+                    id="fecha"
+                    selectedDate={editData.fecha}
+                    onChange={(date) => setEditData({ ...editData, fecha: date })}
+                    className="w-full"
+                  />
+                </div>
 
-      <Dialog
-        header="Detalles del Estado de Seguimiento"
-        visible={viewDialogVisible}
-        style={{ width: '90%', maxWidth: '700px' }}
-        onHide={() => setViewDialogVisible(false)}
-        modal
-        className="p-fluid"
-        blockScroll={false}
-        footer={
-          <Button
-            label="Cerrar"
-            icon="pi pi-times"
-            className="p-button-text text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-            onClick={() => setViewDialogVisible(false)}
-          />
-        }
-      >
-        {viewDialogContent}
-      </Dialog>
+                <div className="field md:col-span-2">
+                  <label htmlFor="descripcion" className="block text-gray-700 font-medium mb-2">
+                    Descripción
+                  </label>
+                  <textarea
+                    id="descripcion"
+                    value={editData.descripcion}
+                    onChange={(e) => setEditData({ ...editData, descripcion: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div className="field">
+                  <label htmlFor="estado" className="block text-gray-700 font-medium mb-2">
+                    Estado
+                  </label>
+                  <select
+                    id="estado"
+                    value={editData.estado}
+                    onChange={(e) => setEditData({ ...editData, estado: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Seleccione un estado</option>
+                    {estadoOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="field">
+                  <label htmlFor="fechaCompromiso" className="block text-gray-700 font-medium mb-2">
+                    Fecha de Compromiso
+                  </label>
+                  <TailwindCalendar
+                    id="fechaCompromiso"
+                    selectedDate={editData.fecha_compromiso}
+                    onChange={(date) => setEditData({ ...editData, fecha_compromiso: date })}
+                    className="w-full"
+                  />
+                </div>
+                
+                <div className="field md:col-span-2">
+                  <label htmlFor="compromiso" className="block text-gray-700 font-medium mb-2">
+                    Compromiso
+                  </label>
+                  <textarea
+                    id="compromiso"
+                    value={editData.compromiso}
+                    onChange={(e) => setEditData({ ...editData, compromiso: e.target.value })}
+                    rows={3}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end p-4 border-t gap-2 sticky bottom-0 bg-white">
+              <button
+                onClick={() => {
+                  setEditDialogVisible(false);
+                  setCreateDialogVisible(false);
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSave}
+                className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none"
+              >
+                {editDialogVisible ? 'Guardar' : 'Crear'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal de confirmación de eliminación */}
+      {deleteDialogVisible && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="bg-yellow-100 p-2 rounded-full mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900">Confirmar eliminación</h3>
+              </div>
+              <p className="text-gray-700 mb-4">
+                ¿Está seguro de que desea eliminar este estado de seguimiento? Esta acción no se puede deshacer.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setDeleteDialogVisible(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    confirmDelete(selectedEstadoSeguimiento);
+                    setDeleteDialogVisible(false);
+                  }}
+                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

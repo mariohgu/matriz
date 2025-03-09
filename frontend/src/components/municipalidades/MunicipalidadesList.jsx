@@ -1,16 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
-import { Toast } from 'primereact/toast';
-import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
-import { FilterMatchMode } from 'primereact/api';
+import React, { useState, useEffect } from 'react';
+import { FiEdit, FiTrash2, FiEye, FiChevronUp, FiChevronDown, FiPlus } from 'react-icons/fi';
 import axios from 'axios';
 import { ADDRESS } from '../../utils.jsx';
 
 export default function MunicipalidadesList() {
   const [municipalidades, setMunicipalidades] = useState([]);
+  const [viewDialogVisible, setViewDialogVisible] = useState(false);
   const [editDialogVisible, setEditDialogVisible] = useState(false);
   const [createDialogVisible, setCreateDialogVisible] = useState(false);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
@@ -24,25 +19,47 @@ export default function MunicipalidadesList() {
     distrito: '',
     ubigeo: '',
   });
-  const [globalFilterValue, setGlobalFilterValue] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const toast = useRef(null);
-  const dt = useRef(null);
-  //const address = "http://127.0.0.1:8000/";
-
-  const [filters, setFilters] = useState({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    nombre: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    region: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    departamento: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    provincia: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    distrito: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    ubigeo: { value: null, matchMode: FilterMatchMode.STARTS_WITH }
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [sortField, setSortField] = useState('nombre');
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [toastMessage, setToastMessage] = useState(null);
+  const [columnFilters, setColumnFilters] = useState({
+    nombre: '',
+    region: '',
+    departamento: '',
+    provincia: '',
+    distrito: '',
+    ubigeo: ''
   });
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
     loadMunicipalidades();
+    
+    // Añadir listener para detectar cambios en el tamaño de la ventana
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
+
+  // Toast message auto-hide
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => {
+        setToastMessage(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
 
   const loadMunicipalidades = async () => {
     setLoading(true);
@@ -51,42 +68,31 @@ export default function MunicipalidadesList() {
       setMunicipalidades(response.data || []);
     } catch (error) {
       console.error('Error al cargar municipalidades:', error);
-      toast.current.show({
+      setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'No se pudieron cargar las municipalidades',
-        life: 3000
+        detail: 'No se pudieron cargar las municipalidades'
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const onGlobalFilterChange = (e) => {
-    const value = e.target.value;
-    let _filters = { ...filters };
-    _filters['global'].value = value;
-    setFilters(_filters);
-    setGlobalFilterValue(value);
-  };
-
   const handleSave = async () => {
     try {
       if (editData.id_municipalidad) {
         await axios.put(`${ADDRESS}api/municipalidades/${editData.id_municipalidad}`, editData);
-        toast.current.show({
+        setToastMessage({
           severity: 'success',
           summary: 'Éxito',
-          detail: 'Municipalidad actualizada correctamente',
-          life: 3000
+          detail: 'Municipalidad actualizada correctamente'
         });
       } else {
         await axios.post(`${ADDRESS}api/municipalidades`, editData);
-        toast.current.show({
+        setToastMessage({
           severity: 'success',
           summary: 'Éxito',
-          detail: 'Municipalidad creada correctamente',
-          life: 3000
+          detail: 'Municipalidad creada correctamente'
         });
       }
       setEditDialogVisible(false);
@@ -103,11 +109,10 @@ export default function MunicipalidadesList() {
       loadMunicipalidades();
     } catch (error) {
       console.error('Error al guardar:', error);
-      toast.current.show({
+      setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'Error al guardar la municipalidad',
-        life: 3000
+        detail: 'Error al guardar la municipalidad'
       });
     }
   };
@@ -115,58 +120,114 @@ export default function MunicipalidadesList() {
   const confirmDelete = async (rowData) => {
     try {
       await axios.delete(`${ADDRESS}api/municipalidades/${rowData.id_municipalidad}`);
-      toast.current.show({
+      setToastMessage({
         severity: 'success',
         summary: 'Éxito',
-        detail: 'Municipalidad eliminada correctamente',
-        life: 3000
+        detail: 'Municipalidad eliminada correctamente'
       });
       loadMunicipalidades();
     } catch (error) {
       console.error('Error al eliminar:', error);
-      toast.current.show({
+      setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'Error al eliminar la municipalidad',
-        life: 3000
+        detail: 'Error al eliminar la municipalidad'
       });
     }
   };
 
-  const actionBodyTemplate = (rowData) => {
-    return (
-      <div className="flex justify-center gap-2">
-        <Button
-          icon="pi pi-pencil"
-          rounded
-          className="p-button-sm bg-blue-500 hover:bg-blue-600 border-blue-500"
-          onClick={() => {
-            setEditData(rowData);
-            setEditDialogVisible(true);
-          }}
-        />
-        <Button
-          icon="pi pi-trash"
-          rounded
-          className="p-button-sm bg-red-500 hover:bg-red-600 border-red-500"
-          onClick={() => {
-            setSelectedMunicipalidad(rowData);
-            setDeleteDialogVisible(true);
-          }}
-        />
-      </div>
-    );
+  // Sorting function
+  const handleSort = (field) => {
+    const isAsc = sortField === field && sortOrder === 'asc';
+    setSortOrder(isAsc ? 'desc' : 'asc');
+    setSortField(field);
   };
 
-  const renderHeader = () => {
-    return (
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-white border-b border-gray-200">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+  // Filtering functions
+  const filteredMunicipalidades = municipalidades.filter(municipalidad => {
+    // Filtro de búsqueda general
+    const searchFields = [
+      municipalidad.nombre,
+      municipalidad.region,
+      municipalidad.departamento,
+      municipalidad.provincia,
+      municipalidad.distrito,
+      municipalidad.ubigeo
+    ];
+    
+    const matchesSearch = searchQuery === '' || 
+      searchFields.some(field => 
+        field && field.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    
+    // Filtros por columna
+    const matchesNombre = columnFilters.nombre === '' || 
+      (municipalidad.nombre && municipalidad.nombre.toLowerCase().includes(columnFilters.nombre.toLowerCase()));
+    
+    const matchesRegion = columnFilters.region === '' || 
+      (municipalidad.region && municipalidad.region.toLowerCase().includes(columnFilters.region.toLowerCase()));
+    
+    const matchesDepartamento = columnFilters.departamento === '' || 
+      (municipalidad.departamento && municipalidad.departamento.toLowerCase().includes(columnFilters.departamento.toLowerCase()));
+    
+    const matchesProvincia = columnFilters.provincia === '' || 
+      (municipalidad.provincia && municipalidad.provincia.toLowerCase().includes(columnFilters.provincia.toLowerCase()));
+    
+    const matchesDistrito = columnFilters.distrito === '' || 
+      (municipalidad.distrito && municipalidad.distrito.toLowerCase().includes(columnFilters.distrito.toLowerCase()));
+    
+    const matchesUbigeo = columnFilters.ubigeo === '' || 
+      (municipalidad.ubigeo && municipalidad.ubigeo.toLowerCase().includes(columnFilters.ubigeo.toLowerCase()));
+    
+    return matchesSearch && matchesNombre && matchesRegion && matchesDepartamento && 
+           matchesProvincia && matchesDistrito && matchesUbigeo;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredMunicipalidades.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+
+  // Sorting
+  const sortedData = [...filteredMunicipalidades].sort((a, b) => {
+    const aValue = a[sortField] || '';
+    const bValue = b[sortField] || '';
+    
+    if (sortOrder === 'asc') {
+      return aValue.localeCompare(bValue, undefined, { numeric: true });
+    } else {
+      return bValue.localeCompare(aValue, undefined, { numeric: true });
+    }
+  });
+
+  const paginatedData = sortedData.slice(startIndex, endIndex);
+
+  const goToPage = (page) => {
+    setCurrentPage(page);
+  };
+
+  return (
+    <div className="p-6 bg-white rounded-lg shadow w-full max-w-full">
+      {/* Toast Message */}
+      {toastMessage && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
+          toastMessage.severity === 'success' ? 'bg-green-100 border-l-4 border-green-500 text-green-700' :
+          toastMessage.severity === 'error' ? 'bg-red-100 border-l-4 border-red-500 text-red-700' :
+          toastMessage.severity === 'warning' ? 'bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700' :
+          'bg-blue-100 border-l-4 border-blue-500 text-blue-700'
+        }`}>
+          <div className="flex items-center">
+            <div className="font-bold">{toastMessage.summary}</div>
+            <div className="ml-2">{toastMessage.detail}</div>
+          </div>
+        </div>
+      )}
+      
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center">
           <h2 className="text-2xl font-bold text-gray-800">Municipalidades</h2>
-          <Button
-            label="Nueva Municipalidad"
-            icon="pi pi-plus"
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
+          <button
             onClick={() => {
               setEditData({
                 id_municipalidad: '',
@@ -179,277 +240,576 @@ export default function MunicipalidadesList() {
               });
               setCreateDialogVisible(true);
             }}
-          />
+            className="ml-4 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+          >
+            <FiPlus className="w-5 h-5" />
+            <span>Nueva Municipalidad</span>
+          </button>
         </div>
-        <div className="w-full sm:w-auto">
-          <span className="p-input-icon-left w-full">
-            <i className="pi pi-search" />
-            <InputText
-              value={globalFilterValue}
-              onChange={onGlobalFilterChange}
-              placeholder="Buscar municipalidad..."
-              className="w-full sm:w-[300px] rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent px-4 py-2"
-            />
-          </span>
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar municipalidad..."
+            className="w-full px-4 py-2 pr-10 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
         </div>
       </div>
-    );
-  };
-
-  const editDialogFooter = (
-    <div className="flex justify-end gap-2 pt-4">
-      <Button
-        label="Cancelar"
-        icon="pi pi-times"
-        className="p-button-text text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-        onClick={() => setEditDialogVisible(false)}
-      />
-      <Button
-        label="Guardar"
-        icon="pi pi-check"
-        className="bg-green-500 hover:bg-green-600 text-white"
-        onClick={handleSave}
-      />
-    </div>
-  );
-
-  const createDialogFooter = (
-    <div className="flex justify-end gap-2 pt-4">
-      <Button
-        label="Cancelar"
-        icon="pi pi-times"
-        className="p-button-text text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-        onClick={() => setCreateDialogVisible(false)}
-      />
-      <Button
-        label="Crear"
-        icon="pi pi-check"
-        className="bg-green-500 hover:bg-green-600 text-white"
-        onClick={handleSave}
-      />
-    </div>
-  );
-
-  const deleteDialogFooter = (
-    <div className="flex justify-end gap-2 pt-4">
-      <Button
-        label="No"
-        icon="pi pi-times"
-        className="p-button-text text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-        onClick={() => setDeleteDialogVisible(false)}
-      />
-      <Button
-        label="Sí"
-        icon="pi pi-check"
-        className="bg-red-500 hover:bg-red-600 text-white"
-        onClick={() => {
-          confirmDelete(selectedMunicipalidad);
-          setDeleteDialogVisible(false);
-        }}
-      />
-    </div>
-  );
-
-  const dialogContent = (
-    <>
-      <div className="field mb-4">
-        <label htmlFor="nombre" className="block text-gray-700 font-medium mb-2">
-          Nombre
-        </label>
-        <InputText
-          id="nombre"
-          value={editData.nombre}
-          onChange={(e) => setEditData({ ...editData, nombre: e.target.value })}
-          className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          required
-        />
+      
+      {/* Table */}
+      <div className="overflow-x-auto w-full">
+        <table className="min-w-full w-full divide-y divide-gray-200 table-fixed">
+          <thead className="bg-gray-50">
+            <tr>
+              <th 
+                scope="col" 
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-1/6"
+                onClick={() => handleSort('nombre')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Nombre</span>
+                  {sortField === 'nombre' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters.nombre}
+                      onChange={(e) => setColumnFilters({...columnFilters, nombre: e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              <th 
+                scope="col" 
+                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : 'w-1/6'}`}
+                onClick={() => handleSort('region')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Región</span>
+                  {sortField === 'region' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters.region}
+                      onChange={(e) => setColumnFilters({...columnFilters, region: e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              <th 
+                scope="col" 
+                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : 'w-1/6'}`}
+                onClick={() => handleSort('departamento')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Departamento</span>
+                  {sortField === 'departamento' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters.departamento}
+                      onChange={(e) => setColumnFilters({...columnFilters, departamento: e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              <th 
+                scope="col" 
+                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : 'w-1/6'}`}
+                onClick={() => handleSort('provincia')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Provincia</span>
+                  {sortField === 'provincia' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters.provincia}
+                      onChange={(e) => setColumnFilters({...columnFilters, provincia: e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              <th 
+                scope="col" 
+                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : 'w-1/6'}`}
+                onClick={() => handleSort('distrito')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Distrito</span>
+                  {sortField === 'distrito' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters.distrito}
+                      onChange={(e) => setColumnFilters({...columnFilters, distrito: e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              <th 
+                scope="col" 
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-1/6"
+                onClick={() => handleSort('ubigeo')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Ubigeo</span>
+                  {sortField === 'ubigeo' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters.ubigeo}
+                      onChange={(e) => setColumnFilters({...columnFilters, ubigeo: e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              <th scope="col" className={`px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider ${isMobile ? 'w-1/4' : 'w-1/6'}`}>
+                Acciones
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {loading ? (
+              <tr>
+                <td colSpan="7" className="px-6 py-4 text-center">
+                  <div className="flex justify-center items-center">
+                    <svg className="animate-spin h-5 w-5 text-blue-500 mr-3" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Cargando...</span>
+                  </div>
+                </td>
+              </tr>
+            ) : paginatedData.length === 0 ? (
+              <tr>
+                <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
+                  No se encontraron municipalidades
+                </td>
+              </tr>
+            ) : (
+              paginatedData.map((municipalidad) => (
+                <tr key={municipalidad.id_municipalidad} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 break-words">{municipalidad.nombre}</td>
+                  <td className={`px-6 py-4 break-words ${isMobile ? 'hidden md:table-cell' : ''}`}>{municipalidad.region}</td>
+                  <td className={`px-6 py-4 break-words ${isMobile ? 'hidden md:table-cell' : ''}`}>{municipalidad.departamento}</td>
+                  <td className={`px-6 py-4 break-words ${isMobile ? 'hidden md:table-cell' : ''}`}>{municipalidad.provincia}</td>
+                  <td className={`px-6 py-4 break-words ${isMobile ? 'hidden md:table-cell' : ''}`}>{municipalidad.distrito}</td>
+                  <td className="px-6 py-4 break-words">{municipalidad.ubigeo}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedMunicipalidad(municipalidad);
+                          setViewDialogVisible(true);
+                        }}
+                        className="p-2 text-purple-600 hover:bg-purple-100 rounded-full"
+                        title="Ver detalles"
+                      >
+                        <FiEye className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedMunicipalidad(municipalidad);
+                          setEditData(municipalidad);
+                          setEditDialogVisible(true);
+                        }}
+                        className="p-2 text-blue-600 hover:bg-blue-100 rounded-full"
+                        title="Editar"
+                      >
+                        <FiEdit className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedMunicipalidad(municipalidad);
+                          setDeleteDialogVisible(true);
+                        }}
+                        className="p-2 text-red-600 hover:bg-red-100 rounded-full"
+                        title="Eliminar"
+                      >
+                        <FiTrash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="field">
-          <label htmlFor="region" className="block text-gray-700 font-medium mb-2">
-            Región
-          </label>
-          <InputText
-            id="region"
-            value={editData.region}
-            onChange={(e) => setEditData({ ...editData, region: e.target.value })}
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+      
+      {/* Pagination */}
+      <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
+        <div className="text-sm text-gray-500">
+          Mostrando {filteredMunicipalidades.length > 0 ? startIndex + 1 : 0} a {Math.min(endIndex, filteredMunicipalidades.length)} de {filteredMunicipalidades.length} resultados
         </div>
-        <div className="field">
-          <label htmlFor="departamento" className="block text-gray-700 font-medium mb-2">
-            Departamento
-          </label>
-          <InputText
-            id="departamento"
-            value={editData.departamento}
-            onChange={(e) => setEditData({ ...editData, departamento: e.target.value })}
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-        <div className="field">
-          <label htmlFor="provincia" className="block text-gray-700 font-medium mb-2">
-            Provincia
-          </label>
-          <InputText
-            id="provincia"
-            value={editData.provincia}
-            onChange={(e) => setEditData({ ...editData, provincia: e.target.value })}
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="distrito" className="block text-gray-700 font-medium mb-2">
-            Distrito
-          </label>
-          <InputText
-            id="distrito"
-            value={editData.distrito}
-            onChange={(e) => setEditData({ ...editData, distrito: e.target.value })}
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-      <div className="field mt-4">
-        <label htmlFor="ubigeo" className="block text-gray-700 font-medium mb-2">
-          Ubigeo
-        </label>
-        <InputText
-          id="ubigeo"
-          value={editData.ubigeo}
-          onChange={(e) => setEditData({ ...editData, ubigeo: e.target.value })}
-          className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-      </div>
-    </>
-  );
-
-  return (
-    <div className="flex-1 p-4 bg-gray-50 min-h-screen">
-      <div className="max-w-[1400px] mx-auto">
-        <Toast ref={toast} />
-        
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden w-full" style={{ width: '100%' }}>
-          {/* Contenedor adicional para forzar el ancho */}
-          <div style={{ width: '100%', overflowX: 'hidden' }}>
-            <DataTable
-              ref={dt}
-              value={municipalidades}
-              paginator
-              rows={10}
-              rowsPerPageOptions={[5, 10, 25, 50]}
-              dataKey="id_municipalidad"
-              filters={filters}
-              loading={loading}
-              globalFilterFields={['nombre', 'region', 'departamento', 'provincia', 'distrito', 'ubigeo']}
-              header={renderHeader}
-              emptyMessage="No se encontraron municipalidades"
-              className="p-datatable-responsive-demo w-full"
-              responsiveLayout="stack"
-              breakpoint="960px"
-              stripedRows
-              style={{ width: '100%' }}
-              tableStyle={{ width: '100%', tableLayout: 'fixed' }}
+        <div className="flex items-center">
+          <div className="mr-4">
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <Column
-                field="nombre"
-                header="Nombre"
-                sortable
-                className="min-w-[200px]"
-                bodyClassName="p-3"
-              />
-              <Column
-                field="region"
-                header="Región"
-                sortable
-                className="min-w-[150px]"
-                bodyClassName="p-3"
-              />
-              <Column
-                field="departamento"
-                header="Departamento"
-                sortable
-                className="min-w-[150px]"
-                bodyClassName="p-3"
-              />
-              <Column
-                field="provincia"
-                header="Provincia"
-                sortable
-                className="min-w-[150px]"
-                bodyClassName="p-3"
-              />
-              <Column
-                field="distrito"
-                header="Distrito"
-                sortable
-                className="min-w-[150px]"
-                bodyClassName="p-3"
-              />
-              <Column
-                field="ubigeo"
-                header="Ubigeo"
-                sortable
-                className="min-w-[120px]"
-                bodyClassName="p-3"
-              />
-              <Column
-                body={actionBodyTemplate}
-                exportable={false}
-                className="min-w-[130px] text-center"
-                bodyClassName="p-3"
-              />
-            </DataTable>
+              <option value="5">5 por página</option>
+              <option value="10">10 por página</option>
+              <option value="25">25 por página</option>
+              <option value="50">50 por página</option>
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => goToPage(1)}
+              disabled={currentPage === 1}
+              className={`px-3 py-1 rounded-md ${
+                currentPage === 1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-blue-600 hover:bg-blue-50 border border-gray-300'
+              }`}
+            >
+              &laquo;
+            </button>
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className={`px-3 py-1 rounded-md ${
+                currentPage === 1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-blue-600 hover:bg-blue-50 border border-gray-300'
+              }`}
+            >
+              &lsaquo;
+            </button>
+            <button
+              onClick={() => {}}
+              className="px-3 py-1 rounded-md bg-blue-600 text-white"
+            >
+              {currentPage}
+            </button>
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className={`px-3 py-1 rounded-md ${
+                currentPage === totalPages
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-blue-600 hover:bg-blue-50 border border-gray-300'
+              }`}
+            >
+              &rsaquo;
+            </button>
+            <button
+              onClick={() => goToPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className={`px-3 py-1 rounded-md ${
+                currentPage === totalPages
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-blue-600 hover:bg-blue-50 border border-gray-300'
+              }`}
+            >
+              &raquo;
+            </button>
           </div>
         </div>
-
-        <Dialog
-          visible={editDialogVisible}
-          style={{ width: '95vw', maxWidth: '600px' }}
-          header="Editar Municipalidad"
-          modal
-          className="p-fluid rounded-xl overflow-hidden"
-          footer={editDialogFooter}
-          onHide={() => setEditDialogVisible(false)}
-          closeIcon="pi pi-times"
-          closeButtonClassName="hover:bg-gray-100 rounded-full p-2 transition-colors"
-        >
-          {dialogContent}
-        </Dialog>
-
-        <Dialog
-          visible={createDialogVisible}
-          style={{ width: '95vw', maxWidth: '600px' }}
-          header="Nueva Municipalidad"
-          modal
-          className="p-fluid rounded-xl overflow-hidden"
-          footer={createDialogFooter}
-          onHide={() => setCreateDialogVisible(false)}
-          closeIcon="pi pi-times"
-          closeButtonClassName="hover:bg-gray-100 rounded-full p-2 transition-colors"
-        >
-          {dialogContent}
-        </Dialog>
-
-        <Dialog
-          visible={deleteDialogVisible}
-          style={{ width: '95vw', maxWidth: '450px' }}
-          header="Confirmar Eliminación"
-          modal
-          footer={deleteDialogFooter}
-          onHide={() => setDeleteDialogVisible(false)}
-          className="p-fluid rounded-xl overflow-hidden"
-        >
-          <div className="flex items-center gap-4 p-4">
-            <i className="pi pi-exclamation-triangle text-yellow-500 text-4xl" />
-            <span className="text-gray-600">
-              ¿Está seguro que desea eliminar la municipalidad <span className="font-bold">{selectedMunicipalidad?.nombre}</span>?
-            </span>
-          </div>
-        </Dialog>
       </div>
+
+      {/* View Dialog */}
+      {viewDialogVisible && selectedMunicipalidad && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full md:max-w-4xl lg:max-w-5xl ml-auto mr-auto relative" style={{ marginLeft: 'auto', marginRight: 'auto', left: '0', right: '0' }}>
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex justify-between items-center pb-3 border-b mb-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    Detalles de la Municipalidad
+                  </h3>
+                  <button
+                    onClick={() => setViewDialogVisible(false)}
+                    className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                  >
+                    <span className="sr-only">Cerrar</span>
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Nombre</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedMunicipalidad.nombre}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Región</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedMunicipalidad.region}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Departamento</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedMunicipalidad.departamento}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Provincia</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedMunicipalidad.provincia}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Distrito</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedMunicipalidad.distrito}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Ubigeo</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedMunicipalidad.ubigeo}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={() => setViewDialogVisible(false)}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create/Edit Dialog */}
+      {(createDialogVisible || editDialogVisible) && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full md:max-w-4xl lg:max-w-5xl ml-auto mr-auto relative" style={{ marginLeft: 'auto', marginRight: 'auto', left: '0', right: '0' }}>
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex justify-between items-center pb-3 border-b mb-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    {editDialogVisible ? 'Editar Municipalidad' : 'Nueva Municipalidad'}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setEditDialogVisible(false);
+                      setCreateDialogVisible(false);
+                    }}
+                    className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                  >
+                    <span className="sr-only">Cerrar</span>
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="nombre" className="block text-sm font-medium text-gray-700">
+                      Nombre
+                    </label>
+                    <input
+                      type="text"
+                      id="nombre"
+                      value={editData.nombre}
+                      onChange={(e) => setEditData({ ...editData, nombre: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="region" className="block text-sm font-medium text-gray-700">
+                        Región
+                      </label>
+                      <input
+                        type="text"
+                        id="region"
+                        value={editData.region}
+                        onChange={(e) => setEditData({ ...editData, region: e.target.value })}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="departamento" className="block text-sm font-medium text-gray-700">
+                        Departamento
+                      </label>
+                      <input
+                        type="text"
+                        id="departamento"
+                        value={editData.departamento}
+                        onChange={(e) => setEditData({ ...editData, departamento: e.target.value })}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="provincia" className="block text-sm font-medium text-gray-700">
+                        Provincia
+                      </label>
+                      <input
+                        type="text"
+                        id="provincia"
+                        value={editData.provincia}
+                        onChange={(e) => setEditData({ ...editData, provincia: e.target.value })}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="distrito" className="block text-sm font-medium text-gray-700">
+                        Distrito
+                      </label>
+                      <input
+                        type="text"
+                        id="distrito"
+                        value={editData.distrito}
+                        onChange={(e) => setEditData({ ...editData, distrito: e.target.value })}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="ubigeo" className="block text-sm font-medium text-gray-700">
+                      Ubigeo
+                    </label>
+                    <input
+                      type="text"
+                      id="ubigeo"
+                      value={editData.ubigeo}
+                      onChange={(e) => setEditData({ ...editData, ubigeo: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={handleSave}
+                >
+                  {editDialogVisible ? 'Guardar' : 'Crear'}
+                </button>
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={() => {
+                    setEditDialogVisible(false);
+                    setCreateDialogVisible(false);
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Dialog */}
+      {deleteDialogVisible && selectedMunicipalidad && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full" style={{ marginLeft: 'auto', marginRight: 'auto', left: '0', right: '0' }}>
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                      Confirmar eliminación
+                    </h3>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500">
+                        ¿Está seguro que desea eliminar la municipalidad <span className="font-bold">{selectedMunicipalidad.nombre}</span>?
+                        Esta acción no se puede deshacer.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={() => {
+                    confirmDelete(selectedMunicipalidad);
+                    setDeleteDialogVisible(false);
+                  }}
+                >
+                  Eliminar
+                </button>
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={() => setDeleteDialogVisible(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

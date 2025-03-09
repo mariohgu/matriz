@@ -1,36 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
-import { Toast } from 'primereact/toast';
-import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
-import { Dropdown } from 'primereact/dropdown';
-import { FilterMatchMode, addLocale } from 'primereact/api';
 import axios from 'axios';
+import { FaEdit, FaTrashAlt, FaPlus, FaSearch, FaSort, FaSortUp, FaSortDown, FaCalendarAlt } from 'react-icons/fa';
 import { ADDRESS } from '../../utils.jsx';
-import { Fragment } from 'react';
-
-// Configuración del locale español
-addLocale('es', {
-    firstDayOfWeek: 1,
-    dayNames: ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'],
-    dayNamesShort: ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'],
-    dayNamesMin: ['D', 'L', 'M', 'X', 'J', 'V', 'S'],
-    monthNames: ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'],
-    monthNamesShort: ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'],
-    today: 'Hoy',
-    clear: 'Limpiar'
-});
 
 export default function EventosList() {
   const [eventos, setEventos] = useState([]);
   const [municipalidades, setMunicipalidades] = useState([]);
   const [contactos, setContactos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedEvento, setSelectedEvento] = useState(null);
   const [editDialogVisible, setEditDialogVisible] = useState(false);
   const [createDialogVisible, setCreateDialogVisible] = useState(false);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
-  const [selectedEvento, setSelectedEvento] = useState(null);
+  const [globalFilterValue, setGlobalFilterValue] = useState('');
+  const [sortField, setSortField] = useState('fecha');
+  const [sortOrder, setSortOrder] = useState(-1); // -1 descendente, 1 ascendente
+  const [filters, setFilters] = useState({
+    'municipalidad.nombre': { value: null, matchMode: 'contains' },
+    'contacto.nombre_completo': { value: null, matchMode: 'contains' },
+    'tipo_acercamiento': { value: null, matchMode: 'contains' },
+    'lugar': { value: null, matchMode: 'contains' },
+    'fecha': { value: null, matchMode: 'contains' }
+  });
   const [editData, setEditData] = useState({
     id_evento: '',
     id_municipalidad: '',
@@ -39,19 +30,11 @@ export default function EventosList() {
     lugar: '',
     fecha: null
   });
-  const [globalFilterValue, setGlobalFilterValue] = useState('');
-  const [loading, setLoading] = useState(false);
+  
+  // Referencia al toast
   const toast = useRef(null);
   const dt = useRef(null);
-
-  const [filters, setFilters] = useState({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    'municipalidad.nombre': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    'contacto.nombre_completo': { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    tipo_acercamiento: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    lugar: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    fecha: { value: null, matchMode: FilterMatchMode.CONTAINS }
-  });
+  const isMobile = window.innerWidth < 768;
 
   useEffect(() => {
     loadEventos();
@@ -59,204 +42,307 @@ export default function EventosList() {
   }, []);
 
   const loadEventos = async () => {
-    setLoading(true);
     try {
+      setLoading(true);
       const response = await axios.get(`${ADDRESS}api/eventos`);
-      setEventos(response.data || []);
+      setEventos(response.data);
+      setLoading(false);
     } catch (error) {
       console.error('Error al cargar eventos:', error);
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudieron cargar los eventos',
-        life: 3000
-      });
-    } finally {
       setLoading(false);
+      const toastDiv = toast.current;
+      if (toastDiv) {
+        toastDiv.innerHTML = `
+          <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded shadow-md">
+            <div class="flex items-center">
+              <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <p><strong>Error:</strong> No se pudieron cargar los eventos</p>
+            </div>
+          </div>
+        `;
+        toastDiv.classList.remove('hidden');
+        setTimeout(() => {
+          toastDiv.classList.add('hidden');
+        }, 3000);
+      }
     }
   };
 
   const loadMunicipalidades = async () => {
     try {
       const response = await axios.get(`${ADDRESS}api/municipalidades`);
-      setMunicipalidades(response.data || []);
+      setMunicipalidades(response.data);
     } catch (error) {
       console.error('Error al cargar municipalidades:', error);
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudieron cargar las municipalidades',
-        life: 3000
-      });
+      const toastDiv = toast.current;
+      if (toastDiv) {
+        toastDiv.innerHTML = `
+          <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded shadow-md">
+            <div class="flex items-center">
+              <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <p><strong>Error:</strong> No se pudieron cargar las municipalidades</p>
+            </div>
+          </div>
+        `;
+        toastDiv.classList.remove('hidden');
+        setTimeout(() => {
+          toastDiv.classList.add('hidden');
+        }, 3000);
+      }
     }
   };
 
-  const loadContactosPorMunicipalidad = async (municipalidadId) => {
+  const loadContactosPorMunicipalidad = async (id_municipalidad) => {
+    if (!id_municipalidad) {
+      setContactos([]);
+      return;
+    }
+    
     try {
-      const response = await axios.get(`${ADDRESS}api/municipalidades/${municipalidadId}/contactos`);
-      setContactos(response.data || []);
+      // Usar el endpoint estándar de contactos y filtrar por id_municipalidad
+      const response = await axios.get(`${ADDRESS}api/contactos`);
+      // Filtrar los contactos que pertenecen a la municipalidad seleccionada
+      const contactosFiltrados = response.data.filter(
+        contacto => contacto.id_municipalidad === parseInt(id_municipalidad)
+      );
+      setContactos(contactosFiltrados);
     } catch (error) {
       console.error('Error al cargar contactos:', error);
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudieron cargar los contactos',
-        life: 3000
-      });
+      const toastDiv = toast.current;
+      if (toastDiv) {
+        toastDiv.innerHTML = `
+          <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded shadow-md">
+            <div class="flex items-center">
+              <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <p><strong>Error:</strong> No se pudieron cargar los contactos</p>
+            </div>
+          </div>
+        `;
+        toastDiv.classList.remove('hidden');
+        setTimeout(() => {
+          toastDiv.classList.add('hidden');
+        }, 3000);
+      }
+    }
+  };
+
+  const handleMunicipalidadChange = (e) => {
+    const id_municipalidad = e.target.value;
+    setEditData(prev => ({ ...prev, id_municipalidad, id_contacto: '' }));
+    loadContactosPorMunicipalidad(id_municipalidad);
+  };
+
+  const handleSave = async () => {
+    if (!editData.id_municipalidad || !editData.id_contacto || !editData.tipo_acercamiento || !editData.lugar || !editData.fecha) {
+      const toastDiv = toast.current;
+      if (toastDiv) {
+        toastDiv.innerHTML = `
+          <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 rounded shadow-md">
+            <div class="flex items-center">
+              <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p><strong>Advertencia:</strong> Por favor complete todos los campos obligatorios</p>
+            </div>
+          </div>
+        `;
+        toastDiv.classList.remove('hidden');
+        setTimeout(() => {
+          toastDiv.classList.add('hidden');
+        }, 3000);
+      }
+      return;
+    }
+
+    const eventoData = {
+      ...editData,
+      fecha: editData.fecha ? editData.fecha.toISOString().split('T')[0] : null
+    };
+
+    try {
+      if (eventoData.id_evento) {
+        await axios.put(`${ADDRESS}api/eventos/${eventoData.id_evento}`, eventoData);
+        
+        const toastDiv = toast.current;
+        if (toastDiv) {
+          toastDiv.innerHTML = `
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded shadow-md">
+              <div class="flex items-center">
+                <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <p><strong>Éxito:</strong> Evento actualizado correctamente</p>
+              </div>
+            </div>
+          `;
+          toastDiv.classList.remove('hidden');
+          setTimeout(() => {
+            toastDiv.classList.add('hidden');
+          }, 3000);
+        }
+      } else {
+        await axios.post(`${ADDRESS}api/eventos`, eventoData);
+        
+        const toastDiv = toast.current;
+        if (toastDiv) {
+          toastDiv.innerHTML = `
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded shadow-md">
+              <div class="flex items-center">
+                <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+                <p><strong>Éxito:</strong> Evento creado correctamente</p>
+              </div>
+            </div>
+          `;
+          toastDiv.classList.remove('hidden');
+          setTimeout(() => {
+            toastDiv.classList.add('hidden');
+          }, 3000);
+        }
+      }
+      
+      setEditDialogVisible(false);
+      setCreateDialogVisible(false);
+      loadEventos();
+    } catch (error) {
+      console.error('Error al guardar evento:', error);
+      
+      const toastDiv = toast.current;
+      if (toastDiv) {
+        toastDiv.innerHTML = `
+          <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded shadow-md">
+            <div class="flex items-center">
+              <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <p><strong>Error:</strong> No se pudo guardar el evento</p>
+            </div>
+          </div>
+        `;
+        toastDiv.classList.remove('hidden');
+        setTimeout(() => {
+          toastDiv.classList.add('hidden');
+        }, 3000);
+      }
+    }
+  };
+
+  const confirmDelete = async (evento) => {
+    try {
+      await axios.delete(`${ADDRESS}api/eventos/${evento.id_evento}`);
+      
+      const toastDiv = toast.current;
+      if (toastDiv) {
+        toastDiv.innerHTML = `
+          <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded shadow-md">
+            <div class="flex items-center">
+              <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              <p><strong>Éxito:</strong> Evento eliminado correctamente</p>
+            </div>
+          </div>
+        `;
+        toastDiv.classList.remove('hidden');
+        setTimeout(() => {
+          toastDiv.classList.add('hidden');
+        }, 3000);
+      }
+      loadEventos();
+    } catch (error) {
+      console.error('Error al eliminar evento:', error);
+      
+      const toastDiv = toast.current;
+      if (toastDiv) {
+        toastDiv.innerHTML = `
+          <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded shadow-md">
+            <div class="flex items-center">
+              <svg class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              <p><strong>Error:</strong> No se pudo eliminar el evento</p>
+            </div>
+          </div>
+        `;
+        toastDiv.classList.remove('hidden');
+        setTimeout(() => {
+          toastDiv.classList.add('hidden');
+        }, 3000);
+      }
     }
   };
 
   const onGlobalFilterChange = (e) => {
-    const value = e.target.value;
-    let _filters = { ...filters };
-    _filters['global'].value = value;
-    setFilters(_filters);
-    setGlobalFilterValue(value);
+    setGlobalFilterValue(e.target.value);
+    applyGlobalFilter(e.target.value);
   };
 
-  const handleMunicipalidadChange = (e) => {
-    const municipalidadId = e.value;
-    setEditData(prev => ({
-      ...prev,
-      id_municipalidad: municipalidadId,
-      id_contacto: '' // Reset contacto when municipalidad changes
-    }));
-    loadContactosPorMunicipalidad(municipalidadId);
+  const applyGlobalFilter = (value) => {
+    const filterValue = value.trim().toLowerCase();
+    const updatedFilters = { ...filters };
+    
+    Object.keys(updatedFilters).forEach(field => {
+      updatedFilters[field] = { value: filterValue || null, matchMode: 'contains' };
+    });
+    
+    setFilters(updatedFilters);
   };
 
-  const handleSave = async () => {
-    try {
-      const dataToSend = {
-        ...editData,
-        fecha: editData.fecha ? editData.fecha.toISOString().split('T')[0] : null
-      };
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder * -1);
+    } else {
+      setSortField(field);
+      setSortOrder(1);
+    }
+  };
 
-      if (editData.id_evento) {
-        await axios.put(`${ADDRESS}api/eventos/${editData.id_evento}`, dataToSend);
-        toast.current.show({
-          severity: 'success',
-          summary: 'Éxito',
-          detail: 'Evento actualizado correctamente',
-          life: 3000
-        });
+  const getSortIcon = (field) => {
+    if (sortField !== field) {
+      return <FaSort className="ml-1 text-gray-400" />;
+    }
+    
+    return sortOrder === 1 
+      ? <FaSortUp className="ml-1 text-blue-500" />
+      : <FaSortDown className="ml-1 text-blue-500" />;
+  };
+
+  const sortData = (data, field, order) => {
+    return [...data].sort((a, b) => {
+      let valueA, valueB;
+      
+      if (field.includes('.')) {
+        const parts = field.split('.');
+        valueA = parts.reduce((obj, key) => obj && obj[key], a);
+        valueB = parts.reduce((obj, key) => obj && obj[key], b);
       } else {
-        await axios.post(`${ADDRESS}api/eventos`, dataToSend);
-        toast.current.show({
-          severity: 'success',
-          summary: 'Éxito',
-          detail: 'Evento creado correctamente',
-          life: 3000
-        });
+        valueA = a[field];
+        valueB = b[field];
       }
-      setEditDialogVisible(false);
-      setCreateDialogVisible(false);
-      setEditData({
-        id_evento: '',
-        id_municipalidad: '',
-        id_contacto: '',
-        tipo_acercamiento: '',
-        lugar: '',
-        fecha: null
-      });
-      loadEventos();
-    } catch (error) {
-      console.error('Error al guardar:', error);
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Error al guardar el evento',
-        life: 3000
-      });
-    }
+      
+      if (valueA === null || valueA === undefined) return 1 * order;
+      if (valueB === null || valueB === undefined) return -1 * order;
+      
+      if (field === 'fecha') {
+        return (new Date(valueA) - new Date(valueB)) * order;
+      }
+      
+      if (typeof valueA === 'string' && typeof valueB === 'string') {
+        return valueA.localeCompare(valueB) * order;
+      }
+      
+      return (valueA - valueB) * order;
+    });
   };
 
-  const confirmDelete = async (rowData) => {
-    try {
-      await axios.delete(`${ADDRESS}api/eventos/${rowData.id_evento}`);
-      toast.current.show({
-        severity: 'success',
-        summary: 'Éxito',
-        detail: 'Evento eliminado correctamente',
-        life: 3000
-      });
-      loadEventos();
-    } catch (error) {
-      console.error('Error al eliminar:', error);
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Error al eliminar el evento',
-        life: 3000
-      });
-    }
-  };
-
-  const actionBodyTemplate = (rowData) => {
-    return (
-      <div className="flex justify-center gap-2">
-        <Button
-          icon="pi pi-pencil"
-          rounded
-          className="p-button-sm bg-blue-500 hover:bg-blue-600 border-blue-500"
-          onClick={() => {
-            setEditData(rowData);
-            loadContactosPorMunicipalidad(rowData.id_municipalidad);
-            setEditDialogVisible(true);
-          }}
-        />
-        <Button
-          icon="pi pi-trash"
-          rounded
-          className="p-button-sm bg-red-500 hover:bg-red-600 border-red-500"
-          onClick={() => {
-            setSelectedEvento(rowData);
-            setDeleteDialogVisible(true);
-          }}
-        />
-      </div>
-    );
-  };
-
-  const renderHeader = () => {
-    return (
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-white border-b border-gray-200">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
-          <h2 className="text-2xl font-bold text-gray-800">Eventos</h2>
-          <Button
-            label="Nuevo Evento"
-            icon="pi pi-plus"
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
-            onClick={() => {
-              setEditData({
-                id_evento: '',
-                id_municipalidad: '',
-                id_contacto: '',
-                tipo_acercamiento: '',
-                lugar: '',
-                fecha: null
-              });
-              setCreateDialogVisible(true);
-            }}
-          />
-        </div>
-        <div className="w-full sm:w-auto">
-          <span className="p-input-icon-left w-full">
-            <i className="pi pi-search" />
-            <InputText
-              value={globalFilterValue}
-              onChange={onGlobalFilterChange}
-              placeholder="Buscar evento..."
-              className="w-full sm:w-[300px] rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent px-4 py-2"
-            />
-          </span>
-        </div>
-      </div>
-    );
-  };
-
-  const dateBodyTemplate = (rowData) => {
-    return formatDate(rowData.fecha);
-  };
+  const sortedData = sortData(eventos, sortField, sortOrder);
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -268,47 +354,31 @@ export default function EventosList() {
     });
   };
 
-  const dialogFooter = (
-    <div className="flex justify-end gap-2 pt-4">
-      <Button
-        label="Cancelar"
-        icon="pi pi-times"
-        className="p-button-text text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-        onClick={() => {
-          setEditDialogVisible(false);
-          setCreateDialogVisible(false);
-        }}
-      />
-      <Button
-        label="Guardar"
-        icon="pi pi-check"
-        className="bg-green-500 hover:bg-green-600 text-white"
-        onClick={handleSave}
-      />
-    </div>
-  );
+  const filteredData = sortedData.filter(evento => {
+    return Object.keys(filters).every(key => {
+      const filter = filters[key];
+      if (!filter.value) return true;
+      
+      let itemValue;
+      if (key.includes('.')) {
+        const parts = key.split('.');
+        itemValue = parts.reduce((obj, part) => obj && obj[part], evento);
+      } else {
+        itemValue = evento[key];
+      }
+      
+      if (itemValue === null || itemValue === undefined) return false;
+      
+      if (key === 'fecha') {
+        const date = new Date(itemValue);
+        const formattedDate = formatDate(date);
+        return formattedDate.toLowerCase().includes(filter.value.toLowerCase());
+      }
+      
+      return String(itemValue).toLowerCase().includes(filter.value.toLowerCase());
+    });
+  });
 
-  const deleteDialogFooter = (
-    <div className="flex justify-end gap-2 pt-4">
-      <Button
-        label="No"
-        icon="pi pi-times"
-        className="p-button-text text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-        onClick={() => setDeleteDialogVisible(false)}
-      />
-      <Button
-        label="Sí"
-        icon="pi pi-check"
-        className="bg-red-500 hover:bg-red-600 text-white"
-        onClick={() => {
-          confirmDelete(selectedEvento);
-          setDeleteDialogVisible(false);
-        }}
-      />
-    </div>
-  );
-
-  // Componente de calendario personalizado con Tailwind CSS
   const TailwindCalendar = ({ selectedDate, onChange, id, className }) => {
     const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
     const [isOpen, setIsOpen] = useState(false);
@@ -326,75 +396,68 @@ export default function EventosList() {
           setIsOpen(false);
         }
       };
-      
+
       document.addEventListener('mousedown', handleClickOutside);
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }, []);
 
-    const getDaysInMonth = (year, month) => {
-      return new Date(year, month + 1, 0).getDate();
-    };
-
-    const getFirstDayOfMonth = (year, month) => {
-      return new Date(year, month, 1).getDay();
-    };
-
-    const handleDateClick = (day) => {
-      const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-      onChange({ value: newDate });
-      setIsOpen(false);
-    };
-
     const handlePrevMonth = () => {
-      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+      setCurrentDate(prev => {
+        const newDate = new Date(prev);
+        newDate.setMonth(newDate.getMonth() - 1);
+        return newDate;
+      });
     };
 
     const handleNextMonth = () => {
-      setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+      setCurrentDate(prev => {
+        const newDate = new Date(prev);
+        newDate.setMonth(newDate.getMonth() + 1);
+        return newDate;
+      });
     };
 
-    const formatDate = (date) => {
-      if (!date) return '';
-      return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+    const handleDayClick = (day) => {
+      const newDate = new Date(currentDate);
+      newDate.setDate(day);
+      onChange({ value: newDate });
+      setIsOpen(false);
     };
 
     const renderCalendarDays = () => {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
-      const daysInMonth = getDaysInMonth(year, month);
-      const firstDay = getFirstDayOfMonth(year, month);
+      
+      const firstDayOfMonth = new Date(year, month, 1).getDay();
+      
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
       
       const days = [];
       
-      // Agregar días vacíos al principio del mes
-      for (let i = 0; i < firstDay; i++) {
-        days.push(<div key={`empty-${i}`} className="h-8 w-8"></div>);
+      for (let i = 0; i < firstDayOfMonth; i++) {
+        days.push(
+          <div key={`empty-${i}`} className="h-8 w-8"></div>
+        );
       }
       
-      // Agregar los días del mes
       for (let day = 1; day <= daysInMonth; day++) {
-        const isSelected = selectedDate && 
-                          selectedDate.getDate() === day && 
-                          selectedDate.getMonth() === month && 
-                          selectedDate.getFullYear() === year;
-        
-        const isToday = new Date().getDate() === day && 
-                        new Date().getMonth() === month && 
-                        new Date().getFullYear() === year;
+        const date = new Date(year, month, day);
+        const isToday = new Date().toDateString() === date.toDateString();
+        const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
         
         days.push(
-          <button
+          <div 
             key={day}
-            onClick={() => handleDateClick(day)}
-            className={`h-8 w-8 rounded-full flex items-center justify-center text-sm transition-colors
-                      ${isSelected ? 'bg-blue-500 text-white' : ''}
-                      ${isToday && !isSelected ? 'border border-blue-500 text-blue-500' : ''}
-                      ${!isSelected && !isToday ? 'hover:bg-gray-100' : ''}`}
+            onClick={() => handleDayClick(day)}
+            className={`h-8 w-8 flex items-center justify-center text-sm rounded-full cursor-pointer
+              ${isToday ? 'bg-blue-100 text-blue-800' : ''}
+              ${isSelected ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}
+            `}
           >
             {day}
-          </button>
+          </div>
         );
       }
       
@@ -415,9 +478,7 @@ export default function EventosList() {
             readOnly
             placeholder="Seleccione una fecha"
           />
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-          </svg>
+          <FaCalendarAlt className="text-gray-400" />
         </div>
 
         {isOpen && (
@@ -485,221 +546,472 @@ export default function EventosList() {
   };
 
   return (
-    <div className="card w-full p-4">
-      <Toast ref={toast} />
+    <div className="w-full p-4">
+      <div ref={toast} className="hidden fixed top-4 right-4 z-50"></div>
       
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden w-full" style={{ width: '100%' }}>
-        {/* Contenedor adicional para forzar el ancho */}
-        <div style={{ width: '100%', overflowX: 'hidden' }}>
-          <DataTable
-            ref={dt}
-            value={eventos}
-            selection={selectedEvento}
-            onSelectionChange={(e) => setSelectedEvento(e.value)}
-            dataKey="id_evento"
-            paginator
-            rows={10}
-            rowsPerPageOptions={[5, 10, 25]}
-            filters={filters}
-            filterDisplay="row"
-            loading={loading}
-            responsiveLayout="stack"
-            breakpoint="960px"
-            globalFilterFields={['municipalidad.nombre', 'contacto.nombre_completo', 'tipo_acercamiento', 'lugar', 'fecha']}
-            header={renderHeader()}
-            emptyMessage="No se encontraron eventos"
-            className="p-datatable-responsive-demo w-full"
-            showGridlines
-            removableSort
-            resizableColumns
-            columnResizeMode="expand"
-            filterIcon="pi pi-filter"
-            filterIconClassName="text-gray-600 hover:text-blue-500"
-            style={{ width: '100%' }}
-            tableStyle={{ width: '100%', tableLayout: 'fixed' }}
-          >
-            <Column 
-              field="municipalidad.nombre" 
-              header="Municipalidad" 
-              sortable 
-              filter 
-              filterPlaceholder="Buscar por municipalidad"
-              className="min-w-[200px]"
-              filterClassName="p-column-filter p-fluid p-column-filter-element"
-              filterClearIcon="pi pi-times"
-              filterApplyIcon="pi pi-check"
-            />
-            <Column 
-              field="contacto.nombre_completo" 
-              header="Contacto" 
-              sortable 
-              filter 
-              filterPlaceholder="Buscar por contacto"
-              className="min-w-[200px]"
-              filterClassName="p-column-filter p-fluid p-column-filter-element"
-              filterClearIcon="pi pi-times"
-              filterApplyIcon="pi pi-check"
-            />
-            <Column 
-              field="tipo_acercamiento" 
-              header="Tipo de Acercamiento" 
-              sortable 
-              filter 
-              filterPlaceholder="Buscar por tipo"
-              className="min-w-[200px]"
-              filterClassName="p-column-filter p-fluid p-column-filter-element"
-              filterClearIcon="pi pi-times"
-              filterApplyIcon="pi pi-check"
-            />
-            <Column 
-              field="lugar" 
-              header="Lugar" 
-              sortable 
-              filter 
-              filterPlaceholder="Buscar por lugar"
-              className="min-w-[150px]"
-              filterClassName="p-column-filter p-fluid p-column-filter-element"
-              filterClearIcon="pi pi-times"
-              filterApplyIcon="pi pi-check"
-            />
-            <Column 
-              field="fecha" 
-              header="Fecha" 
-              sortable 
-              filter 
-              filterPlaceholder="Buscar por fecha"
-              body={dateBodyTemplate}
-              className="min-w-[150px]"
-              filterClassName="p-column-filter p-fluid p-column-filter-element"
-              filterClearIcon="pi pi-times"
-              filterApplyIcon="pi pi-check"
-            />
-            <Column 
-              body={actionBodyTemplate} 
-              exportable={false} 
-              className="min-w-[100px]"
-              headerClassName="text-center"
-              bodyClassName="text-center"
-            />
-          </DataTable>
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden w-full">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-white border-b border-gray-200">
+        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+            <h2 className="text-2xl font-bold text-gray-800">Eventos</h2>
+            <button
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all w-full sm:w-auto flex items-center justify-center gap-2"
+              onClick={() => {
+                setEditData({
+                  id_evento: '',
+                  id_municipalidad: '',
+                  id_contacto: '',
+                  tipo_acercamiento: '',
+                  lugar: '',
+                  fecha: null
+                });
+                setCreateDialogVisible(true);
+              }}
+            >
+              <FaPlus />
+              <span>Nuevo Evento</span>
+            </button>
+          </div>
+          <div className="w-full sm:w-auto">
+            <div className="relative w-full">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <FaSearch className="text-gray-400" />
+              </div>
+              <input
+                type="text"
+                value={globalFilterValue}
+                onChange={onGlobalFilterChange}
+                placeholder="Buscar evento..."
+                className="w-full sm:w-[300px] pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th 
+                  scope="col" 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort('municipalidad.nombre')}
+                >
+                  <div className="flex items-center">
+                    <span>Municipalidad</span>
+                    {getSortIcon('municipalidad.nombre')}
+                  </div>
+                  {!isMobile && (
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        className="w-full p-1 text-sm border border-gray-300 rounded"
+                        placeholder="Filtrar..."
+                        value={filters['municipalidad.nombre'].value || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setFilters(prev => ({
+                            ...prev,
+                            'municipalidad.nombre': { value: value || null, matchMode: 'contains' }
+                          }));
+                        }}
+                      />
+                    </div>
+                  )}
+                </th>
+                
+                {!isMobile && (
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('contacto.nombre_completo')}
+                  >
+                    <div className="flex items-center">
+                      <span>Contacto</span>
+                      {getSortIcon('contacto.nombre_completo')}
+                    </div>
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        className="w-full p-1 text-sm border border-gray-300 rounded"
+                        placeholder="Filtrar..."
+                        value={filters['contacto.nombre_completo'].value || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setFilters(prev => ({
+                            ...prev,
+                            'contacto.nombre_completo': { value: value || null, matchMode: 'contains' }
+                          }));
+                        }}
+                      />
+                    </div>
+                  </th>
+                )}
+                
+                {!isMobile && (
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('tipo_acercamiento')}
+                  >
+                    <div className="flex items-center">
+                      <span>Tipo de Acercamiento</span>
+                      {getSortIcon('tipo_acercamiento')}
+                    </div>
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        className="w-full p-1 text-sm border border-gray-300 rounded"
+                        placeholder="Filtrar..."
+                        value={filters['tipo_acercamiento'].value || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setFilters(prev => ({
+                            ...prev,
+                            'tipo_acercamiento': { value: value || null, matchMode: 'contains' }
+                          }));
+                        }}
+                      />
+                    </div>
+                  </th>
+                )}
+                
+                {!isMobile && (
+                  <th 
+                    scope="col" 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                    onClick={() => handleSort('lugar')}
+                  >
+                    <div className="flex items-center">
+                      <span>Lugar</span>
+                      {getSortIcon('lugar')}
+                    </div>
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        className="w-full p-1 text-sm border border-gray-300 rounded"
+                        placeholder="Filtrar..."
+                        value={filters['lugar'].value || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setFilters(prev => ({
+                            ...prev,
+                            'lugar': { value: value || null, matchMode: 'contains' }
+                          }));
+                        }}
+                      />
+                    </div>
+                  </th>
+                )}
+                
+                <th 
+                  scope="col" 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort('fecha')}
+                >
+                  <div className="flex items-center">
+                    <span>Fecha</span>
+                    {getSortIcon('fecha')}
+                  </div>
+                  {!isMobile && (
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        className="w-full p-1 text-sm border border-gray-300 rounded"
+                        placeholder="Filtrar..."
+                        value={filters['fecha'].value || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setFilters(prev => ({
+                            ...prev,
+                            'fecha': { value: value || null, matchMode: 'contains' }
+                          }));
+                        }}
+                      />
+                    </div>
+                  )}
+                </th>
+                
+                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {loading ? (
+                <tr>
+                  <td colSpan={isMobile ? 3 : 6} className="px-6 py-4 text-center text-gray-500">
+                    <div className="flex justify-center items-center">
+                      <svg className="animate-spin h-5 w-5 mr-3 text-blue-500" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Cargando...
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredData.length === 0 ? (
+                <tr>
+                  <td colSpan={isMobile ? 3 : 6} className="px-6 py-4 text-center text-gray-500">
+                    No se encontraron eventos
+                  </td>
+                </tr>
+              ) : (
+                filteredData.map(evento => (
+                  <tr key={evento.id_evento} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-normal">
+                      <div className="text-sm font-medium text-gray-900">
+                        {evento.municipalidad?.nombre || 'N/A'}
+                      </div>
+                    </td>
+                    
+                    {!isMobile && (
+                      <td className="px-6 py-4 whitespace-normal">
+                        <div className="text-sm text-gray-900">
+                          {evento.contacto?.nombre_completo || 'N/A'}
+                        </div>
+                      </td>
+                    )}
+                    
+                    {!isMobile && (
+                      <td className="px-6 py-4 whitespace-normal">
+                        <div className="text-sm text-gray-900">
+                          {evento.tipo_acercamiento || 'N/A'}
+                        </div>
+                      </td>
+                    )}
+                    
+                    {!isMobile && (
+                      <td className="px-6 py-4 whitespace-normal">
+                        <div className="text-sm text-gray-900">
+                          {evento.lugar || 'N/A'}
+                        </div>
+                      </td>
+                    )}
+                    
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {formatDate(evento.fecha)}
+                      </div>
+                    </td>
+                    
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className="flex justify-center space-x-2">
+                        <button
+                          className="text-blue-500 hover:text-blue-700"
+                          onClick={() => {
+                            setEditData({
+                              ...evento,
+                              fecha: evento.fecha ? new Date(evento.fecha) : null
+                            });
+                            loadContactosPorMunicipalidad(evento.id_municipalidad);
+                            setEditDialogVisible(true);
+                          }}
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          className="text-red-500 hover:text-red-700"
+                          onClick={() => {
+                            setSelectedEvento(evento);
+                            setDeleteDialogVisible(true);
+                          }}
+                        >
+                          <FaTrashAlt />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        <div className="px-6 py-3 flex items-center justify-between border-t border-gray-200">
+          <div className="flex-1 flex justify-between sm:hidden">
+            <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              Anterior
+            </button>
+            <button className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+              Siguiente
+            </button>
+          </div>
+          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Mostrando <span className="font-medium">1</span> a <span className="font-medium">{filteredData.length}</span> de <span className="font-medium">{filteredData.length}</span> resultados
+              </p>
+            </div>
+            <div>
+              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                <button className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                  <span className="sr-only">Anterior</span>
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  1
+                </button>
+                <button className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                  <span className="sr-only">Siguiente</span>
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </nav>
+            </div>
+          </div>
         </div>
       </div>
+      
+      {(editDialogVisible || createDialogVisible) && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+            <div className="p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                {editData.id_evento ? 'Editar Evento' : 'Nuevo Evento'}
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="mb-4">
+                  <label htmlFor="municipalidad" className="block text-sm font-medium text-gray-700 mb-1">
+                    Municipalidad
+                  </label>
+                  <select
+                    id="municipalidad"
+                    value={editData.id_municipalidad}
+                    onChange={handleMunicipalidadChange}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Seleccione una municipalidad</option>
+                    {municipalidades.map(muni => (
+                      <option key={muni.id_municipalidad} value={muni.id_municipalidad}>
+                        {muni.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-      <Dialog
-        visible={editDialogVisible || createDialogVisible}
-        style={{ width: '90%', maxWidth: '800px' }}
-        header={editData.id_evento ? 'Editar Evento' : 'Nuevo Evento'}
-        modal
-        className="p-fluid"
-        footer={dialogFooter}
-        onHide={() => {
-          setEditDialogVisible(false);
-          setCreateDialogVisible(false);
-          setEditData({
-            id_evento: '',
-            id_municipalidad: '',
-            id_contacto: '',
-            tipo_acercamiento: '',
-            lugar: '',
-            fecha: null
-          });
-        }}
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-field mb-4">
-            <label htmlFor="municipalidad" className="block text-sm font-medium text-gray-700 mb-1">
-              Municipalidad
-            </label>
-            <Dropdown
-              id="municipalidad"
-              value={editData.id_municipalidad}
-              onChange={handleMunicipalidadChange}
-              options={municipalidades}
-              optionLabel="nombre"
-              optionValue="id_municipalidad"
-              placeholder="Seleccione una municipalidad"
-              className="w-full"
-              filter
-              showClear
-            />
-          </div>
+                <div className="mb-4">
+                  <label htmlFor="contacto" className="block text-sm font-medium text-gray-700 mb-1">
+                    Contacto
+                  </label>
+                  <select
+                    id="contacto"
+                    value={editData.id_contacto}
+                    onChange={(e) => setEditData(prev => ({ ...prev, id_contacto: e.target.value }))}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={!editData.id_municipalidad}
+                  >
+                    <option value="">Seleccione un contacto</option>
+                    {contactos.map(contacto => (
+                      <option key={contacto.id_contacto} value={contacto.id_contacto}>
+                        {contacto.nombre_completo}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-          <div className="p-field mb-4">
-            <label htmlFor="contacto" className="block text-sm font-medium text-gray-700 mb-1">
-              Contacto
-            </label>
-            <Dropdown
-              id="contacto"
-              value={editData.id_contacto}
-              onChange={(e) => setEditData(prev => ({ ...prev, id_contacto: e.value }))}
-              options={contactos}
-              optionLabel="nombre_completo"
-              optionValue="id_contacto"
-              placeholder="Seleccione un contacto"
-              className="w-full"
-              disabled={!editData.id_municipalidad}
-              filter
-              showClear
-            />
-          </div>
+                <div className="mb-4">
+                  <label htmlFor="lugar" className="block text-sm font-medium text-gray-700 mb-1">
+                    Lugar
+                  </label>
+                  <input
+                    id="lugar"
+                    type="text"
+                    value={editData.lugar}
+                    onChange={(e) => setEditData(prev => ({ ...prev, lugar: e.target.value }))}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
 
-          <div className="p-field mb-4">
-            <label htmlFor="lugar" className="block text-sm font-medium text-gray-700 mb-1">
-              Lugar
-            </label>
-            <InputText
-              id="lugar"
-              value={editData.lugar}
-              onChange={(e) => setEditData(prev => ({ ...prev, lugar: e.target.value }))}
-              className="w-full p-2 border rounded-md"
-            />
-          </div>
+                <div className="mb-4">
+                  <label htmlFor="fecha" className="block text-sm font-medium text-gray-700 mb-1">
+                    Fecha
+                  </label>
+                  <TailwindCalendar
+                    id="fecha"
+                    selectedDate={editData.fecha ? new Date(editData.fecha) : null}
+                    onChange={(e) => setEditData(prev => ({ ...prev, fecha: e.value }))}
+                    className="w-full"
+                  />
+                </div>
 
-          <div className="p-field mb-4">
-            <label htmlFor="fecha" className="block text-sm font-medium text-gray-700 mb-1">
-              Fecha
-            </label>
-            <TailwindCalendar
-              id="fecha"
-              selectedDate={editData.fecha ? new Date(editData.fecha) : null}
-              onChange={(e) => setEditData(prev => ({ ...prev, fecha: e.value }))}
-              className="w-full"
-            />
-          </div>
-
-          <div className="p-field mb-4 col-span-full">
-            <label htmlFor="tipo_acercamiento" className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Acercamiento
-            </label>
-            <textarea
-              id="tipo_acercamiento"
-              value={editData.tipo_acercamiento}
-              onChange={(e) => setEditData(prev => ({ ...prev, tipo_acercamiento: e.target.value }))}
-              className="w-full p-2 border rounded-md"
-              rows={4}
-            />
+                <div className="mb-4 col-span-full">
+                  <label htmlFor="tipo_acercamiento" className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Acercamiento
+                  </label>
+                  <textarea
+                    id="tipo_acercamiento"
+                    value={editData.tipo_acercamiento}
+                    onChange={(e) => setEditData(prev => ({ ...prev, tipo_acercamiento: e.target.value }))}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={4}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2 mt-6">
+                <button
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded"
+                  onClick={() => {
+                    setEditDialogVisible(false);
+                    setCreateDialogVisible(false);
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded"
+                  onClick={handleSave}
+                >
+                  Guardar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </Dialog>
-
-      <Dialog
-        visible={deleteDialogVisible}
-        style={{ width: '450px' }}
-        header="Confirmar"
-        modal
-        className="p-fluid"
-        footer={deleteDialogFooter}
-        onHide={() => setDeleteDialogVisible(false)}
-      >
-        <div className="confirmation-content">
-          <i className="pi pi-exclamation-triangle text-yellow-500 mr-3" style={{ fontSize: '2rem' }} />
-          {selectedEvento && (
-            <span>
-              ¿Está seguro que desea eliminar el evento?
-            </span>
-          )}
+      )}
+      
+      {deleteDialogVisible && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="bg-yellow-100 p-2 rounded-full mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path fillRule="evenodd" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900">Confirmar eliminación</h3>
+              </div>
+              
+              <p className="text-gray-700 mb-6">
+                ¿Está seguro que desea eliminar este evento? Esta acción no se puede deshacer.
+              </p>
+              
+              <div className="flex justify-end gap-2">
+                <button
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded"
+                  onClick={() => setDeleteDialogVisible(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded"
+                  onClick={() => {
+                    confirmDelete(selectedEvento);
+                    setDeleteDialogVisible(false);
+                  }}
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </Dialog>
+      )}
     </div>
   );
 }

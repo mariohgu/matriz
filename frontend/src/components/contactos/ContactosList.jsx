@@ -1,18 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { DataTable } from 'primereact/datatable';
-import { Column } from 'primereact/column';
-import { Toast } from 'primereact/toast';
-import { Button } from 'primereact/button';
-import { Dialog } from 'primereact/dialog';
-import { InputText } from 'primereact/inputtext';
-import { Dropdown } from 'primereact/dropdown';
-import { FilterMatchMode } from 'primereact/api';
+import React, { useState, useEffect } from 'react';
+import { FiEdit, FiTrash2, FiEye, FiChevronUp, FiChevronDown, FiPlus } from 'react-icons/fi';
 import axios from 'axios';
 import { ADDRESS } from '../../utils.jsx';
 
 export default function ContactosList() {
   const [contactos, setContactos] = useState([]);
   const [municipalidades, setMunicipalidades] = useState([]);
+  const [viewDialogVisible, setViewDialogVisible] = useState(false);
   const [editDialogVisible, setEditDialogVisible] = useState(false);
   const [createDialogVisible, setCreateDialogVisible] = useState(false);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
@@ -25,25 +19,47 @@ export default function ContactosList() {
     telefono: '',
     email: '',
   });
-  const [globalFilterValue, setGlobalFilterValue] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const toast = useRef(null);
-  const dt = useRef(null);
-  //const address = "http://127.0.0.1:8000/";
-
-  const [filters, setFilters] = useState({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    nombre_completo: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    cargo: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    telefono: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    email: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    'municipalidad.nombre': { value: null, matchMode: FilterMatchMode.CONTAINS }
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [sortField, setSortField] = useState('nombre_completo');
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [toastMessage, setToastMessage] = useState(null);
+  const [columnFilters, setColumnFilters] = useState({
+    nombre_completo: '',
+    cargo: '',
+    telefono: '',
+    email: '',
+    municipalidad: ''
   });
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
     loadContactos();
     loadMunicipalidades();
+    
+    // Añadir listener para detectar cambios en el tamaño de la ventana
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
+
+  // Toast message auto-hide
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => {
+        setToastMessage(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
 
   const loadContactos = async () => {
     setLoading(true);
@@ -52,11 +68,10 @@ export default function ContactosList() {
       setContactos(response.data || []);
     } catch (error) {
       console.error('Error al cargar contactos:', error);
-      toast.current.show({
+      setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'No se pudieron cargar los contactos',
-        life: 3000
+        detail: 'No se pudieron cargar los contactos'
       });
     } finally {
       setLoading(false);
@@ -69,40 +84,29 @@ export default function ContactosList() {
       setMunicipalidades(response.data || []);
     } catch (error) {
       console.error('Error al cargar municipalidades:', error);
-      toast.current.show({
+      setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'No se pudieron cargar las municipalidades',
-        life: 3000
+        detail: 'No se pudieron cargar las municipalidades'
       });
     }
-  };
-
-  const onGlobalFilterChange = (e) => {
-    const value = e.target.value;
-    let _filters = { ...filters };
-    _filters['global'].value = value;
-    setFilters(_filters);
-    setGlobalFilterValue(value);
   };
 
   const handleSave = async () => {
     try {
       if (editData.id_contacto) {
         await axios.put(`${ADDRESS}api/contactos/${editData.id_contacto}`, editData);
-        toast.current.show({
+        setToastMessage({
           severity: 'success',
           summary: 'Éxito',
-          detail: 'Contacto actualizado correctamente',
-          life: 3000
+          detail: 'Contacto actualizado correctamente'
         });
       } else {
         await axios.post(`${ADDRESS}api/contactos`, editData);
-        toast.current.show({
+        setToastMessage({
           severity: 'success',
           summary: 'Éxito',
-          detail: 'Contacto creado correctamente',
-          life: 3000
+          detail: 'Contacto creado correctamente'
         });
       }
       setEditDialogVisible(false);
@@ -118,11 +122,10 @@ export default function ContactosList() {
       loadContactos();
     } catch (error) {
       console.error('Error al guardar:', error);
-      toast.current.show({
+      setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'Error al guardar el contacto',
-        life: 3000
+        detail: 'Error al guardar el contacto'
       });
     }
   };
@@ -130,58 +133,124 @@ export default function ContactosList() {
   const confirmDelete = async (rowData) => {
     try {
       await axios.delete(`${ADDRESS}api/contactos/${rowData.id_contacto}`);
-      toast.current.show({
+      setToastMessage({
         severity: 'success',
         summary: 'Éxito',
-        detail: 'Contacto eliminado correctamente',
-        life: 3000
+        detail: 'Contacto eliminado correctamente'
       });
       loadContactos();
     } catch (error) {
       console.error('Error al eliminar:', error);
-      toast.current.show({
+      setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'Error al eliminar el contacto',
-        life: 3000
+        detail: 'Error al eliminar el contacto'
       });
     }
   };
 
-  const actionBodyTemplate = (rowData) => {
-    return (
-      <div className="flex justify-center gap-2">
-        <Button
-          icon="pi pi-pencil"
-          rounded
-          className="p-button-sm bg-blue-500 hover:bg-blue-600 border-blue-500"
-          onClick={() => {
-            setEditData(rowData);
-            setEditDialogVisible(true);
-          }}
-        />
-        <Button
-          icon="pi pi-trash"
-          rounded
-          className="p-button-sm bg-red-500 hover:bg-red-600 border-red-500"
-          onClick={() => {
-            setSelectedContacto(rowData);
-            setDeleteDialogVisible(true);
-          }}
-        />
-      </div>
-    );
+  // Sorting function
+  const handleSort = (field) => {
+    const isAsc = sortField === field && sortOrder === 'asc';
+    setSortOrder(isAsc ? 'desc' : 'asc');
+    setSortField(field);
   };
 
-  const renderHeader = () => {
-    return (
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-white border-b border-gray-200">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+  // Get municipalidad name by id
+  const getMunicipalidadName = (id_municipalidad) => {
+    const municipalidad = municipalidades.find(m => m.id_municipalidad === id_municipalidad);
+    return municipalidad ? municipalidad.nombre : '';
+  };
+
+  // Filtering functions
+  const filteredContactos = contactos.filter(contacto => {
+    // Filtro de búsqueda general
+    const searchFields = [
+      contacto.nombre_completo,
+      contacto.cargo,
+      contacto.telefono,
+      contacto.email,
+      getMunicipalidadName(contacto.id_municipalidad)
+    ];
+    
+    const matchesSearch = searchQuery === '' || 
+      searchFields.some(field => 
+        field && field.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    
+    // Filtros por columna
+    const matchesNombre = columnFilters.nombre_completo === '' || 
+      (contacto.nombre_completo && contacto.nombre_completo.toLowerCase().includes(columnFilters.nombre_completo.toLowerCase()));
+    
+    const matchesCargo = columnFilters.cargo === '' || 
+      (contacto.cargo && contacto.cargo.toLowerCase().includes(columnFilters.cargo.toLowerCase()));
+    
+    const matchesTelefono = columnFilters.telefono === '' || 
+      (contacto.telefono && contacto.telefono.toLowerCase().includes(columnFilters.telefono.toLowerCase()));
+    
+    const matchesEmail = columnFilters.email === '' || 
+      (contacto.email && contacto.email.toLowerCase().includes(columnFilters.email.toLowerCase()));
+    
+    const municipalidadName = getMunicipalidadName(contacto.id_municipalidad);
+    const matchesMunicipalidad = columnFilters.municipalidad === '' || 
+      (municipalidadName && municipalidadName.toLowerCase().includes(columnFilters.municipalidad.toLowerCase()));
+    
+    return matchesSearch && matchesNombre && matchesCargo && matchesTelefono && 
+           matchesEmail && matchesMunicipalidad;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredContactos.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+
+  // Sorting
+  const sortedData = [...filteredContactos].sort((a, b) => {
+    let aValue, bValue;
+    
+    if (sortField === 'municipalidad') {
+      aValue = getMunicipalidadName(a.id_municipalidad) || '';
+      bValue = getMunicipalidadName(b.id_municipalidad) || '';
+    } else {
+      aValue = a[sortField] || '';
+      bValue = b[sortField] || '';
+    }
+    
+    if (sortOrder === 'asc') {
+      return aValue.localeCompare(bValue, undefined, { numeric: true });
+    } else {
+      return bValue.localeCompare(aValue, undefined, { numeric: true });
+    }
+  });
+
+  const paginatedData = sortedData.slice(startIndex, endIndex);
+
+  const goToPage = (page) => {
+    setCurrentPage(page);
+  };
+
+  return (
+    <div className="p-6 bg-white rounded-lg shadow w-full max-w-full">
+      {/* Toast Message */}
+      {toastMessage && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
+          toastMessage.severity === 'success' ? 'bg-green-100 border-l-4 border-green-500 text-green-700' :
+          toastMessage.severity === 'error' ? 'bg-red-100 border-l-4 border-red-500 text-red-700' :
+          toastMessage.severity === 'warning' ? 'bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700' :
+          'bg-blue-100 border-l-4 border-blue-500 text-blue-700'
+        }`}>
+          <div className="flex items-center">
+            <div className="font-bold">{toastMessage.summary}</div>
+            <div className="ml-2">{toastMessage.detail}</div>
+          </div>
+        </div>
+      )}
+      
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center">
           <h2 className="text-2xl font-bold text-gray-800">Contactos</h2>
-          <Button
-            label="Nuevo Contacto"
-            icon="pi pi-plus"
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all w-full sm:w-auto"
+          <button
             onClick={() => {
               setEditData({
                 id_contacto: '',
@@ -193,294 +262,540 @@ export default function ContactosList() {
               });
               setCreateDialogVisible(true);
             }}
+            className="ml-4 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+          >
+            <FiPlus className="w-5 h-5" />
+            <span>Nuevo Contacto</span>
+          </button>
+        </div>
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar contacto..."
+            className="w-full px-4 py-2 pr-10 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
-        </div>
-        <div className="w-full sm:w-auto">
-          <span className="p-input-icon-left w-full">
-            <i className="pi pi-search" />
-            <InputText
-              value={globalFilterValue}
-              onChange={onGlobalFilterChange}
-              placeholder="Buscar contacto..."
-              className="w-full sm:w-[300px] rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent px-4 py-2"
-            />
-          </span>
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
         </div>
       </div>
-    );
-  };
-
-  const municipalidadBodyTemplate = (rowData) => {
-    const municipalidad = municipalidades.find(m => m.id_municipalidad === rowData.id_municipalidad);
-    return municipalidad ? municipalidad.nombre : '';
-  };
-
-  const dialogContent = (
-    <>
-      <div className="field mb-4">
-        <label htmlFor="municipalidad" className="block text-gray-700 font-medium mb-2">
-          Municipalidad
-        </label>
-        <Dropdown
-          id="municipalidad"
-          value={editData.id_municipalidad}
-          options={municipalidades}
-          onChange={(e) => setEditData({ ...editData, id_municipalidad: e.value })}
-          optionLabel="nombre"
-          optionValue="id_municipalidad"
-          placeholder="Seleccione una municipalidad"
-          className="w-full"
-          filter
-          showClear
-        />
+      
+      {/* Table */}
+      <div className="overflow-x-auto w-full">
+        <table className="min-w-full w-full divide-y divide-gray-200 table-fixed">
+          <thead className="bg-gray-50">
+            <tr>
+              <th 
+                scope="col" 
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-1/6"
+                onClick={() => handleSort('nombre_completo')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Nombre</span>
+                  {sortField === 'nombre_completo' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters.nombre_completo}
+                      onChange={(e) => setColumnFilters({...columnFilters, nombre_completo: e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              <th 
+                scope="col" 
+                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : 'w-1/6'}`}
+                onClick={() => handleSort('cargo')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Cargo</span>
+                  {sortField === 'cargo' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters.cargo}
+                      onChange={(e) => setColumnFilters({...columnFilters, cargo: e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              <th 
+                scope="col" 
+                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : 'w-1/6'}`}
+                onClick={() => handleSort('telefono')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Teléfono</span>
+                  {sortField === 'telefono' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters.telefono}
+                      onChange={(e) => setColumnFilters({...columnFilters, telefono: e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              <th 
+                scope="col" 
+                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : 'w-1/6'}`}
+                onClick={() => handleSort('email')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Email</span>
+                  {sortField === 'email' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters.email}
+                      onChange={(e) => setColumnFilters({...columnFilters, email: e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              <th 
+                scope="col" 
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-1/6"
+                onClick={() => handleSort('municipalidad')}
+              >
+                <div className="flex items-center space-x-1">
+                  <span>Municipalidad</span>
+                  {sortField === 'municipalidad' && (
+                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
+                  )}
+                </div>
+                {!isMobile && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={columnFilters.municipalidad}
+                      onChange={(e) => setColumnFilters({...columnFilters, municipalidad: e.target.value})}
+                      placeholder="Filtrar..."
+                      className="w-full px-2 py-1 text-xs border rounded"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </th>
+              <th scope="col" className={`px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider ${isMobile ? 'w-1/4' : 'w-1/6'}`}>
+                Acciones
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {loading ? (
+              <tr>
+                <td colSpan="6" className="px-6 py-4 text-center">
+                  <div className="flex justify-center items-center">
+                    <svg className="animate-spin h-5 w-5 text-blue-500 mr-3" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Cargando...</span>
+                  </div>
+                </td>
+              </tr>
+            ) : paginatedData.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                  No se encontraron contactos
+                </td>
+              </tr>
+            ) : (
+              paginatedData.map((contacto) => (
+                <tr key={contacto.id_contacto} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 break-words">{contacto.nombre_completo}</td>
+                  <td className={`px-6 py-4 break-words ${isMobile ? 'hidden md:table-cell' : ''}`}>{contacto.cargo}</td>
+                  <td className={`px-6 py-4 break-words ${isMobile ? 'hidden md:table-cell' : ''}`}>{contacto.telefono}</td>
+                  <td className={`px-6 py-4 break-words ${isMobile ? 'hidden md:table-cell' : ''}`}>{contacto.email}</td>
+                  <td className="px-6 py-4 break-words">{getMunicipalidadName(contacto.id_municipalidad)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedContacto(contacto);
+                          setViewDialogVisible(true);
+                        }}
+                        className="p-2 text-purple-600 hover:bg-purple-100 rounded-full"
+                        title="Ver detalles"
+                      >
+                        <FiEye className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedContacto(contacto);
+                          setEditData(contacto);
+                          setEditDialogVisible(true);
+                        }}
+                        className="p-2 text-blue-600 hover:bg-blue-100 rounded-full"
+                        title="Editar"
+                      >
+                        <FiEdit className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedContacto(contacto);
+                          setDeleteDialogVisible(true);
+                        }}
+                        className="p-2 text-red-600 hover:bg-red-100 rounded-full"
+                        title="Eliminar"
+                      >
+                        <FiTrash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
-      <div className="field mb-4">
-        <label htmlFor="nombre_completo" className="block text-gray-700 font-medium mb-2">
-          Nombre Completo
-        </label>
-        <InputText
-          id="nombre_completo"
-          value={editData.nombre_completo}
-          onChange={(e) => setEditData({ ...editData, nombre_completo: e.target.value })}
-          className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          required
-        />
-      </div>
-      <div className="field mb-4">
-        <label htmlFor="cargo" className="block text-gray-700 font-medium mb-2">
-          Cargo
-        </label>
-        <InputText
-          id="cargo"
-          value={editData.cargo}
-          onChange={(e) => setEditData({ ...editData, cargo: e.target.value })}
-          className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          required
-        />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="field">
-          <label htmlFor="telefono" className="block text-gray-700 font-medium mb-2">
-            Teléfono
-          </label>
-          <InputText
-            id="telefono"
-            value={editData.telefono}
-            onChange={(e) => setEditData({ ...editData, telefono: e.target.value })}
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+      
+      {/* Pagination */}
+      <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
+        <div className="text-sm text-gray-500">
+          Mostrando {filteredContactos.length > 0 ? startIndex + 1 : 0} a {Math.min(endIndex, filteredContactos.length)} de {filteredContactos.length} resultados
         </div>
-        <div className="field">
-          <label htmlFor="email" className="block text-gray-700 font-medium mb-2">
-            Email
-          </label>
-          <InputText
-            id="email"
-            value={editData.email}
-            onChange={(e) => setEditData({ ...editData, email: e.target.value })}
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            type="email"
-          />
-        </div>
-      </div>
-    </>
-  );
-
-  const editDialogFooter = (
-    <div className="flex justify-end gap-2 pt-4">
-      <Button
-        label="Cancelar"
-        icon="pi pi-times"
-        className="p-button-text text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-        onClick={() => setEditDialogVisible(false)}
-      />
-      <Button
-        label="Guardar"
-        icon="pi pi-check"
-        className="bg-green-500 hover:bg-green-600 text-white"
-        onClick={handleSave}
-      />
-    </div>
-  );
-
-  const createDialogFooter = (
-    <div className="flex justify-end gap-2 pt-4">
-      <Button
-        label="Cancelar"
-        icon="pi pi-times"
-        className="p-button-text text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-        onClick={() => setCreateDialogVisible(false)}
-      />
-      <Button
-        label="Crear"
-        icon="pi pi-check"
-        className="bg-green-500 hover:bg-green-600 text-white"
-        onClick={handleSave}
-      />
-    </div>
-  );
-
-  const deleteDialogFooter = (
-    <div className="flex justify-end gap-2 pt-4">
-      <Button
-        label="No"
-        icon="pi pi-times"
-        className="p-button-text text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-        onClick={() => setDeleteDialogVisible(false)}
-      />
-      <Button
-        label="Sí"
-        icon="pi pi-check"
-        className="bg-red-500 hover:bg-red-600 text-white"
-        onClick={() => {
-          confirmDelete(selectedContacto);
-          setDeleteDialogVisible(false);
-        }}
-      />
-    </div>
-  );
-
-  return (
-    <div className="flex-1 p-4 bg-gray-50 min-h-screen">
-      <div className="max-w-[1400px] mx-auto">
-        <Toast ref={toast} />
-        
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden w-full" style={{ width: '100%' }}>
-          {/* Contenedor adicional para forzar el ancho */}
-          <div style={{ width: '100%', overflowX: 'hidden' }}>
-            <DataTable
-              ref={dt}
-              value={contactos}
-              dataKey="id_contacto"
-              paginator
-              rows={10}
-              rowsPerPageOptions={[5, 10, 25]}
-              loading={loading}
-              filters={filters}
-              header={renderHeader}
-              emptyMessage="No se encontraron contactos"
-              className="p-datatable-responsive-demo w-full"
-              responsiveLayout="stack"
-              breakpoint="960px"
-              showGridlines
-              removableSort
-              filterDisplay="row"
-              globalFilterFields={['nombre_completo', 'cargo', 'telefono', 'email', 'municipalidad.nombre']}
-              filterIcon="pi pi-filter"
-              filterIconClassName="text-gray-600 hover:text-blue-500"
-              style={{ width: '100%' }}
-              tableStyle={{ width: '100%', tableLayout: 'fixed' }}
+        <div className="flex items-center">
+          <div className="mr-4">
+            <select
+              value={itemsPerPage}
+              onChange={(e) => {
+                setItemsPerPage(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <Column
-                field="nombre_completo"
-                header="Nombre"
-                sortable
-                filter
-                filterPlaceholder="Buscar por nombre"
-                className="min-w-[200px]"
-                filterClassName="p-column-filter p-fluid p-column-filter-element"
-                filterClearIcon="pi pi-times"
-                filterApplyIcon="pi pi-check"
-              />
-              <Column
-                field="cargo"
-                header="Cargo"
-                sortable
-                filter
-                filterPlaceholder="Buscar por cargo"
-                className="min-w-[150px]"
-                filterClassName="p-column-filter p-fluid p-column-filter-element"
-                filterClearIcon="pi pi-times"
-                filterApplyIcon="pi pi-check"
-              />
-              <Column
-                field="telefono"
-                header="Teléfono"
-                sortable
-                filter
-                filterPlaceholder="Buscar por teléfono"
-                className="min-w-[120px]"
-                filterClassName="p-column-filter p-fluid p-column-filter-element"
-                filterClearIcon="pi pi-times"
-                filterApplyIcon="pi pi-check"
-              />
-              <Column
-                field="email"
-                header="Email"
-                sortable
-                filter
-                filterPlaceholder="Buscar por email"
-                className="min-w-[200px]"
-                filterClassName="p-column-filter p-fluid p-column-filter-element"
-                filterClearIcon="pi pi-times"
-                filterApplyIcon="pi pi-check"
-              />
-              <Column
-                field="municipalidad.nombre"
-                header="Municipalidad"
-                sortable
-                filter
-                filterPlaceholder="Buscar por municipalidad"
-                className="min-w-[200px]"
-                filterClassName="p-column-filter p-fluid p-column-filter-element"
-                filterClearIcon="pi pi-times"
-                filterApplyIcon="pi pi-check"
-              />
-              <Column
-                body={actionBodyTemplate}
-                exportable={false}
-                style={{ minWidth: '8rem' }}
-                className="text-center"
-              />
-            </DataTable>
+              <option value="5">5 por página</option>
+              <option value="10">10 por página</option>
+              <option value="25">25 por página</option>
+              <option value="50">50 por página</option>
+            </select>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => goToPage(1)}
+              disabled={currentPage === 1}
+              className={`px-3 py-1 rounded-md ${
+                currentPage === 1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-blue-600 hover:bg-blue-50 border border-gray-300'
+              }`}
+            >
+              &laquo;
+            </button>
+            <button
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className={`px-3 py-1 rounded-md ${
+                currentPage === 1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-blue-600 hover:bg-blue-50 border border-gray-300'
+              }`}
+            >
+              &lsaquo;
+            </button>
+            <button
+              onClick={() => {}}
+              className="px-3 py-1 rounded-md bg-blue-600 text-white"
+            >
+              {currentPage}
+            </button>
+            <button
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className={`px-3 py-1 rounded-md ${
+                currentPage === totalPages
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-blue-600 hover:bg-blue-50 border border-gray-300'
+              }`}
+            >
+              &rsaquo;
+            </button>
+            <button
+              onClick={() => goToPage(totalPages)}
+              disabled={currentPage === totalPages}
+              className={`px-3 py-1 rounded-md ${
+                currentPage === totalPages
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-blue-600 hover:bg-blue-50 border border-gray-300'
+              }`}
+            >
+              &raquo;
+            </button>
           </div>
         </div>
-
-        <Dialog
-          visible={editDialogVisible}
-          style={{ width: '95vw', maxWidth: '600px' }}
-          header="Editar Contacto"
-          modal
-          className="p-fluid rounded-xl overflow-hidden"
-          footer={editDialogFooter}
-          onHide={() => setEditDialogVisible(false)}
-          closeIcon="pi pi-times"
-          closeButtonClassName="hover:bg-gray-100 rounded-full p-2 transition-colors"
-        >
-          {dialogContent}
-        </Dialog>
-
-        <Dialog
-          visible={createDialogVisible}
-          style={{ width: '95vw', maxWidth: '600px' }}
-          header="Nuevo Contacto"
-          modal
-          className="p-fluid rounded-xl overflow-hidden"
-          footer={createDialogFooter}
-          onHide={() => setCreateDialogVisible(false)}
-          closeIcon="pi pi-times"
-          closeButtonClassName="hover:bg-gray-100 rounded-full p-2 transition-colors"
-        >
-          {dialogContent}
-        </Dialog>
-
-        <Dialog
-          visible={deleteDialogVisible}
-          style={{ width: '95vw', maxWidth: '450px' }}
-          header="Confirmar Eliminación"
-          modal
-          footer={deleteDialogFooter}
-          onHide={() => setDeleteDialogVisible(false)}
-          className="p-fluid rounded-xl overflow-hidden"
-        >
-          <div className="flex items-center gap-4 p-4">
-            <i className="pi pi-exclamation-triangle text-yellow-500 text-4xl" />
-            <span className="text-gray-600">
-              ¿Está seguro que desea eliminar el contacto <span className="font-bold">{selectedContacto?.nombre_completo}</span>?
-            </span>
-          </div>
-        </Dialog>
       </div>
+
+      {/* View Dialog */}
+      {viewDialogVisible && selectedContacto && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full md:max-w-4xl lg:max-w-5xl ml-auto mr-auto relative">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex justify-between items-center pb-3 border-b mb-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    Detalles del Contacto
+                  </h3>
+                  <button
+                    onClick={() => setViewDialogVisible(false)}
+                    className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                  >
+                    <span className="sr-only">Cerrar</span>
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Nombre Completo</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedContacto.nombre_completo}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Cargo</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedContacto.cargo}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Teléfono</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedContacto.telefono}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Email</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedContacto.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Municipalidad</p>
+                    <p className="mt-1 text-sm text-gray-900">{getMunicipalidadName(selectedContacto.id_municipalidad)}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={() => setViewDialogVisible(false)}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create/Edit Dialog */}
+      {(createDialogVisible || editDialogVisible) && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full md:max-w-4xl lg:max-w-5xl ml-auto mr-auto relative">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex justify-between items-center pb-3 border-b mb-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    {editDialogVisible ? 'Editar Contacto' : 'Nuevo Contacto'}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setEditDialogVisible(false);
+                      setCreateDialogVisible(false);
+                    }}
+                    className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                  >
+                    <span className="sr-only">Cerrar</span>
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="municipalidad" className="block text-sm font-medium text-gray-700">
+                      Municipalidad
+                    </label>
+                    <select
+                      id="municipalidad"
+                      value={editData.id_municipalidad}
+                      onChange={(e) => setEditData({ ...editData, id_municipalidad: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Seleccione una municipalidad</option>
+                      {municipalidades.map((municipalidad) => (
+                        <option key={municipalidad.id_municipalidad} value={municipalidad.id_municipalidad}>
+                          {municipalidad.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="nombre_completo" className="block text-sm font-medium text-gray-700">
+                      Nombre Completo
+                    </label>
+                    <input
+                      type="text"
+                      id="nombre_completo"
+                      value={editData.nombre_completo}
+                      onChange={(e) => setEditData({ ...editData, nombre_completo: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="cargo" className="block text-sm font-medium text-gray-700">
+                      Cargo
+                    </label>
+                    <input
+                      type="text"
+                      id="cargo"
+                      value={editData.cargo}
+                      onChange={(e) => setEditData({ ...editData, cargo: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="telefono" className="block text-sm font-medium text-gray-700">
+                        Teléfono
+                      </label>
+                      <input
+                        type="text"
+                        id="telefono"
+                        value={editData.telefono}
+                        onChange={(e) => setEditData({ ...editData, telefono: e.target.value })}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        value={editData.email}
+                        onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={handleSave}
+                >
+                  {editDialogVisible ? 'Guardar' : 'Crear'}
+                </button>
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={() => {
+                    setEditDialogVisible(false);
+                    setCreateDialogVisible(false);
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Dialog */}
+      {deleteDialogVisible && selectedContacto && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full" style={{ marginLeft: 'auto', marginRight: 'auto', left: '0', right: '0' }}>
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                    <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                      Confirmar eliminación
+                    </h3>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500">
+                        ¿Está seguro que desea eliminar el contacto <span className="font-bold">{selectedContacto.nombre_completo}</span>?
+                        Esta acción no se puede deshacer.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={() => {
+                    confirmDelete(selectedContacto);
+                    setDeleteDialogVisible(false);
+                  }}
+                >
+                  Eliminar
+                </button>
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={() => setDeleteDialogVisible(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

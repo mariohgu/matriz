@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\TipoEventoController;
 use App\Http\Controllers\Api\TipoReunionController;
 use App\Http\Controllers\Api\EventoController;
 use App\Http\Controllers\Api\EstadoSeguimientoController;
+use App\Http\Controllers\Api\OficioController;
+use App\Http\Controllers\Api\ConvenioController;
 
 // Ruta del controlador Hello
 Route::get('/hello', [HelloController::class, 'index']);
@@ -35,3 +37,14 @@ Route::post('eventos/por-fecha', [EventoController::class, 'porFecha']);
 Route::apiResource('estados-seguimiento', EstadoSeguimientoController::class);
 Route::get('eventos/{id}/estados-seguimiento', [EstadoSeguimientoController::class, 'porEvento']);
 Route::post('estados-seguimiento/por-fecha', [EstadoSeguimientoController::class, 'porFecha']);
+
+// Rutas para el CRUD de Oficios
+Route::apiResource('oficios', OficioController::class);
+Route::get('municipalidades/{id}/oficios', [OficioController::class, 'porMunicipalidad']);
+Route::post('oficios/por-fecha', [OficioController::class, 'porFecha']);
+
+// Rutas para el CRUD de Convenios
+Route::apiResource('convenios', ConvenioController::class);
+Route::get('municipalidades/{id}/convenios', [ConvenioController::class, 'porMunicipalidad']);
+Route::post('convenios/por-fecha', [ConvenioController::class, 'porFecha']);
+Route::post('convenios/por-monto', [ConvenioController::class, 'porMonto']);
