@@ -48,76 +48,11 @@ export default function EstadoSeguimientosList() {
     { label: 'Cancelado', value: 'Cancelado' }
   ];
 
-  useEffect(() => {
-    loadEstadosSeguimiento();
-    loadEventos();
-    loadTiposReunion();
-    
-    // Añadir listener para detectar cambios en el tamaño de la ventana
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
-
-  // Toast message auto-hide
-  useEffect(() => {
-    if (toastMessage) {
-      const timer = setTimeout(() => {
-        setToastMessage(null);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [toastMessage]);
-
   const loadEstadosSeguimiento = async () => {
     setLoading(true);
     try {
       const response = await axios.get(`${ADDRESS}api/estados-seguimiento`);
-      const estadosSeguimientoData = response.data || [];
-      
-      // Cargar datos completos para cada estado de seguimiento
-      const estadosCompletos = await Promise.all(
-        estadosSeguimientoData.map(async (estado) => {
-          try {
-            // Cargar evento relacionado si existe
-            if (estado.id_evento) {
-              const eventoResponse = await axios.get(`${ADDRESS}api/eventos/${estado.id_evento}`);
-              estado.evento = eventoResponse.data;
-              
-              // Cargar municipalidad relacionada si existe
-              if (estado.evento && estado.evento.id_municipalidad) {
-                const municipalidadResponse = await axios.get(`${ADDRESS}api/municipalidades/${estado.evento.id_municipalidad}`);
-                estado.evento.municipalidad = municipalidadResponse.data;
-              }
-            }
-            
-            // Cargar contacto relacionado si existe
-            if (estado.id_contacto) {
-              const contactoResponse = await axios.get(`${ADDRESS}api/contactos/${estado.id_contacto}`);
-              estado.contacto = contactoResponse.data;
-            }
-            
-            // Cargar tipo de reunión relacionado si existe
-            if (estado.id_tipo_reunion) {
-              const tipoReunionResponse = await axios.get(`${ADDRESS}api/tipos-reunion/${estado.id_tipo_reunion}`);
-              estado.tipoReunion = tipoReunionResponse.data;
-            }
-            
-            return estado;
-          } catch (error) {
-            console.error(`Error al cargar datos relacionados para estado ${estado.id_estado}:`, error);
-            return estado;
-          }
-        })
-      );
-      
-      setEstadosSeguimiento(estadosCompletos);
+      setEstadosSeguimiento(response.data || []);
     } catch (error) {
       console.error('Error al cargar estados de seguimiento:', error);
       setToastMessage({
@@ -129,6 +64,55 @@ export default function EstadoSeguimientosList() {
       setLoading(false);
     }
   };
+
+  const loadRelatedData = async () => {
+    try {
+      const [eventosResponse, municipalidadesResponse, contactosResponse, tiposReunionResponse] = 
+        await Promise.all([
+          axios.get(`${ADDRESS}api/eventos`),
+          axios.get(`${ADDRESS}api/municipalidades`),
+          axios.get(`${ADDRESS}api/contactos`),
+          axios.get(`${ADDRESS}api/tipos-reunion`)
+        ]);
+      
+      setEventos(eventosResponse.data || []);
+      setContactos(contactosResponse.data || []);
+      setTiposReunion(tiposReunionResponse.data || []);
+      
+      window.municipalidadesData = municipalidadesResponse.data || [];
+    } catch (error) {
+      console.error('Error al cargar datos relacionados:', error);
+      setToastMessage({
+        severity: 'error',
+        summary: 'Error',
+        detail: 'No se pudieron cargar algunos datos relacionados'
+      });
+    }
+  };
+
+  useEffect(() => {
+    loadEstadosSeguimiento();
+    loadRelatedData();
+    
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => {
+        setToastMessage(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
 
   const loadEventos = async () => {
     try {
@@ -160,14 +144,11 @@ export default function EstadoSeguimientosList() {
 
   const loadContactosPorEvento = async (eventoId) => {
     try {
-      // Primero obtenemos el evento para saber su municipalidad
       const eventoResponse = await axios.get(`${ADDRESS}api/eventos/${eventoId}`);
       const evento = eventoResponse.data;
       
       if (evento && evento.id_municipalidad) {
-        // Luego cargamos los contactos de esa municipalidad
         const response = await axios.get(`${ADDRESS}api/municipalidades/${evento.id_municipalidad}/contactos`);
-        // Filtrar los contactos que pertenecen a la municipalidad seleccionada
         const contactosFiltrados = response.data.filter(
           contacto => contacto.id_municipalidad === parseInt(evento.id_municipalidad)
         );
@@ -187,10 +168,8 @@ export default function EstadoSeguimientosList() {
 
   const handleSave = async () => {
     try {
-      // Crear una copia del objeto para no modificar el estado directamente
       const dataToSend = { ...editData };
       
-      // Asegurarse de que las fechas estén en el formato correcto para la API
       if (dataToSend.fecha && dataToSend.fecha instanceof Date) {
         dataToSend.fecha = dataToSend.fecha.toISOString().split('T')[0];
       }
@@ -258,7 +237,6 @@ export default function EstadoSeguimientosList() {
     }
   };
 
-  // Función para formatear fechas
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
@@ -269,16 +247,13 @@ export default function EstadoSeguimientosList() {
     });
   };
 
-  // Sorting function
   const handleSort = (field) => {
     const isAsc = sortField === field && sortOrder === 'asc';
     setSortOrder(isAsc ? 'desc' : 'asc');
     setSortField(field);
   };
 
-  // Filtering functions
   const filteredEstadosSeguimiento = estadosSeguimiento.filter(estado => {
-    // Filtro de búsqueda general
     const searchFields = [
       estado.evento?.municipalidad?.nombre,
       estado.contacto?.nombre,
@@ -295,7 +270,6 @@ export default function EstadoSeguimientosList() {
         field && field.toLowerCase().includes(searchQuery.toLowerCase())
       );
     
-    // Filtros por columna
     const matchesMunicipalidad = columnFilters['evento.municipalidad.nombre'] === '' || 
       (estado.evento?.municipalidad?.nombre && 
        estado.evento.municipalidad.nombre.toLowerCase().includes(columnFilters['evento.municipalidad.nombre'].toLowerCase()));
@@ -324,16 +298,13 @@ export default function EstadoSeguimientosList() {
            matchesFecha && matchesEstado && matchesFechaCompromiso;
   });
 
-  // Pagination
   const totalPages = Math.ceil(filteredEstadosSeguimiento.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
 
-  // Sorting
   const sortedData = [...filteredEstadosSeguimiento].sort((a, b) => {
     let aValue, bValue;
     
-    // Manejar campos anidados
     if (sortField.includes('.')) {
       const parts = sortField.split('.');
       aValue = parts.reduce((obj, key) => obj && obj[key], a) || '';
@@ -343,21 +314,18 @@ export default function EstadoSeguimientosList() {
       bValue = b[sortField] || '';
     }
     
-    // Manejar fechas
     if (sortField === 'fecha' || sortField === 'fecha_compromiso') {
       return sortOrder === 'asc' 
         ? new Date(aValue) - new Date(bValue)
         : new Date(bValue) - new Date(aValue);
     }
     
-    // Manejar strings
     if (typeof aValue === 'string' && typeof bValue === 'string') {
       return sortOrder === 'asc'
         ? aValue.localeCompare(bValue, undefined, { numeric: true })
         : bValue.localeCompare(aValue, undefined, { numeric: true });
     }
     
-    // Manejar otros tipos
     return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
   });
 
@@ -367,7 +335,6 @@ export default function EstadoSeguimientosList() {
     setCurrentPage(page);
   };
 
-  // Componente de calendario personalizado con Tailwind CSS
   const TailwindCalendar = ({ selectedDate, onChange, id, className }) => {
     const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
     const [isOpen, setIsOpen] = useState(false);
@@ -408,23 +375,18 @@ export default function EstadoSeguimientosList() {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
       
-      // Primer día del mes (0-6, donde 0 es domingo)
       const firstDayOfMonth = new Date(year, month, 1).getDay();
       
-      // Número de días en el mes
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       
-      // Crear array para los días
       const days = [];
       
-      // Añadir espacios vacíos para los días anteriores al primer día del mes
       for (let i = 0; i < firstDayOfMonth; i++) {
         days.push(
           <div key={`empty-${i}`} className="h-8 w-8"></div>
         );
       }
       
-      // Añadir los días del mes
       for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day);
         const isToday = new Date().toDateString() === date.toDateString();
@@ -533,13 +495,11 @@ export default function EstadoSeguimientosList() {
     );
   };
 
-  // Funciones para renderizar datos relacionados
   const eventoBodyTemplate = (estado) => {
     if (estado.evento && estado.evento.municipalidad) {
       return estado.evento.municipalidad.nombre || 'Sin municipalidad';
     }
     
-    // Fallback usando la búsqueda en eventos
     const evento = eventos.find(e => e.id_evento === estado.id_evento);
     if (evento && evento.municipalidad) {
       return evento.municipalidad.nombre || 'Sin municipalidad';
@@ -553,7 +513,6 @@ export default function EstadoSeguimientosList() {
       return estado.contacto.nombre_completo || 'Sin nombre';
     }
     
-    // Fallback usando la búsqueda en contactos
     const contacto = contactos.find(c => c.id_contacto === estado.id_contacto);
     if (contacto) {
       return contacto.nombre_completo || 'Sin nombre';
@@ -567,7 +526,6 @@ export default function EstadoSeguimientosList() {
       return estado.tipoReunion.descripcion || 'Sin descripción';
     }
     
-    // Fallback usando la búsqueda en tiposReunion
     const tipoReunion = tiposReunion.find(tr => tr.id_tipo_reunion === estado.id_tipo_reunion);
     if (tipoReunion) {
       return tipoReunion.descripcion || 'Sin descripción';
@@ -578,7 +536,6 @@ export default function EstadoSeguimientosList() {
 
   return (
     <div className="p-6 bg-white rounded-lg shadow w-full max-w-full">
-      {/* Toast Message */}
       {toastMessage && (
         <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border border-gray-200 ${
           toastMessage.severity === 'success' ? 'bg-green-100 border-l-4 border-green-500 text-green-700' :
@@ -593,7 +550,6 @@ export default function EstadoSeguimientosList() {
         </div>
       )}
       
-      {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center">
           <h2 className="text-2xl font-bold text-gray-800">Estados de Seguimiento</h2>
@@ -627,14 +583,13 @@ export default function EstadoSeguimientosList() {
             className="w-full px-4 py-2 pr-10 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
             </svg>
           </div>
         </div>
       </div>
       
-      {/* Table */}
       <div className="overflow-x-auto w-full">
         <table className="min-w-full w-full divide-y divide-gray-200 table-fixed">
           <thead className="bg-gray-50">
@@ -917,7 +872,6 @@ export default function EstadoSeguimientosList() {
         </table>
       </div>
       
-      {/* Paginación */}
       <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6 mt-4">
         <div className="flex justify-between sm:hidden w-full">
           <button 
@@ -1050,7 +1004,6 @@ export default function EstadoSeguimientosList() {
         </div>
       </div>
       
-      {/* Modal de visualización */}
       {viewDialogVisible && selectedEstadoSeguimiento && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
@@ -1130,7 +1083,6 @@ export default function EstadoSeguimientosList() {
         </div>
       )}
       
-      {/* Modal de edición/creación */}
       {(editDialogVisible || createDialogVisible) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -1308,7 +1260,6 @@ export default function EstadoSeguimientosList() {
         </div>
       )}
       
-      {/* Modal de confirmación de eliminación */}
       {deleteDialogVisible && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
