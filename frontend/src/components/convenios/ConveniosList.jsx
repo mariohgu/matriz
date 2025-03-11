@@ -6,6 +6,8 @@ import { ADDRESS } from '../../utils.jsx';
 export default function ConveniosList() {
   const [convenios, setConvenios] = useState([]);
   const [municipalidades, setMunicipalidades] = useState([]);
+  const [municipalidadesFiltered, setMunicipalidadesFiltered] = useState([]);
+  const [municipalidadSearchQuery, setMunicipalidadSearchQuery] = useState('');
   const [editDialogVisible, setEditDialogVisible] = useState(false);
   const [createDialogVisible, setCreateDialogVisible] = useState(false);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
@@ -35,6 +37,8 @@ export default function ConveniosList() {
     estado: ''
   });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showMunicipalidadDropdown, setShowMunicipalidadDropdown] = useState(false);
+  const municipalidadDropdownRef = useRef(null);
 
   const estadoOptions = [
     { label: 'Pendiente', value: 'Pendiente' },
@@ -63,10 +67,35 @@ export default function ConveniosList() {
     
     window.addEventListener('resize', handleResize);
     
+    // Añadir listener para cerrar el dropdown de municipalidades cuando se hace clic fuera
+    const handleClickOutside = (event) => {
+      if (municipalidadDropdownRef.current && !municipalidadDropdownRef.current.contains(event.target)) {
+        setShowMunicipalidadDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    
     return () => {
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Efecto para filtrar municipalidades cuando cambia la búsqueda
+  useEffect(() => {
+    if (municipalidadSearchQuery.trim() === '') {
+      setMunicipalidadesFiltered(municipalidades);
+    } else {
+      const filtered = municipalidades.filter(municipalidad => 
+        municipalidad.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()) ||
+        municipalidad.departamento.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()) ||
+        municipalidad.provincia.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()) ||
+        municipalidad.distrito.toLowerCase().includes(municipalidadSearchQuery.toLowerCase())
+      );
+      setMunicipalidadesFiltered(filtered);
+    }
+  }, [municipalidadSearchQuery, municipalidades]);
 
   // Toast message auto-hide
   useEffect(() => {
@@ -95,7 +124,9 @@ export default function ConveniosList() {
   const loadMunicipalidades = async () => {
     try {
       const response = await axios.get(`${ADDRESS}api/municipalidades`);
-      setMunicipalidades(response.data || []);
+      const municipalidadesData = response.data || [];
+      setMunicipalidades(municipalidadesData);
+      setMunicipalidadesFiltered(municipalidadesData);
     } catch (error) {
       console.error('Error al cargar municipalidades:', error);
       showToast('error', 'Error', 'No se pudieron cargar las municipalidades');
@@ -751,125 +782,199 @@ export default function ConveniosList() {
       {/* Create/Edit Dialog */}
       {(createDialogVisible || editDialogVisible) && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 transition-opacity" aria-hidden="true">
               <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
             </div>
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full md:max-w-2xl ml-auto mr-auto relative" style={{ marginLeft: 'auto', marginRight: 'auto', left: '0', right: '0' }}>
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-                      {editDialogVisible ? 'Editar Convenio' : 'Crear Nuevo Convenio'}
-                    </h3>
-                    <div className="mt-2 space-y-4">
-                      <div>
-                        <label htmlFor="id_municipalidad" className="block text-sm font-medium text-gray-700">
-                          Municipalidad
-                        </label>
-                        <select
-                          id="id_municipalidad"
-                          value={editData.id_municipalidad}
-                          onChange={(e) => setEditData({...editData, id_municipalidad: e.target.value})}
-                          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                          required
-                        >
-                          <option value="">Seleccione una municipalidad</option>
-                          {municipalidades.map((municipalidad) => (
-                            <option key={municipalidad.id_municipalidad} value={municipalidad.id_municipalidad}>
-                              {municipalidad.nombre}
-                            </option>
-                          ))}
-                        </select>
+                <div className="flex justify-between items-center pb-3 border-b mb-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    {editDialogVisible ? 'Editar Convenio' : 'Crear Nuevo Convenio'}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setEditDialogVisible(false);
+                      setCreateDialogVisible(false);
+                      setMunicipalidadSearchQuery('');
+                      setShowMunicipalidadDropdown(false);
+                    }}
+                    className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                  >
+                    <span className="sr-only">Cerrar</span>
+                    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label htmlFor="id_municipalidad" className="block text-sm font-medium text-gray-700 mb-1">
+                      Municipalidad <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative" ref={municipalidadDropdownRef}>
+                      <div 
+                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md cursor-pointer bg-white"
+                        onClick={() => setShowMunicipalidadDropdown(!showMunicipalidadDropdown)}
+                      >
+                        {editData.id_municipalidad 
+                          ? municipalidades.find(m => m.id_municipalidad == editData.id_municipalidad)?.nombre || 'Seleccione una municipalidad'
+                          : 'Seleccione una municipalidad'}
+                        <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                          <FiChevronDown className={`h-5 w-5 text-gray-400 ${showMunicipalidadDropdown ? 'hidden' : 'block'}`} />
+                          <FiChevronUp className={`h-5 w-5 text-gray-400 ${showMunicipalidadDropdown ? 'block' : 'hidden'}`} />
+                        </span>
                       </div>
                       
-                      <div>
-                        <label htmlFor="tipo_convenio" className="block text-sm font-medium text-gray-700">
-                          Tipo de Convenio
-                        </label>
-                        <select
-                          id="tipo_convenio"
-                          value={editData.tipo_convenio}
-                          onChange={(e) => setEditData({...editData, tipo_convenio: e.target.value})}
-                          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                          required
-                        >
-                          <option value="">Seleccione un tipo</option>
-                          {tipoConvenioOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
+                      {showMunicipalidadDropdown && (
+                        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                          <div className="sticky top-0 z-10 bg-white p-2">
+                            <div className="relative">
+                              <input
+                                type="text"
+                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                placeholder="Buscar municipalidad..."
+                                value={municipalidadSearchQuery}
+                                onChange={(e) => setMunicipalidadSearchQuery(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <FiSearch className="h-5 w-5 text-gray-400" />
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {municipalidadesFiltered.length === 0 ? (
+                            <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
+                          ) : (
+                            municipalidadesFiltered.map((municipalidad) => (
+                              <div
+                                key={municipalidad.id_municipalidad}
+                                className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
+                                  editData.id_municipalidad == municipalidad.id_municipalidad ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                                }`}
+                                onClick={() => {
+                                  setEditData({...editData, id_municipalidad: municipalidad.id_municipalidad});
+                                  setShowMunicipalidadDropdown(false);
+                                }}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-medium truncate">{municipalidad.nombre}</span>
+                                  <span className="text-xs text-gray-500 truncate">
+                                    {municipalidad.departamento}, {municipalidad.provincia}, {municipalidad.distrito}
+                                  </span>
+                                </div>
+                                
+                                {editData.id_municipalidad == municipalidad.id_municipalidad && (
+                                  <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  </span>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="tipo_convenio" className="block text-sm font-medium text-gray-700 mb-1">
+                      Tipo de Convenio <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="tipo_convenio"
+                      value={editData.tipo_convenio}
+                      onChange={(e) => setEditData({...editData, tipo_convenio: e.target.value})}
+                      className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                      required
+                    >
+                      <option value="">Seleccione un tipo</option>
+                      {tipoConvenioOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="monto" className="block text-sm font-medium text-gray-700 mb-1">
+                      Monto <span className="text-red-500">*</span>
+                    </label>
+                    <div className="mt-1 relative rounded-md shadow-sm">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 sm:text-sm">S/</span>
                       </div>
-                      
-                      <div>
-                        <label htmlFor="monto" className="block text-sm font-medium text-gray-700">
-                          Monto
-                        </label>
-                        <input
-                          type="number"
-                          id="monto"
-                          value={editData.monto}
-                          onChange={(e) => setEditData({...editData, monto: e.target.value})}
-                          className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                          required
-                          step="0.01"
-                          min="0"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label htmlFor="fecha_firma" className="block text-sm font-medium text-gray-700">
-                          Fecha de Firma
-                        </label>
-                        <input
-                          type="date"
-                          id="fecha_firma"
-                          value={editData.fecha_firma ? editData.fecha_firma instanceof Date 
-                            ? editData.fecha_firma.toISOString().split('T')[0]
-                            : editData.fecha_firma
-                            : ''}
-                          onChange={(e) => setEditData({...editData, fecha_firma: e.target.value ? new Date(e.target.value) : null})}
-                          className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <label htmlFor="estado" className="block text-sm font-medium text-gray-700">
-                          Estado
-                        </label>
-                        <select
-                          id="estado"
-                          value={editData.estado}
-                          onChange={(e) => setEditData({...editData, estado: e.target.value})}
-                          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                          required
-                        >
-                          <option value="">Seleccione un estado</option>
-                          {estadoOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      
-                      <div>
-                        <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700">
-                          Descripción
-                        </label>
-                        <textarea
-                          id="descripcion"
-                          value={editData.descripcion || ''}
-                          onChange={(e) => setEditData({...editData, descripcion: e.target.value})}
-                          rows="4"
-                          className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                        ></textarea>
+                      <input
+                        type="number"
+                        id="monto"
+                        value={editData.monto}
+                        onChange={(e) => setEditData({...editData, monto: e.target.value})}
+                        className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 pr-12 sm:text-sm border-gray-300 rounded-md"
+                        placeholder="0.00"
+                        required
+                        step="0.01"
+                        min="0"
+                      />
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 sm:text-sm">PEN</span>
                       </div>
                     </div>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="fecha_firma" className="block text-sm font-medium text-gray-700 mb-1">
+                      Fecha de Firma <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      id="fecha_firma"
+                      value={editData.fecha_firma ? editData.fecha_firma instanceof Date 
+                        ? editData.fecha_firma.toISOString().split('T')[0]
+                        : editData.fecha_firma
+                        : ''}
+                      onChange={(e) => setEditData({...editData, fecha_firma: e.target.value ? new Date(e.target.value) : null})}
+                      className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="estado" className="block text-sm font-medium text-gray-700 mb-1">
+                      Estado <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      id="estado"
+                      value={editData.estado}
+                      onChange={(e) => setEditData({...editData, estado: e.target.value})}
+                      className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                      required
+                    >
+                      <option value="">Seleccione un estado</option>
+                      {estadoOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700 mb-1">
+                      Descripción
+                    </label>
+                    <textarea
+                      id="descripcion"
+                      value={editData.descripcion || ''}
+                      onChange={(e) => setEditData({...editData, descripcion: e.target.value})}
+                      rows="4"
+                      className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                      placeholder="Ingrese una descripción detallada del convenio..."
+                    ></textarea>
                   </div>
                 </div>
               </div>
@@ -887,6 +992,8 @@ export default function ConveniosList() {
                   onClick={() => {
                     setEditDialogVisible(false);
                     setCreateDialogVisible(false);
+                    setMunicipalidadSearchQuery('');
+                    setShowMunicipalidadDropdown(false);
                   }}
                 >
                   Cancelar
