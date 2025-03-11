@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FiEdit, FiTrash2, FiEye, FiChevronUp, FiChevronDown, FiPlus, FiCalendar } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiEye, FiChevronUp, FiChevronDown, FiPlus, FiCalendar, FiSearch } from 'react-icons/fi';
 import axios from 'axios';
 import { ADDRESS } from '../../utils.jsx';
 
@@ -40,6 +40,24 @@ export default function EstadoSeguimientosList() {
     fecha_compromiso: ''
   });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  // Estados para búsqueda en selectbox de eventos
+  const [eventosFiltered, setEventosFiltered] = useState([]);
+  const [eventoSearchQuery, setEventoSearchQuery] = useState('');
+  const [showEventoDropdown, setShowEventoDropdown] = useState(false);
+  const eventoDropdownRef = useRef(null);
+  
+  // Estados para búsqueda en selectbox de contactos
+  const [contactosFiltered, setContactosFiltered] = useState([]);
+  const [contactoSearchQuery, setContactoSearchQuery] = useState('');
+  const [showContactoDropdown, setShowContactoDropdown] = useState(false);
+  const contactoDropdownRef = useRef(null);
+  
+  // Estados para búsqueda en selectbox de tipos de reunión
+  const [tiposReunionFiltered, setTiposReunionFiltered] = useState([]);
+  const [tipoReunionSearchQuery, setTipoReunionSearchQuery] = useState('');
+  const [showTipoReunionDropdown, setShowTipoReunionDropdown] = useState(false);
+  const tipoReunionDropdownRef = useRef(null);
 
   const estadoOptions = [
     { label: 'Pendiente', value: 'Pendiente' },
@@ -100,10 +118,70 @@ export default function EstadoSeguimientosList() {
     
     window.addEventListener('resize', handleResize);
     
+    // Manejadores de clics fuera de los dropdowns
+    const handleClickOutside = (event) => {
+      if (eventoDropdownRef.current && !eventoDropdownRef.current.contains(event.target)) {
+        setShowEventoDropdown(false);
+      }
+      if (contactoDropdownRef.current && !contactoDropdownRef.current.contains(event.target)) {
+        setShowContactoDropdown(false);
+      }
+      if (tipoReunionDropdownRef.current && !tipoReunionDropdownRef.current.contains(event.target)) {
+        setShowTipoReunionDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    
     return () => {
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    if (eventoSearchQuery.trim() === '') {
+      setEventosFiltered(eventos);
+    } else {
+      const searchTerm = eventoSearchQuery.toLowerCase();
+      const filtered = eventos.filter(evento => 
+        (evento.municipalidad?.nombre && evento.municipalidad.nombre.toLowerCase().includes(searchTerm)) ||
+        (evento.municipalidad?.ubigeo && evento.municipalidad.ubigeo.toLowerCase().includes(searchTerm)) ||
+        (evento.municipalidad?.departamento && evento.municipalidad.departamento.toLowerCase().includes(searchTerm)) ||
+        (evento.municipalidad?.provincia && evento.municipalidad.provincia.toLowerCase().includes(searchTerm)) ||
+        (evento.municipalidad?.distrito && evento.municipalidad.distrito.toLowerCase().includes(searchTerm)) ||
+        (evento.fecha && formatDate(evento.fecha).toLowerCase().includes(searchTerm))
+      );
+      setEventosFiltered(filtered);
+    }
+  }, [eventoSearchQuery, eventos]);
+
+  useEffect(() => {
+    if (contactoSearchQuery.trim() === '') {
+      setContactosFiltered(contactos);
+    } else {
+      const searchTerm = contactoSearchQuery.toLowerCase();
+      const filtered = contactos.filter(contacto => 
+        (contacto.nombre_completo && contacto.nombre_completo.toLowerCase().includes(searchTerm)) ||
+        (contacto.cargo && contacto.cargo.toLowerCase().includes(searchTerm)) ||
+        (contacto.telefono && contacto.telefono.toLowerCase().includes(searchTerm)) ||
+        (contacto.correo && contacto.correo.toLowerCase().includes(searchTerm))
+      );
+      setContactosFiltered(filtered);
+    }
+  }, [contactoSearchQuery, contactos]);
+
+  useEffect(() => {
+    if (tipoReunionSearchQuery.trim() === '') {
+      setTiposReunionFiltered(tiposReunion);
+    } else {
+      const searchTerm = tipoReunionSearchQuery.toLowerCase();
+      const filtered = tiposReunion.filter(tipo => 
+        (tipo.descripcion && tipo.descripcion.toLowerCase().includes(searchTerm))
+      );
+      setTiposReunionFiltered(filtered);
+    }
+  }, [tipoReunionSearchQuery, tiposReunion]);
 
   useEffect(() => {
     if (toastMessage) {
@@ -583,9 +661,7 @@ export default function EstadoSeguimientosList() {
             className="w-full px-4 py-2 pr-10 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-            <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
+            <FiSearch className="w-5 h-5 text-gray-400" />
           </div>
         </div>
       </div>
@@ -1004,6 +1080,8 @@ export default function EstadoSeguimientosList() {
         </div>
       </div>
       
+    
+      
       {viewDialogVisible && selectedEstadoSeguimiento && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
@@ -1106,67 +1184,245 @@ export default function EstadoSeguimientosList() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="field">
                   <label htmlFor="evento" className="block text-gray-700 font-medium mb-2">
-                    Evento (Municipalidad)
+                    Evento (Municipalidad) <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    id="evento"
-                    value={editData.id_evento || ''}
-                    onChange={(e) => {
-                      setEditData({ ...editData, id_evento: e.target.value, id_contacto: '' });
-                      if (e.target.value) {
-                        loadContactosPorEvento(e.target.value);
-                      } else {
-                        setContactos([]);
-                      }
-                    }}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Seleccione un evento</option>
-                    {eventos.map(evento => (
-                      <option key={evento.id_evento} value={evento.id_evento}>
-                        {evento.municipalidad?.nombre || 'Sin municipalidad'} - {formatDate(evento.fecha)}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative" ref={eventoDropdownRef}>
+                    <div 
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent flex justify-between items-center cursor-pointer bg-white"
+                      onClick={() => setShowEventoDropdown(!showEventoDropdown)}
+                    >
+                      <span className="truncate">
+                        {editData.id_evento 
+                          ? `${eventos.find(e => e.id_evento == editData.id_evento)?.municipalidad?.nombre || 'Sin municipalidad'} - ${formatDate(eventos.find(e => e.id_evento == editData.id_evento)?.fecha)}`
+                          : 'Seleccione un evento'}
+                      </span>
+                      <span>
+                        {showEventoDropdown ? (
+                          <FiChevronUp className="h-5 w-5 text-gray-400" />
+                        ) : (
+                          <FiChevronDown className="h-5 w-5 text-gray-400" />
+                        )}
+                      </span>
+                    </div>
+                    
+                    {showEventoDropdown && (
+                      <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                        <div className="sticky top-0 z-10 bg-white p-2">
+                          <div className="relative">
+                            <input
+                              type="text"
+                              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                              placeholder="Buscar evento por municipalidad..."
+                              value={eventoSearchQuery}
+                              onChange={(e) => setEventoSearchQuery(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <FiSearch className="h-5 w-5 text-gray-400" />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {eventosFiltered.length === 0 ? (
+                          <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
+                        ) : (
+                          eventosFiltered.map((evento) => (
+                            <div
+                              key={evento.id_evento}
+                              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
+                                editData.id_evento == evento.id_evento ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                              }`}
+                              onClick={() => {
+                                setEditData({
+                                  ...editData, 
+                                  id_evento: evento.id_evento,
+                                  id_contacto: ''
+                                });
+                                setShowEventoDropdown(false);
+                                if (evento.id_evento) {
+                                  loadContactosPorEvento(evento.id_evento);
+                                }
+                              }}
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-medium truncate">
+                                  {evento.municipalidad?.nombre || 'Sin municipalidad'}
+                                </span>
+                                <span className="text-xs text-gray-500 truncate">
+                                  {evento.municipalidad?.ubigeo && <span className="font-semibold mr-1">[{evento.municipalidad.ubigeo}]</span>}
+                                  {formatDate(evento.fecha)}
+                                </span>
+                              </div>
+                              
+                              {editData.id_evento == evento.id_evento && (
+                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                </span>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="field">
                   <label htmlFor="contacto" className="block text-gray-700 font-medium mb-2">
-                    Contacto
+                    Contacto <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    id="contacto"
-                    value={editData.id_contacto || ''}
-                    onChange={(e) => setEditData({ ...editData, id_contacto: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    disabled={!editData.id_evento}
-                  >
-                    <option value="">Seleccione un contacto</option>
-                    {contactos.map(contacto => (
-                      <option key={contacto.id_contacto} value={contacto.id_contacto}>
-                        {contacto.nombre_completo || 'Sin nombre'}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative" ref={contactoDropdownRef}>
+                    <div 
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent flex justify-between items-center cursor-pointer bg-white"
+                      onClick={() => {
+                        if (editData.id_evento) {
+                          setShowContactoDropdown(!showContactoDropdown);
+                        }
+                      }}
+                      style={{ opacity: editData.id_evento ? '1' : '0.6' }}
+                    >
+                      <span className="truncate">
+                        {editData.id_contacto 
+                          ? contactos.find(c => c.id_contacto == editData.id_contacto)?.nombre_completo || 'Sin nombre'
+                          : 'Seleccione un contacto'}
+                      </span>
+                      <span>
+                        {showContactoDropdown ? (
+                          <FiChevronUp className="h-5 w-5 text-gray-400" />
+                        ) : (
+                          <FiChevronDown className="h-5 w-5 text-gray-400" />
+                        )}
+                      </span>
+                    </div>
+                    
+                    {showContactoDropdown && editData.id_evento && (
+                      <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                        <div className="sticky top-0 z-10 bg-white p-2">
+                          <div className="relative">
+                            <input
+                              type="text"
+                              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                              placeholder="Buscar contacto..."
+                              value={contactoSearchQuery}
+                              onChange={(e) => setContactoSearchQuery(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <FiSearch className="h-5 w-5 text-gray-400" />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {contactosFiltered.length === 0 ? (
+                          <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
+                        ) : (
+                          contactosFiltered.map((contacto) => (
+                            <div
+                              key={contacto.id_contacto}
+                              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
+                                editData.id_contacto == contacto.id_contacto ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                              }`}
+                              onClick={() => {
+                                setEditData({...editData, id_contacto: contacto.id_contacto});
+                                setShowContactoDropdown(false);
+                              }}
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-medium truncate">{contacto.nombre_completo || 'Sin nombre'}</span>
+                                <span className="text-xs text-gray-500 truncate">
+                                  {contacto.cargo || ''} {contacto.telefono ? `- Tel: ${contacto.telefono}` : ''}
+                                </span>
+                              </div>
+                              
+                              {editData.id_contacto == contacto.id_contacto && (
+                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                </span>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="field">
                   <label htmlFor="tipoReunion" className="block text-gray-700 font-medium mb-2">
-                    Tipo de Reunión
+                    Tipo de Reunión <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    id="tipoReunion"
-                    value={editData.id_tipo_reunion || ''}
-                    onChange={(e) => setEditData({ ...editData, id_tipo_reunion: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Seleccione un tipo de reunión</option>
-                    {tiposReunion.map(tipo => (
-                      <option key={tipo.id_tipo_reunion} value={tipo.id_tipo_reunion}>
-                        {tipo.descripcion || 'Sin descripción'}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative" ref={tipoReunionDropdownRef}>
+                    <div 
+                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent flex justify-between items-center cursor-pointer bg-white"
+                      onClick={() => setShowTipoReunionDropdown(!showTipoReunionDropdown)}
+                    >
+                      <span className="truncate">
+                        {editData.id_tipo_reunion 
+                          ? tiposReunion.find(t => t.id_tipo_reunion == editData.id_tipo_reunion)?.descripcion || 'Sin descripción'
+                          : 'Seleccione un tipo de reunión'}
+                      </span>
+                      <span>
+                        {showTipoReunionDropdown ? (
+                          <FiChevronUp className="h-5 w-5 text-gray-400" />
+                        ) : (
+                          <FiChevronDown className="h-5 w-5 text-gray-400" />
+                        )}
+                      </span>
+                    </div>
+                    
+                    {showTipoReunionDropdown && (
+                      <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                        <div className="sticky top-0 z-10 bg-white p-2">
+                          <div className="relative">
+                            <input
+                              type="text"
+                              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                              placeholder="Buscar tipo de reunión..."
+                              value={tipoReunionSearchQuery}
+                              onChange={(e) => setTipoReunionSearchQuery(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <FiSearch className="h-5 w-5 text-gray-400" />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {tiposReunionFiltered.length === 0 ? (
+                          <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
+                        ) : (
+                          tiposReunionFiltered.map((tipo) => (
+                            <div
+                              key={tipo.id_tipo_reunion}
+                              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
+                                editData.id_tipo_reunion == tipo.id_tipo_reunion ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                              }`}
+                              onClick={() => {
+                                setEditData({...editData, id_tipo_reunion: tipo.id_tipo_reunion});
+                                setShowTipoReunionDropdown(false);
+                              }}
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-medium truncate">{tipo.descripcion || 'Sin descripción'}</span>
+                              </div>
+                              
+                              {editData.id_tipo_reunion == tipo.id_tipo_reunion && (
+                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                </span>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="field">
@@ -1267,7 +1523,7 @@ export default function EstadoSeguimientosList() {
               <div className="flex items-center mb-4">
                 <div className="bg-yellow-100 p-2 rounded-full mr-4">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    <path fillRule="evenodd" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                 </div>
                 <h3 className="text-lg font-medium text-gray-900">Confirmar eliminación</h3>

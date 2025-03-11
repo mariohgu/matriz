@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FiEdit, FiTrash2, FiEye, FiChevronUp, FiChevronDown, FiPlus } from 'react-icons/fi';
+import React, { useState, useEffect, useRef } from 'react';
+import { FiEdit, FiTrash2, FiEye, FiChevronUp, FiChevronDown, FiPlus, FiSearch, FiX } from 'react-icons/fi';
 import axios from 'axios';
 import { ADDRESS } from '../../utils.jsx';
 
@@ -34,6 +34,10 @@ export default function ContactosList() {
     municipalidad: ''
   });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [municipalidadesFiltered, setMunicipalidadesFiltered] = useState([]);
+  const [municipalidadSearchQuery, setMunicipalidadSearchQuery] = useState('');
+  const [showMunicipalidadDropdown, setShowMunicipalidadDropdown] = useState(false);
+  const municipalidadDropdownRef = useRef(null);
 
   useEffect(() => {
     loadContactos();
@@ -46,10 +50,37 @@ export default function ContactosList() {
     
     window.addEventListener('resize', handleResize);
     
+    // Añadir listener para cerrar el dropdown de municipalidades cuando se hace clic fuera
+    const handleClickOutside = (event) => {
+      if (municipalidadDropdownRef.current && !municipalidadDropdownRef.current.contains(event.target)) {
+        setShowMunicipalidadDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    
     return () => {
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Efecto para filtrar municipalidades cuando cambia la búsqueda
+  useEffect(() => {
+    if (municipalidadSearchQuery.trim() === '') {
+      setMunicipalidadesFiltered(municipalidades);
+    } else {
+      const searchTerm = municipalidadSearchQuery.toLowerCase();
+      const filtered = municipalidades.filter(municipalidad => 
+        municipalidad.nombre.toLowerCase().includes(searchTerm) ||
+        (municipalidad.ubigeo && municipalidad.ubigeo.toLowerCase().includes(searchTerm)) ||
+        municipalidad.departamento.toLowerCase().includes(searchTerm) ||
+        municipalidad.provincia.toLowerCase().includes(searchTerm) ||
+        municipalidad.distrito.toLowerCase().includes(searchTerm)
+      );
+      setMunicipalidadesFiltered(filtered);
+    }
+  }, [municipalidadSearchQuery, municipalidades]);
 
   // Toast message auto-hide
   useEffect(() => {
@@ -277,9 +308,7 @@ export default function ContactosList() {
             className="w-full px-4 py-2 pr-10 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
+            <FiSearch className="w-5 h-5 text-gray-400" />
           </div>
         </div>
       </div>
@@ -538,10 +567,10 @@ export default function ContactosList() {
                 }`}
               >
                 <span className="sr-only">Primera página</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                   <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                   <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               </button>
@@ -553,7 +582,7 @@ export default function ContactosList() {
                 }`}
               >
                 <span className="sr-only">Anterior</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                   <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               </button>
@@ -592,7 +621,7 @@ export default function ContactosList() {
                 }`}
               >
                 <span className="sr-only">Siguiente</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                   <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                 </svg>
               </button>
@@ -606,10 +635,10 @@ export default function ContactosList() {
                 }`}
               >
                 <span className="sr-only">Última página</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                   <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                 </svg>
-                <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                   <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                 </svg>
               </button>
@@ -708,22 +737,76 @@ export default function ContactosList() {
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="municipalidad" className="block text-sm font-medium text-gray-700">
-                      Municipalidad
+                    <label htmlFor="municipalidad" className="block text-sm font-medium text-gray-700 mb-1">
+                      Municipalidad <span className="text-red-500">*</span>
                     </label>
-                    <select
-                      id="municipalidad"
-                      value={editData.id_municipalidad}
-                      onChange={(e) => setEditData({ ...editData, id_municipalidad: e.target.value })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Seleccione una municipalidad</option>
-                      {municipalidades.map((municipalidad) => (
-                        <option key={municipalidad.id_municipalidad} value={municipalidad.id_municipalidad}>
-                          {municipalidad.nombre}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative" ref={municipalidadDropdownRef}>
+                      <div 
+                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md cursor-pointer bg-white"
+                        onClick={() => setShowMunicipalidadDropdown(!showMunicipalidadDropdown)}
+                      >
+                        {editData.id_municipalidad 
+                          ? municipalidades.find(m => m.id_municipalidad == editData.id_municipalidad)?.nombre || 'Seleccione una municipalidad'
+                          : 'Seleccione una municipalidad'}
+                        <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                          <FiChevronDown className={`h-5 w-5 text-gray-400 ${showMunicipalidadDropdown ? 'hidden' : 'block'}`} />
+                          <FiChevronUp className={`h-5 w-5 text-gray-400 ${showMunicipalidadDropdown ? 'block' : 'hidden'}`} />
+                        </span>
+                      </div>
+                      
+                      {showMunicipalidadDropdown && (
+                        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                          <div className="sticky top-0 z-10 bg-white p-2">
+                            <div className="relative">
+                              <input
+                                type="text"
+                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Buscar municipalidad..."
+                                value={municipalidadSearchQuery}
+                                onChange={(e) => setMunicipalidadSearchQuery(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <FiSearch className="h-5 w-5 text-gray-400" />
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {municipalidadesFiltered.length === 0 ? (
+                            <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
+                          ) : (
+                            municipalidadesFiltered.map((municipalidad) => (
+                              <div
+                                key={municipalidad.id_municipalidad}
+                                className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
+                                  editData.id_municipalidad == municipalidad.id_municipalidad ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                                }`}
+                                onClick={() => {
+                                  setEditData({...editData, id_municipalidad: municipalidad.id_municipalidad});
+                                  setShowMunicipalidadDropdown(false);
+                                }}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-medium truncate">{municipalidad.nombre}</span>
+                                  <span className="text-xs text-gray-500 truncate">
+                                    {municipalidad.ubigeo && <span className="font-semibold mr-1">[{municipalidad.ubigeo}]</span>}
+                                    {municipalidad.departamento}, {municipalidad.provincia}, {municipalidad.distrito}
+                                  </span>
+                                </div>
+                                
+                                {editData.id_municipalidad == municipalidad.id_municipalidad && (
+                                  <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  </span>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <label htmlFor="nombre_completo" className="block text-sm font-medium text-gray-700">

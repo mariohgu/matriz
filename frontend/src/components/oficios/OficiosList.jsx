@@ -35,6 +35,33 @@ export default function OficiosList() {
     estado: ''
   });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  // Variables para los dropdowns con búsqueda
+  const [showMunicipalidadDropdown, setShowMunicipalidadDropdown] = useState(false);
+  const [municipalidadSearchQuery, setMunicipalidadSearchQuery] = useState('');
+  const municipalidadDropdownRef = useRef(null);
+
+  const [showEstadoDropdown, setShowEstadoDropdown] = useState(false);
+  const [estadoSearchQuery, setEstadoSearchQuery] = useState('');
+  const estadoDropdownRef = useRef(null);
+
+  // Efecto para cerrar el dropdown cuando se hace clic fuera de él
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (municipalidadDropdownRef.current && !municipalidadDropdownRef.current.contains(event.target)) {
+        setShowMunicipalidadDropdown(false);
+      }
+      
+      if (estadoDropdownRef.current && !estadoDropdownRef.current.contains(event.target)) {
+        setShowEstadoDropdown(false);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [municipalidadDropdownRef, estadoDropdownRef]);
 
   const estadoOptions = [
     { label: 'Borrador', value: 'Borrador' },
@@ -205,39 +232,25 @@ export default function OficiosList() {
 
   // Filtering functions
   const filteredOficios = oficios.filter(oficio => {
-    // Filtro de búsqueda general
-    const searchFields = [
-      oficio.numero_oficio,
-      municipalidades.find(m => m.id_municipalidad === oficio.id_municipalidad)?.nombre || '',
-      oficio.asunto,
-      oficio.estado,
-      oficio.contenido
-    ];
+    const matchesSearch = searchQuery.trim() === '' || 
+      (oficio.numero_oficio && oficio.numero_oficio.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (oficio.asunto && oficio.asunto.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (oficio.municipalidad && oficio.municipalidad.nombre && oficio.municipalidad.nombre.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    const matchesSearch = searchQuery === '' || 
-      searchFields.some(field => 
-        field.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+    const matchesColumnFilters = 
+      (columnFilters.numero_oficio === '' || (oficio.numero_oficio && oficio.numero_oficio.toLowerCase().includes(columnFilters.numero_oficio.toLowerCase()))) &&
+      (columnFilters.municipalidad === '' || (oficio.municipalidad && oficio.municipalidad.nombre && oficio.municipalidad.nombre.toLowerCase().includes(columnFilters.municipalidad.toLowerCase()))) &&
+      (columnFilters.fecha_envio === '' || (oficio.fecha_envio && formatDate(oficio.fecha_envio).includes(columnFilters.fecha_envio))) &&
+      (columnFilters.asunto === '' || (oficio.asunto && oficio.asunto.toLowerCase().includes(columnFilters.asunto.toLowerCase()))) &&
+      (columnFilters.estado === '' || (oficio.estado && oficio.estado.toLowerCase().includes(columnFilters.estado.toLowerCase())));
     
-    // Filtros por columna
-    const matchesNumeroOficio = columnFilters.numero_oficio === '' || 
-      oficio.numero_oficio.toLowerCase().includes(columnFilters.numero_oficio.toLowerCase());
-    
-    const municipalidadNombre = municipalidades.find(m => m.id_municipalidad === oficio.id_municipalidad)?.nombre || '';
-    const matchesMunicipalidad = columnFilters.municipalidad === '' || 
-      municipalidadNombre.toLowerCase().includes(columnFilters.municipalidad.toLowerCase());
-    
-    const matchesFechaEnvio = columnFilters.fecha_envio === '' || 
-      (oficio.fecha_envio && formatDate(oficio.fecha_envio).includes(columnFilters.fecha_envio));
-    
-    const matchesAsunto = columnFilters.asunto === '' || 
-      oficio.asunto.toLowerCase().includes(columnFilters.asunto.toLowerCase());
-    
-    const matchesEstado = columnFilters.estado === '' || 
-      oficio.estado.toLowerCase().includes(columnFilters.estado.toLowerCase());
-    
-    return matchesSearch && matchesNumeroOficio && matchesMunicipalidad && 
-           matchesFechaEnvio && matchesAsunto && matchesEstado;
+    return matchesSearch && matchesColumnFilters;
+  });
+  
+  const municipalidadesFiltered = municipalidades.filter(municipalidad => {
+    return municipalidadSearchQuery.trim() === '' || 
+      (municipalidad.nombre && municipalidad.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase())) ||
+      (municipalidad.ubigeo && municipalidad.ubigeo.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()));
   });
 
   // Pagination
@@ -432,7 +445,7 @@ export default function OficiosList() {
                   </div>
                 )}
               </th>
-              <th scope="col" className={`px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider ${isMobile ? 'w-1/4' : 'w-1/6'}`}>
+              <th scope="col" className={`px-6 py-3 text-right text-xs font-medium ${isMobile ? 'w-1/4' : 'w-1/6'}`}>
                 Acciones
               </th>
             </tr>
@@ -558,7 +571,7 @@ export default function OficiosList() {
                 setItemsPerPage(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="border border-gray-300 rounded-md text-sm py-1 pl-2 pr-8 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-gray-300 rounded-md text-sm py-1 pl-2 pr-8 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             >
               <option value={5}>5 por página</option>
               <option value={10}>10 por página</option>
@@ -669,21 +682,80 @@ export default function OficiosList() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="mb-4">
                     <label htmlFor="municipalidad" className="block text-sm font-medium text-gray-700 mb-1">
-                      Municipalidad
+                      Municipalidad <span className="text-red-500">*</span>
                     </label>
-                    <select
-                      id="municipalidad"
-                      value={editData.id_municipalidad}
-                      onChange={(e) => setEditData({ ...editData, id_municipalidad: e.target.value })}
-                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    >
-                      <option value="">Seleccione una municipalidad</option>
-                      {municipalidades.map(municipalidad => (
-                        <option key={municipalidad.id_municipalidad} value={municipalidad.id_municipalidad}>
-                          {municipalidad.nombre}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative" ref={municipalidadDropdownRef}>
+                      <div 
+                        className="w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm flex justify-between items-center cursor-pointer"
+                        onClick={() => setShowMunicipalidadDropdown(!showMunicipalidadDropdown)}
+                      >
+                        <span className="truncate">
+                          {editData.id_municipalidad 
+                            ? municipalidades.find(m => m.id_municipalidad == editData.id_municipalidad)?.nombre || 'Sin nombre'
+                            : 'Seleccione una municipalidad'}
+                        </span>
+                        <span>
+                          {showMunicipalidadDropdown ? (
+                            <FiChevronUp className="h-5 w-5 text-gray-400" />
+                          ) : (
+                            <FiChevronDown className="h-5 w-5 text-gray-400" />
+                          )}
+                        </span>
+                      </div>
+                      
+                      {showMunicipalidadDropdown && (
+                        <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                          <div className="sticky top-0 z-10 bg-white p-2">
+                            <div className="relative">
+                              <input
+                                type="text"
+                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                placeholder="Buscar municipalidad..."
+                                value={municipalidadSearchQuery}
+                                onChange={(e) => setMunicipalidadSearchQuery(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <FiSearch className="h-5 w-5 text-gray-400" />
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {municipalidadesFiltered.length === 0 ? (
+                            <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
+                          ) : (
+                            municipalidadesFiltered.map((municipalidad) => (
+                              <div
+                                key={municipalidad.id_municipalidad}
+                                className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
+                                  editData.id_municipalidad == municipalidad.id_municipalidad ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                                }`}
+                                onClick={() => {
+                                  setEditData({...editData, id_municipalidad: municipalidad.id_municipalidad});
+                                  setShowMunicipalidadDropdown(false);
+                                }}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-medium truncate">{municipalidad.nombre || 'Sin nombre'}</span>
+                                  <span className="text-xs text-gray-500 truncate">
+                                    {municipalidad.ubigeo && <span className="font-semibold mr-1">[{municipalidad.ubigeo}]</span>}
+                                    {municipalidad.provincia || ''} {municipalidad.departamento ? `- ${municipalidad.departamento}` : ''}
+                                  </span>
+                                </div>
+                                
+                                {editData.id_municipalidad == municipalidad.id_municipalidad && (
+                                  <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  </span>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="mb-4">
@@ -721,19 +793,74 @@ export default function OficiosList() {
                     <label htmlFor="estado" className="block text-sm font-medium text-gray-700 mb-1">
                       Estado
                     </label>
-                    <select
-                      id="estado"
-                      value={editData.estado}
-                      onChange={(e) => setEditData({ ...editData, estado: e.target.value })}
-                      className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    >
-                      <option value="">Seleccione un estado</option>
-                      {estadoOptions.map(option => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative" ref={estadoDropdownRef}>
+                      <div 
+                        className="w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm flex justify-between items-center cursor-pointer"
+                        onClick={() => setShowEstadoDropdown(!showEstadoDropdown)}
+                      >
+                        <span className="truncate">
+                          {editData.estado 
+                            ? estadoOptions.find(option => option.value === editData.estado)?.label || 'Sin nombre'
+                            : 'Seleccione un estado'}
+                        </span>
+                        <span>
+                          {showEstadoDropdown ? (
+                            <FiChevronUp className="h-5 w-5 text-gray-400" />
+                          ) : (
+                            <FiChevronDown className="h-5 w-5 text-gray-400" />
+                          )}
+                        </span>
+                      </div>
+                      
+                      {showEstadoDropdown && (
+                        <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                          <div className="sticky top-0 z-10 bg-white p-2">
+                            <div className="relative">
+                              <input
+                                type="text"
+                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                placeholder="Buscar estado..."
+                                value={estadoSearchQuery}
+                                onChange={(e) => setEstadoSearchQuery(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <FiSearch className="h-5 w-5 text-gray-400" />
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {estadoOptions.filter(option => option.label.toLowerCase().includes(estadoSearchQuery.toLowerCase())).length === 0 ? (
+                            <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
+                          ) : (
+                            estadoOptions.filter(option => option.label.toLowerCase().includes(estadoSearchQuery.toLowerCase())).map((option) => (
+                              <div
+                                key={option.value}
+                                className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
+                                  editData.estado == option.value ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                                }`}
+                                onClick={() => {
+                                  setEditData({...editData, estado: option.value});
+                                  setShowEstadoDropdown(false);
+                                }}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-medium truncate">{option.label}</span>
+                                </div>
+                                
+                                {editData.estado == option.value && (
+                                  <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  </span>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="mb-4 col-span-1 md:col-span-2">

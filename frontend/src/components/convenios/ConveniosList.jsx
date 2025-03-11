@@ -37,8 +37,6 @@ export default function ConveniosList() {
     estado: ''
   });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [showMunicipalidadDropdown, setShowMunicipalidadDropdown] = useState(false);
-  const municipalidadDropdownRef = useRef(null);
 
   const estadoOptions = [
     { label: 'Pendiente', value: 'Pendiente' },
@@ -56,6 +54,17 @@ export default function ConveniosList() {
     { label: 'Otros', value: 'Otros' }
   ];
 
+  const [showMunicipalidadDropdown, setShowMunicipalidadDropdown] = useState(false);
+  const [showTipoConvenioDropdown, setShowTipoConvenioDropdown] = useState(false);
+  const [showEstadoDropdown, setShowEstadoDropdown] = useState(false);
+  const [tipoConvenioSearchQuery, setTipoConvenioSearchQuery] = useState('');
+  const [estadoSearchQuery, setEstadoSearchQuery] = useState('');
+  const municipalidadDropdownRef = useRef(null);
+  const tipoConvenioDropdownRef = useRef(null);
+  const estadoDropdownRef = useRef(null);
+  const [tipoConvenioFiltered, setTipoConvenioFiltered] = useState(tipoConvenioOptions);
+  const [estadoFiltered, setEstadoFiltered] = useState(estadoOptions);
+
   useEffect(() => {
     loadConvenios();
     loadMunicipalidades();
@@ -72,6 +81,12 @@ export default function ConveniosList() {
       if (municipalidadDropdownRef.current && !municipalidadDropdownRef.current.contains(event.target)) {
         setShowMunicipalidadDropdown(false);
       }
+      if (tipoConvenioDropdownRef.current && !tipoConvenioDropdownRef.current.contains(event.target)) {
+        setShowTipoConvenioDropdown(false);
+      }
+      if (estadoDropdownRef.current && !estadoDropdownRef.current.contains(event.target)) {
+        setShowEstadoDropdown(false);
+      }
     };
     
     document.addEventListener('mousedown', handleClickOutside);
@@ -87,15 +102,41 @@ export default function ConveniosList() {
     if (municipalidadSearchQuery.trim() === '') {
       setMunicipalidadesFiltered(municipalidades);
     } else {
+      const searchTerm = municipalidadSearchQuery.toLowerCase();
       const filtered = municipalidades.filter(municipalidad => 
-        municipalidad.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()) ||
-        municipalidad.departamento.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()) ||
-        municipalidad.provincia.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()) ||
-        municipalidad.distrito.toLowerCase().includes(municipalidadSearchQuery.toLowerCase())
+        municipalidad.nombre.toLowerCase().includes(searchTerm) ||
+        (municipalidad.ubigeo && municipalidad.ubigeo.toLowerCase().includes(searchTerm)) ||
+        municipalidad.departamento.toLowerCase().includes(searchTerm) ||
+        municipalidad.provincia.toLowerCase().includes(searchTerm) ||
+        municipalidad.distrito.toLowerCase().includes(searchTerm)
       );
       setMunicipalidadesFiltered(filtered);
     }
   }, [municipalidadSearchQuery, municipalidades]);
+
+  useEffect(() => {
+    if (tipoConvenioSearchQuery.trim() === '') {
+      setTipoConvenioFiltered(tipoConvenioOptions);
+    } else {
+      const filtered = tipoConvenioOptions.filter(option => 
+        option.label.toLowerCase().includes(tipoConvenioSearchQuery.toLowerCase()) ||
+        option.value.toLowerCase().includes(tipoConvenioSearchQuery.toLowerCase())
+      );
+      setTipoConvenioFiltered(filtered);
+    }
+  }, [tipoConvenioSearchQuery]);
+
+  useEffect(() => {
+    if (estadoSearchQuery.trim() === '') {
+      setEstadoFiltered(estadoOptions);
+    } else {
+      const filtered = estadoOptions.filter(option => 
+        option.label.toLowerCase().includes(estadoSearchQuery.toLowerCase()) ||
+        option.value.toLowerCase().includes(estadoSearchQuery.toLowerCase())
+      );
+      setEstadoFiltered(filtered);
+    }
+  }, [estadoSearchQuery]);
 
   // Toast message auto-hide
   useEffect(() => {
@@ -344,7 +385,7 @@ export default function ConveniosList() {
                 tipo_convenio: '',
                 monto: '',
                 fecha_firma: null,
-                estado: 'Pendiente',
+                estado: '',
                 descripcion: ''
               });
               setCreateDialogVisible(true);
@@ -781,13 +822,13 @@ export default function ConveniosList() {
 
       {/* Create/Edit Dialog */}
       {(createDialogVisible || editDialogVisible) && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="fixed inset-0 z-50 overflow-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
             <div className="fixed inset-0 transition-opacity" aria-hidden="true">
               <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
             </div>
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full md:max-w-2xl ml-auto mr-auto relative" style={{ marginLeft: 'auto', marginRight: 'auto', left: '0', right: '0' }}>
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-visible shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full md:max-w-2xl" style={{ margin: '0 auto' }}>
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="flex justify-between items-center pb-3 border-b mb-4">
                   <h3 className="text-lg leading-6 font-medium text-gray-900">
@@ -799,6 +840,10 @@ export default function ConveniosList() {
                       setCreateDialogVisible(false);
                       setMunicipalidadSearchQuery('');
                       setShowMunicipalidadDropdown(false);
+                      setTipoConvenioSearchQuery('');
+                      setShowTipoConvenioDropdown(false);
+                      setEstadoSearchQuery('');
+                      setShowEstadoDropdown(false);
                     }}
                     className="text-gray-400 hover:text-gray-500 focus:outline-none"
                   >
@@ -828,7 +873,7 @@ export default function ConveniosList() {
                       </div>
                       
                       {showMunicipalidadDropdown && (
-                        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                        <div className="absolute z-50 mt-1 w-full bg-white shadow-lg rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm" style={{ maxHeight: '200px' }}>
                           <div className="sticky top-0 z-10 bg-white p-2">
                             <div className="relative">
                               <input
@@ -862,6 +907,7 @@ export default function ConveniosList() {
                                 <div className="flex flex-col">
                                   <span className="font-medium truncate">{municipalidad.nombre}</span>
                                   <span className="text-xs text-gray-500 truncate">
+                                    {municipalidad.ubigeo && <span className="font-semibold mr-1">[{municipalidad.ubigeo}]</span>}
                                     {municipalidad.departamento}, {municipalidad.provincia}, {municipalidad.distrito}
                                   </span>
                                 </div>
@@ -885,20 +931,69 @@ export default function ConveniosList() {
                     <label htmlFor="tipo_convenio" className="block text-sm font-medium text-gray-700 mb-1">
                       Tipo de Convenio <span className="text-red-500">*</span>
                     </label>
-                    <select
-                      id="tipo_convenio"
-                      value={editData.tipo_convenio}
-                      onChange={(e) => setEditData({...editData, tipo_convenio: e.target.value})}
-                      className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                      required
-                    >
-                      <option value="">Seleccione un tipo</option>
-                      {tipoConvenioOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative" ref={tipoConvenioDropdownRef}>
+                      <div 
+                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md cursor-pointer bg-white"
+                        onClick={() => setShowTipoConvenioDropdown(!showTipoConvenioDropdown)}
+                      >
+                        {editData.tipo_convenio 
+                          ? tipoConvenioOptions.find(option => option.value == editData.tipo_convenio)?.label || 'Seleccione un tipo'
+                          : 'Seleccione un tipo'}
+                        <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                          <FiChevronDown className={`h-5 w-5 text-gray-400 ${showTipoConvenioDropdown ? 'hidden' : 'block'}`} />
+                          <FiChevronUp className={`h-5 w-5 text-gray-400 ${showTipoConvenioDropdown ? 'block' : 'hidden'}`} />
+                        </span>
+                      </div>
+                      
+                      {showTipoConvenioDropdown && (
+                        <div className="absolute z-50 mt-1 w-full bg-white shadow-lg rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm" style={{ maxHeight: '200px' }}>
+                          <div className="sticky top-0 z-10 bg-white p-2">
+                            <div className="relative">
+                              <input
+                                type="text"
+                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                placeholder="Buscar tipo de convenio..."
+                                value={tipoConvenioSearchQuery}
+                                onChange={(e) => setTipoConvenioSearchQuery(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <FiSearch className="h-5 w-5 text-gray-400" />
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {tipoConvenioFiltered.length === 0 ? (
+                            <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
+                          ) : (
+                            tipoConvenioFiltered.map((option) => (
+                              <div
+                                key={option.value}
+                                className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
+                                  editData.tipo_convenio == option.value ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                                }`}
+                                onClick={() => {
+                                  setEditData({...editData, tipo_convenio: option.value});
+                                  setShowTipoConvenioDropdown(false);
+                                }}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-medium truncate">{option.label}</span>
+                                </div>
+                                
+                                {editData.tipo_convenio == option.value && (
+                                  <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  </span>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   <div>
@@ -947,20 +1042,69 @@ export default function ConveniosList() {
                     <label htmlFor="estado" className="block text-sm font-medium text-gray-700 mb-1">
                       Estado <span className="text-red-500">*</span>
                     </label>
-                    <select
-                      id="estado"
-                      value={editData.estado}
-                      onChange={(e) => setEditData({...editData, estado: e.target.value})}
-                      className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                      required
-                    >
-                      <option value="">Seleccione un estado</option>
-                      {estadoOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative" ref={estadoDropdownRef}>
+                      <div 
+                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md cursor-pointer bg-white"
+                        onClick={() => setShowEstadoDropdown(!showEstadoDropdown)}
+                      >
+                        {editData.estado 
+                          ? estadoOptions.find(option => option.value == editData.estado)?.label || 'Seleccione un estado'
+                          : 'Seleccione un estado'}
+                        <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                          <FiChevronDown className={`h-5 w-5 text-gray-400 ${showEstadoDropdown ? 'hidden' : 'block'}`} />
+                          <FiChevronUp className={`h-5 w-5 text-gray-400 ${showEstadoDropdown ? 'block' : 'hidden'}`} />
+                        </span>
+                      </div>
+                      
+                      {showEstadoDropdown && (
+                        <div className="absolute z-50 mt-1 w-full bg-white shadow-lg rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm" style={{ maxHeight: '200px' }}>
+                          <div className="sticky top-0 z-10 bg-white p-2">
+                            <div className="relative">
+                              <input
+                                type="text"
+                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                placeholder="Buscar estado..."
+                                value={estadoSearchQuery}
+                                onChange={(e) => setEstadoSearchQuery(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <FiSearch className="h-5 w-5 text-gray-400" />
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {estadoFiltered.length === 0 ? (
+                            <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
+                          ) : (
+                            estadoFiltered.map((option) => (
+                              <div
+                                key={option.value}
+                                className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
+                                  editData.estado == option.value ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                                }`}
+                                onClick={() => {
+                                  setEditData({...editData, estado: option.value});
+                                  setShowEstadoDropdown(false);
+                                }}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-medium truncate">{option.label}</span>
+                                </div>
+                                
+                                {editData.estado == option.value && (
+                                  <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  </span>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   <div>
@@ -994,6 +1138,10 @@ export default function ConveniosList() {
                     setCreateDialogVisible(false);
                     setMunicipalidadSearchQuery('');
                     setShowMunicipalidadDropdown(false);
+                    setTipoConvenioSearchQuery('');
+                    setShowTipoConvenioDropdown(false);
+                    setEstadoSearchQuery('');
+                    setShowEstadoDropdown(false);
                   }}
                 >
                   Cancelar

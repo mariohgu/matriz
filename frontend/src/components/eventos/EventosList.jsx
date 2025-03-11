@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { FaEdit, FaTrashAlt, FaPlus, FaSearch, FaSort, FaSortUp, FaSortDown, FaCalendarAlt } from 'react-icons/fa';
+import { FiChevronDown, FiChevronUp, FiSearch } from 'react-icons/fi';
 import { ADDRESS } from '../../utils.jsx';
 
 export default function EventosList() {
@@ -31,6 +32,15 @@ export default function EventosList() {
     fecha: null
   });
   
+  // Variables para los dropdowns con búsqueda
+  const [showMunicipalidadDropdown, setShowMunicipalidadDropdown] = useState(false);
+  const [municipalidadSearchQuery, setMunicipalidadSearchQuery] = useState('');
+  const municipalidadDropdownRef = useRef(null);
+  
+  const [showContactoDropdown, setShowContactoDropdown] = useState(false);
+  const [contactoSearchQuery, setContactoSearchQuery] = useState('');
+  const contactoDropdownRef = useRef(null);
+  
   // Referencia al toast
   const toast = useRef(null);
   const dt = useRef(null);
@@ -40,6 +50,24 @@ export default function EventosList() {
     loadEventos();
     loadMunicipalidades();
   }, []);
+
+  // Efecto para cerrar los dropdowns cuando se hace clic fuera de ellos
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (municipalidadDropdownRef.current && !municipalidadDropdownRef.current.contains(event.target)) {
+        setShowMunicipalidadDropdown(false);
+      }
+      
+      if (contactoDropdownRef.current && !contactoDropdownRef.current.contains(event.target)) {
+        setShowContactoDropdown(false);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [municipalidadDropdownRef, contactoDropdownRef]);
 
   const loadEventos = async () => {
     try {
@@ -132,10 +160,10 @@ export default function EventosList() {
     }
   };
 
-  const handleMunicipalidadChange = (e) => {
-    const id_municipalidad = e.target.value;
+  const handleMunicipalidadChange = (id_municipalidad) => {
     setEditData(prev => ({ ...prev, id_municipalidad, id_contacto: '' }));
     loadContactosPorMunicipalidad(id_municipalidad);
+    setContactoSearchQuery(''); // Limpiar búsqueda de contactos al cambiar municipalidad
   };
 
   const handleSave = async () => {
@@ -525,7 +553,7 @@ export default function EventosList() {
                   onChange({ value: today });
                   setIsOpen(false);
                 }}
-                className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                className="px-3 py-1 text-sm bg-blue-500 text-white rounded"
               >
                 Hoy
               </button>
@@ -887,11 +915,11 @@ export default function EventosList() {
                   }`}
                 >
                   <span className="sr-only">Primera página</span>
-                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
-                  <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                  <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 </button>
                 <button
@@ -903,7 +931,7 @@ export default function EventosList() {
                 >
                   <span className="sr-only">Anterior</span>
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 </button>
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -942,7 +970,7 @@ export default function EventosList() {
                 >
                   <span className="sr-only">Siguiente</span>
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                   </svg>
                 </button>
                 <button
@@ -956,10 +984,10 @@ export default function EventosList() {
                 >
                   <span className="sr-only">Última página</span>
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                   </svg>
                   <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                   </svg>
                 </button>
               </nav>
@@ -981,39 +1009,178 @@ export default function EventosList() {
                   <label htmlFor="municipalidad" className="block text-sm font-medium text-gray-700 mb-1">
                     Municipalidad
                   </label>
-                  <select
-                    id="municipalidad"
-                    value={editData.id_municipalidad}
-                    onChange={handleMunicipalidadChange}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Seleccione una municipalidad</option>
-                    {municipalidades.map(muni => (
-                      <option key={muni.id_municipalidad} value={muni.id_municipalidad}>
-                        {muni.nombre}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative" ref={municipalidadDropdownRef}>
+                    <div 
+                      className="w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm flex justify-between items-center cursor-pointer"
+                      onClick={() => setShowMunicipalidadDropdown(!showMunicipalidadDropdown)}
+                    >
+                      <span className="truncate">
+                        {editData.id_municipalidad 
+                          ? municipalidades.find(m => m.id_municipalidad === parseInt(editData.id_municipalidad))?.nombre || 'Sin nombre'
+                          : 'Seleccione una municipalidad'}
+                      </span>
+                      <span>
+                        {showMunicipalidadDropdown ? (
+                          <FiChevronUp className="h-5 w-5 text-gray-400" />
+                        ) : (
+                          <FiChevronDown className="h-5 w-5 text-gray-400" />
+                        )}
+                      </span>
+                    </div>
+                    
+                    {showMunicipalidadDropdown && (
+                      <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                        <div className="sticky top-0 z-10 bg-white p-2">
+                          <div className="relative">
+                            <input
+                              type="text"
+                              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                              placeholder="Buscar municipalidad..."
+                              value={municipalidadSearchQuery}
+                              onChange={(e) => setMunicipalidadSearchQuery(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <FiSearch className="h-5 w-5 text-gray-400" />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {municipalidades.filter(muni => 
+                          municipalidadSearchQuery.trim() === '' || 
+                          (muni.nombre && muni.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase())) ||
+                          (muni.ubigeo && muni.ubigeo.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()))
+                        ).length === 0 ? (
+                          <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
+                        ) : (
+                          municipalidades.filter(muni => 
+                            municipalidadSearchQuery.trim() === '' || 
+                            (muni.nombre && muni.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase())) ||
+                            (muni.ubigeo && muni.ubigeo.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()))
+                          ).map((muni) => (
+                            <div
+                              key={muni.id_municipalidad}
+                              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
+                                parseInt(editData.id_municipalidad) === muni.id_municipalidad ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                              }`}
+                              onClick={() => {
+                                handleMunicipalidadChange(muni.id_municipalidad.toString());
+                                setShowMunicipalidadDropdown(false);
+                              }}
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-medium truncate">{muni.nombre}</span>
+                                {muni.ubigeo && (
+                                  <span className="text-xs text-gray-500">Ubigeo: {muni.ubigeo}</span>
+                                )}
+                              </div>
+                              
+                              {parseInt(editData.id_municipalidad) === muni.id_municipalidad && (
+                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                </span>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mb-4">
                   <label htmlFor="contacto" className="block text-sm font-medium text-gray-700 mb-1">
                     Contacto
                   </label>
-                  <select
-                    id="contacto"
-                    value={editData.id_contacto}
-                    onChange={(e) => setEditData(prev => ({ ...prev, id_contacto: e.target.value }))}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    disabled={!editData.id_municipalidad}
-                  >
-                    <option value="">Seleccione un contacto</option>
-                    {contactos.map(contacto => (
-                      <option key={contacto.id_contacto} value={contacto.id_contacto}>
-                        {contacto.nombre_completo}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative" ref={contactoDropdownRef}>
+                    <div 
+                      className={`w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm flex justify-between items-center ${editData.id_municipalidad ? 'cursor-pointer' : 'cursor-not-allowed bg-gray-100'}`}
+                      onClick={() => {
+                        if (editData.id_municipalidad) {
+                          setShowContactoDropdown(!showContactoDropdown);
+                        }
+                      }}
+                    >
+                      <span className="truncate">
+                        {editData.id_contacto 
+                          ? contactos.find(c => c.id_contacto === parseInt(editData.id_contacto))?.nombre_completo || 'Sin nombre'
+                          : editData.id_municipalidad 
+                            ? 'Seleccione un contacto' 
+                            : 'Primero seleccione una municipalidad'}
+                      </span>
+                      <span>
+                        {editData.id_municipalidad && (
+                          showContactoDropdown ? (
+                            <FiChevronUp className="h-5 w-5 text-gray-400" />
+                          ) : (
+                            <FiChevronDown className="h-5 w-5 text-gray-400" />
+                          )
+                        )}
+                      </span>
+                    </div>
+                    
+                    {showContactoDropdown && editData.id_municipalidad && (
+                      <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                        <div className="sticky top-0 z-10 bg-white p-2">
+                          <div className="relative">
+                            <input
+                              type="text"
+                              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                              placeholder="Buscar contacto..."
+                              value={contactoSearchQuery}
+                              onChange={(e) => setContactoSearchQuery(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <FiSearch className="h-5 w-5 text-gray-400" />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {contactos.filter(contacto => 
+                          contactoSearchQuery.trim() === '' || 
+                          (contacto.nombre_completo && contacto.nombre_completo.toLowerCase().includes(contactoSearchQuery.toLowerCase())) ||
+                          (contacto.cargo && contacto.cargo.toLowerCase().includes(contactoSearchQuery.toLowerCase()))
+                        ).length === 0 ? (
+                          <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
+                        ) : (
+                          contactos.filter(contacto => 
+                            contactoSearchQuery.trim() === '' || 
+                            (contacto.nombre_completo && contacto.nombre_completo.toLowerCase().includes(contactoSearchQuery.toLowerCase())) ||
+                            (contacto.cargo && contacto.cargo.toLowerCase().includes(contactoSearchQuery.toLowerCase()))
+                          ).map((contacto) => (
+                            <div
+                              key={contacto.id_contacto}
+                              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
+                                parseInt(editData.id_contacto) === contacto.id_contacto ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                              }`}
+                              onClick={() => {
+                                setEditData(prev => ({ ...prev, id_contacto: contacto.id_contacto.toString() }));
+                                setShowContactoDropdown(false);
+                              }}
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-medium truncate">{contacto.nombre_completo}</span>
+                                {contacto.cargo && (
+                                  <span className="text-xs text-gray-500">Cargo: {contacto.cargo}</span>
+                                )}
+                              </div>
+                              
+                              {parseInt(editData.id_contacto) === contacto.id_contacto && (
+                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                </span>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mb-4">
