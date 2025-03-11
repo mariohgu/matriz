@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { ADDRESS } from '../utils.jsx';
-import { FiCalendar, FiUsers, FiActivity, FiBarChart2, FiClock, FiFilter } from 'react-icons/fi';
+import { FiCalendar, FiUsers, FiActivity, FiBarChart2, FiClock, FiFilter, FiSearch, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from 'chart.js';
 import { Bar, Pie, Line } from 'react-chartjs-2';
-import DatePicker from 'react-datepicker';
-import "react-datepicker/dist/react-datepicker.css";
 
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
@@ -22,7 +20,10 @@ function Dashboard() {
   // Filtros
   const [startDate, setStartDate] = useState(new Date(new Date().setMonth(new Date().getMonth() - 3)));
   const [endDate, setEndDate] = useState(new Date());
-  const [filterType, setFilterType] = useState('all'); // 'all', 'provincial', 'distrital', 'regional'
+  const [selectedMunicipalidad, setSelectedMunicipalidad] = useState(null);
+  const [municipalidadSearchQuery, setMunicipalidadSearchQuery] = useState('');
+  const [showMunicipalidadDropdown, setShowMunicipalidadDropdown] = useState(false);
+  const municipalidadDropdownRef = useRef(null);
   
   // Datos procesados para gráficos
   const [interactionsByType, setInteractionsByType] = useState({});
@@ -30,6 +31,178 @@ function Dashboard() {
   const [interactionsByMonth, setInteractionsByMonth] = useState({});
   const [interactionFrequency, setInteractionFrequency] = useState({});
   
+  // Función auxiliar para formatear fechas
+  const formatDate = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  // Componente TailwindCalendar para fechas
+  const TailwindCalendar = ({ selectedDate, onChange, id, className }) => {
+    const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
+    const [isOpen, setIsOpen] = useState(false);
+    const calendarRef = useRef(null);
+    
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+          setIsOpen(false);
+        }
+      };
+      
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, []);
+    
+    const handleDateSelect = (date) => {
+      onChange(date);
+      setIsOpen(false);
+    };
+    
+    const navigateMonth = (step) => {
+      const newDate = new Date(currentDate);
+      newDate.setMonth(newDate.getMonth() + step);
+      setCurrentDate(newDate);
+    };
+    
+    const monthNames = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    
+    const renderCalendarDays = () => {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      
+      const firstDayOfMonth = new Date(year, month, 1).getDay();
+      
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      
+      const days = [];
+      
+      for (let i = 0; i < firstDayOfMonth; i++) {
+        days.push(
+          <div key={`empty-${i}`} className="h-8 w-8"></div>
+        );
+      }
+      
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month, day);
+        const isToday = new Date().toDateString() === date.toDateString();
+        const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
+        
+        days.push(
+          <button
+            key={`day-${day}`}
+            type="button"
+            onClick={() => handleDateSelect(date)}
+            className={`h-8 w-8 rounded-full flex items-center justify-center text-sm ${
+              isSelected
+                ? 'bg-blue-500 text-white'
+                : isToday
+                  ? 'bg-blue-100 text-blue-800'
+                  : 'hover:bg-gray-100'
+            }`}
+          >
+            {day}
+          </button>
+        );
+      }
+      
+      return days;
+    };
+    
+    return (
+      <div className="relative" ref={calendarRef}>
+        <div className={`relative ${className}`}>
+          <input
+            id={id}
+            type="text"
+            readOnly
+            value={selectedDate ? formatDate(selectedDate) : ''}
+            placeholder="Seleccionar fecha"
+            onClick={() => setIsOpen(!isOpen)}
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+          />
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+            <FiCalendar className="h-5 w-5 text-gray-400" />
+          </div>
+        </div>
+        
+        {isOpen && (
+          <div className="absolute z-50 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-64">
+            <div className="flex justify-between items-center mb-4">
+              <button
+                type="button"
+                onClick={() => navigateMonth(-1)}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <div className="font-semibold">
+                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </div>
+              <button
+                type="button"
+                onClick={() => navigateMonth(1)}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {dayNames.map(day => (
+                <div key={day} className="h-8 w-8 flex items-center justify-center text-xs text-gray-500">
+                  {day}
+                </div>
+              ))}
+            </div>
+            
+            <div className="grid grid-cols-7 gap-1">
+              {renderCalendarDays()}
+            </div>
+            
+            <div className="mt-4 flex justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  handleDateSelect(new Date());
+                }}
+                className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
+              >
+                Hoy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(null);
+                  setIsOpen(false);
+                }}
+                className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
+              >
+                Limpiar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   useEffect(() => {
     // Cargar todos los datos necesarios
     const fetchData = async () => {
@@ -51,11 +224,9 @@ function Dashboard() {
         setEstadosSeguimiento(estadosSeguimientoRes.data || []);
         setContactos(contactosRes.data || []);
         setEventos(eventosRes.data || []);
-        
-        // Establecer la fecha de última actualización
         setLastUpdateDate(new Date());
       } catch (error) {
-        console.error('Error al cargar datos:', error);
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
@@ -63,24 +234,46 @@ function Dashboard() {
     
     fetchData();
   }, []);
-  
-  // Procesar datos cuando cambian los filtros o los datos
+
   useEffect(() => {
-    if (loading) return;
+    // Manejar clic fuera de los dropdowns
+    const handleClickOutside = (event) => {
+      if (municipalidadDropdownRef.current && !municipalidadDropdownRef.current.contains(event.target)) {
+        setShowMunicipalidadDropdown(false);
+      }
+    };
     
-    processInteractionsByType();
-    processContactsByMunicipality();
-    processInteractionsByMonth();
-    processInteractionFrequency();
-    
-  }, [estadosSeguimiento, municipalidades, contactos, eventos, startDate, endDate, filterType, loading]);
-  
-  // Procesar número de interacciones por tipo (estado)
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Procesar datos cuando cambian los filtros o los datos
+    if (!loading) {
+      processInteractionsByType();
+      processContactsByMunicipality();
+      processInteractionsByMonth();
+      processInteractionFrequency();
+    }
+  }, [estadosSeguimiento, eventos, contactos, municipalidades, startDate, endDate, selectedMunicipalidad, loading]);
+
+  // Procesar interacciones por tipo
   const processInteractionsByType = () => {
-    const filteredInteractions = estadosSeguimiento.filter(estado => {
+    let filteredInteractions = estadosSeguimiento.filter(estado => {
       const estadoDate = new Date(estado.fecha);
       return estadoDate >= startDate && estadoDate <= endDate;
     });
+    
+    // Filtrar por municipalidad si hay una seleccionada
+    if (selectedMunicipalidad) {
+      const municipalidadId = selectedMunicipalidad.id_municipalidad;
+      filteredInteractions = filteredInteractions.filter(estado => {
+        const evento = eventos.find(e => e.id_evento === estado.id_evento);
+        return evento && evento.id_municipalidad === municipalidadId;
+      });
+    }
     
     const interactionCounts = filteredInteractions.reduce((acc, estado) => {
       const estadoValue = estado.estado || 'Sin Estado';
@@ -90,18 +283,16 @@ function Dashboard() {
     
     setInteractionsByType(interactionCounts);
   };
-  
+
   // Procesar contactos por municipalidad
   const processContactsByMunicipality = () => {
     // Filtrar municipalidades según el tipo seleccionado
-    const filteredMunicipalities = filterType === 'all' 
-      ? municipalidades 
-      : municipalidades.filter(m => {
-          if (filterType === 'provincial') return m.nombre.toLowerCase().includes('provincial');
-          if (filterType === 'distrital') return !m.nombre.toLowerCase().includes('provincial') && !m.nombre.toLowerCase().includes('regional');
-          if (filterType === 'regional') return m.nombre.toLowerCase().includes('regional');
-          return true;
-        });
+    let filteredMunicipalities = municipalidades;
+        
+    // Filtrar por municipalidad específica si hay una seleccionada
+    if (selectedMunicipalidad) {
+      filteredMunicipalities = filteredMunicipalities.filter(m => m.id_municipalidad === selectedMunicipalidad.id_municipalidad);
+    }
     
     // Contar contactos por municipalidad
     const contactCounts = {};
@@ -118,13 +309,22 @@ function Dashboard() {
     
     setContactsByMunicipality(contactCounts);
   };
-  
+
   // Procesar interacciones por mes
   const processInteractionsByMonth = () => {
-    const filteredInteractions = estadosSeguimiento.filter(estado => {
+    let filteredInteractions = estadosSeguimiento.filter(estado => {
       const estadoDate = new Date(estado.fecha);
       return estadoDate >= startDate && estadoDate <= endDate;
     });
+    
+    // Filtrar por municipalidad si hay una seleccionada
+    if (selectedMunicipalidad) {
+      const municipalidadId = selectedMunicipalidad.id_municipalidad;
+      filteredInteractions = filteredInteractions.filter(estado => {
+        const evento = eventos.find(e => e.id_evento === estado.id_evento);
+        return evento && evento.id_municipalidad === municipalidadId;
+      });
+    }
     
     const monthlyData = {};
     
@@ -151,13 +351,22 @@ function Dashboard() {
     
     setInteractionsByMonth(sortedData);
   };
-  
+
   // Procesar frecuencia de interacciones (cuántas municipalidades tienen 1, 2, 3+ interacciones)
   const processInteractionFrequency = () => {
-    const filteredInteractions = estadosSeguimiento.filter(estado => {
+    let filteredInteractions = estadosSeguimiento.filter(estado => {
       const estadoDate = new Date(estado.fecha);
       return estadoDate >= startDate && estadoDate <= endDate;
     });
+    
+    // Filtrar por municipalidad si hay una seleccionada
+    if (selectedMunicipalidad) {
+      const municipalidadId = selectedMunicipalidad.id_municipalidad;
+      filteredInteractions = filteredInteractions.filter(estado => {
+        const evento = eventos.find(e => e.id_evento === estado.id_evento);
+        return evento && evento.id_municipalidad === municipalidadId;
+      });
+    }
     
     // Obtener eventos relacionados con las interacciones
     const eventosIds = filteredInteractions.map(estado => estado.id_evento).filter(id => id);
@@ -190,7 +399,16 @@ function Dashboard() {
     
     setInteractionFrequency(frequency);
   };
-  
+
+  // Filtro de municipalidades procesado
+  const municipalidadesFiltered = municipalidades.filter(municipalidad => {
+    const matchesQuery = municipalidadSearchQuery.trim() === '' || 
+      (municipalidad.nombre && municipalidad.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase())) ||
+      (municipalidad.ubigeo && municipalidad.ubigeo.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()));
+      
+    return matchesQuery;
+  });
+
   // Configuración de gráficos
   const interactionsByTypeChartData = {
     labels: Object.keys(interactionsByType),
@@ -216,7 +434,7 @@ function Dashboard() {
       },
     ],
   };
-  
+
   const contactsByMunicipalityChartData = {
     labels: Object.keys(contactsByMunicipality).slice(0, 10), // Mostrar solo los 10 primeros para legibilidad
     datasets: [
@@ -229,7 +447,7 @@ function Dashboard() {
       },
     ],
   };
-  
+
   const interactionsByMonthChartData = {
     labels: Object.keys(interactionsByMonth),
     datasets: [
@@ -243,7 +461,7 @@ function Dashboard() {
       },
     ],
   };
-  
+
   const interactionFrequencyChartData = {
     labels: Object.keys(interactionFrequency),
     datasets: [
@@ -266,7 +484,7 @@ function Dashboard() {
       },
     ],
   };
-  
+
   // Opciones comunes para los gráficos
   const chartOptions = {
     responsive: true,
@@ -281,7 +499,7 @@ function Dashboard() {
       },
     },
   };
-  
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-center mb-6">
@@ -303,48 +521,114 @@ function Dashboard() {
           <FiFilter className="mr-2" /> Filtros
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Rango de fechas con el nuevo TailwindCalendar */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Rango de Fechas</label>
-            <div className="flex space-x-2">
-              <div>
-                <DatePicker
-                  selected={startDate}
-                  onChange={date => setStartDate(date)}
-                  selectsStart
-                  startDate={startDate}
-                  endDate={endDate}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  dateFormat="dd/MM/yyyy"
-                />
-              </div>
-              <div>
-                <DatePicker
-                  selected={endDate}
-                  onChange={date => setEndDate(date)}
-                  selectsEnd
-                  startDate={startDate}
-                  endDate={endDate}
-                  minDate={startDate}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  dateFormat="dd/MM/yyyy"
-                />
-              </div>
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
+            <TailwindCalendar
+              id="start-date"
+              selectedDate={startDate}
+              onChange={date => setStartDate(date || new Date(new Date().setMonth(new Date().getMonth() - 3)))}
+              className="mb-2"
+            />
+            
+            <label className="block text-sm font-medium text-gray-700 mb-1 mt-3">Fecha Fin</label>
+            <TailwindCalendar
+              id="end-date"
+              selectedDate={endDate}
+              onChange={date => setEndDate(date || new Date())}
+              className="mb-2"
+            />
           </div>
           
+          {/* Selector de Municipalidad específica */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Municipalidad</label>
-            <select
-              value={filterType}
-              onChange={e => setFilterType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="all">Todas</option>
-              <option value="provincial">Provinciales</option>
-              <option value="distrital">Distritales</option>
-              <option value="regional">Gobiernos Regionales</option>
-            </select>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Municipalidad</label>
+            <div className="relative" ref={municipalidadDropdownRef}>
+              <div 
+                className="w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm flex justify-between items-center cursor-pointer"
+                onClick={() => setShowMunicipalidadDropdown(!showMunicipalidadDropdown)}
+              >
+                <span className="truncate">
+                  {selectedMunicipalidad 
+                    ? selectedMunicipalidad.nombre 
+                    : 'Seleccione una municipalidad'}
+                </span>
+                <span>
+                  {showMunicipalidadDropdown ? (
+                    <FiChevronUp className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <FiChevronDown className="h-5 w-5 text-gray-400" />
+                  )}
+                </span>
+              </div>
+              
+              {showMunicipalidadDropdown && (
+                <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                  <div className="sticky top-0 z-10 bg-white p-2">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        placeholder="Buscar municipalidad..."
+                        value={municipalidadSearchQuery}
+                        onChange={(e) => setMunicipalidadSearchQuery(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <FiSearch className="h-5 w-5 text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Opción para limpiar la selección */}
+                  <div
+                    className="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 border-b border-gray-200"
+                    onClick={() => {
+                      setSelectedMunicipalidad(null);
+                      setShowMunicipalidadDropdown(false);
+                    }}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium truncate text-gray-500">Todas las municipalidades</span>
+                    </div>
+                  </div>
+                  
+                  {municipalidadesFiltered.length === 0 ? (
+                    <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
+                  ) : (
+                    municipalidadesFiltered.map((municipalidad) => (
+                      <div
+                        key={municipalidad.id_municipalidad}
+                        className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
+                          selectedMunicipalidad && selectedMunicipalidad.id_municipalidad === municipalidad.id_municipalidad ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                        }`}
+                        onClick={() => {
+                          setSelectedMunicipalidad(municipalidad);
+                          setShowMunicipalidadDropdown(false);
+                        }}
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium truncate">{municipalidad.nombre || 'Sin nombre'}</span>
+                          <span className="text-xs text-gray-500 truncate">
+                            {municipalidad.ubigeo && <span className="font-semibold mr-1">[{municipalidad.ubigeo}]</span>}
+                            {municipalidad.provincia || ''} {municipalidad.departamento ? `- ${municipalidad.departamento}` : ''}
+                          </span>
+                        </div>
+                        
+                        {selectedMunicipalidad && selectedMunicipalidad.id_municipalidad === municipalidad.id_municipalidad && (
+                          <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                            <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </span>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

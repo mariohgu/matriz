@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FiSearch, FiPlus, FiTrash2, FiEdit, FiEye, FiChevronDown, FiChevronUp, FiChevronLeft, FiChevronRight, FiX } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiTrash2, FiEdit, FiEye, FiChevronDown, FiChevronUp, FiChevronLeft, FiChevronRight, FiX, FiCalendar } from 'react-icons/fi';
 import axios from 'axios';
 import { ADDRESS } from '../../utils.jsx';
 
@@ -349,6 +349,167 @@ export default function ConveniosList() {
 
   const goToPage = (page) => {
     setCurrentPage(page);
+  };
+
+  // Componente TailwindCalendar extraído de EstadoSeguimientosList
+  const TailwindCalendar = ({ selectedDate, onChange, id, className }) => {
+    const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
+    const [isOpen, setIsOpen] = useState(false);
+    const calendarRef = useRef(null);
+    
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+          setIsOpen(false);
+        }
+      };
+      
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, []);
+    
+    const handleDateSelect = (date) => {
+      onChange(date);
+      setIsOpen(false);
+    };
+    
+    const navigateMonth = (step) => {
+      const newDate = new Date(currentDate);
+      newDate.setMonth(newDate.getMonth() + step);
+      setCurrentDate(newDate);
+    };
+    
+    const monthNames = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+    
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    
+    const renderCalendarDays = () => {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      
+      const firstDayOfMonth = new Date(year, month, 1).getDay();
+      
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      
+      const days = [];
+      
+      for (let i = 0; i < firstDayOfMonth; i++) {
+        days.push(
+          <div key={`empty-${i}`} className="h-8 w-8"></div>
+        );
+      }
+      
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month, day);
+        const isToday = new Date().toDateString() === date.toDateString();
+        const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
+        
+        days.push(
+          <button
+            key={`day-${day}`}
+            type="button"
+            onClick={() => handleDateSelect(date)}
+            className={`h-8 w-8 rounded-full flex items-center justify-center text-sm ${
+              isSelected
+                ? 'bg-blue-500 text-white'
+                : isToday
+                  ? 'bg-blue-100 text-blue-800'
+                  : 'hover:bg-gray-100'
+            }`}
+          >
+            {day}
+          </button>
+        );
+      }
+      
+      return days;
+    };
+    
+    return (
+      <div className="relative" ref={calendarRef}>
+        <div className={`relative ${className}`}>
+          <input
+            id={id}
+            type="text"
+            readOnly
+            value={selectedDate ? formatDate(selectedDate) : ''}
+            placeholder="Seleccionar fecha"
+            onClick={() => setIsOpen(!isOpen)}
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
+          />
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+            <FiCalendar className="h-5 w-5 text-gray-400" />
+          </div>
+        </div>
+        
+        {isOpen && (
+          <div className="absolute z-50 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-64">
+            <div className="flex justify-between items-center mb-4">
+              <button
+                type="button"
+                onClick={() => navigateMonth(-1)}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <div className="font-semibold">
+                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </div>
+              <button
+                type="button"
+                onClick={() => navigateMonth(1)}
+                className="p-1 rounded-full hover:bg-gray-100"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {dayNames.map(day => (
+                <div key={day} className="h-8 w-8 flex items-center justify-center text-xs text-gray-500">
+                  {day}
+                </div>
+              ))}
+            </div>
+            
+            <div className="grid grid-cols-7 gap-1">
+              {renderCalendarDays()}
+            </div>
+            
+            <div className="mt-4 flex justify-between">
+              <button
+                type="button"
+                onClick={() => {
+                  handleDateSelect(new Date());
+                }}
+                className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
+              >
+                Hoy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(null);
+                  setIsOpen(false);
+                }}
+                className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
+              >
+                Limpiar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -849,7 +1010,7 @@ export default function ConveniosList() {
                   >
                     <span className="sr-only">Cerrar</span>
                     <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
@@ -1025,16 +1186,13 @@ export default function ConveniosList() {
                     <label htmlFor="fecha_firma" className="block text-sm font-medium text-gray-700 mb-1">
                       Fecha de Firma <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="date"
+                    <TailwindCalendar
                       id="fecha_firma"
-                      value={editData.fecha_firma ? editData.fecha_firma instanceof Date 
-                        ? editData.fecha_firma.toISOString().split('T')[0]
-                        : editData.fecha_firma
-                        : ''}
-                      onChange={(e) => setEditData({...editData, fecha_firma: e.target.value ? new Date(e.target.value) : null})}
-                      className="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                      required
+                      selectedDate={editData.fecha_firma instanceof Date 
+                        ? editData.fecha_firma 
+                        : editData.fecha_firma ? new Date(editData.fecha_firma) : null}
+                      onChange={(date) => setEditData({...editData, fecha_firma: date})}
+                      className="w-full"
                     />
                   </div>
                   
