@@ -31,6 +31,10 @@ function Dashboard() {
   const [interactionsByMonth, setInteractionsByMonth] = useState({});
   const [interactionFrequency, setInteractionFrequency] = useState({});
   
+  // Estado para el diálogo de visualización
+  const [viewDialogVisible, setViewDialogVisible] = useState(false);
+  const [selectedInteraction, setSelectedInteraction] = useState(null);
+
   // Función auxiliar para formatear fechas
   const formatDate = (value) => {
     if (!value) return '';
@@ -500,23 +504,51 @@ function Dashboard() {
     },
   };
 
+  const loadAllData = async () => {
+    setLoading(true);
+    try {
+      const [
+        municipalidadesRes, 
+        estadosSeguimientoRes, 
+        contactosRes,
+        eventosRes
+      ] = await Promise.all([
+        axios.get(`${ADDRESS}api/municipalidades`),
+        axios.get(`${ADDRESS}api/estados-seguimiento`),
+        axios.get(`${ADDRESS}api/contactos`),
+        axios.get(`${ADDRESS}api/eventos`)
+      ]);
+      
+      setMunicipalidades(municipalidadesRes.data || []);
+      setEstadosSeguimiento(estadosSeguimientoRes.data || []);
+      setContactos(contactosRes.data || []);
+      setEventos(eventosRes.data || []);
+      setLastUpdateDate(new Date());
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div>
       <div className="flex flex-col md:flex-row justify-between items-center mb-6">
         <h2 className="text-2xl font-bold mb-4 md:mb-0">Dashboard de Interacciones</h2>
         
-        <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4">
-          <div className="flex items-center space-x-2">
-            <FiClock className="text-gray-500" />
-            <span className="text-sm text-gray-600">
-              Última actualización: {lastUpdateDate.toLocaleString()}
-            </span>
-          </div>
+        <div className="text-sm text-gray-500 flex items-center">
+          <span>Última actualización: {lastUpdateDate.toLocaleString()}</span>
+          <button 
+            onClick={loadAllData}
+            className="ml-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
+          >
+            Actualizar
+          </button>
         </div>
       </div>
       
       {/* Filtros */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
+      <div className="bg-white p-6 rounded-lg shadow mb-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center">
           <FiFilter className="mr-2" /> Filtros
         </h3>
@@ -738,10 +770,24 @@ function Dashboard() {
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
                 </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Fecha Compromiso
+                </th>
+                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acciones
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {estadosSeguimiento
+                .filter(estado => {
+                  // Si hay una municipalidad seleccionada, filtrar por ella
+                  if (selectedMunicipalidad) {
+                    const evento = eventos.find(e => e.id_evento === estado.id_evento);
+                    return evento && evento.id_municipalidad === selectedMunicipalidad.id_municipalidad;
+                  }
+                  return true; // Si no hay municipalidad seleccionada, mostrar todos
+                })
                 .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
                 .slice(0, 5)
                 .map((estado, index) => {
@@ -776,6 +822,36 @@ function Dashboard() {
                           {estado.estado || 'Sin Estado'}
                         </span>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {estado.fecha_compromiso ? new Date(estado.fecha_compromiso).toLocaleDateString() : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                        <button
+                          onClick={() => {
+                            // Preparar los datos para la visualización
+                            const tipoReunionDesc = estado.id_tipo_reunion 
+                              ? axios.get(`${ADDRESS}api/tipos-reunion/${estado.id_tipo_reunion}`)
+                                  .then(response => response.data?.descripcion || 'N/A')
+                                  .catch(() => 'N/A')
+                              : Promise.resolve('N/A');
+                              
+                            // Una vez que tenemos la descripción, mostrar el modal
+                            tipoReunionDesc.then(descripcion => {
+                              setSelectedInteraction({
+                                ...estado,
+                                evento,
+                                municipalidad,
+                                contacto,
+                                tipo_reunion: descripcion
+                              });
+                              setViewDialogVisible(true);
+                            });
+                          }}
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium"
+                        >
+                          Visualizar
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -783,6 +859,88 @@ function Dashboard() {
           </table>
         </div>
       </div>
+
+      {/* Diálogo para visualizar detalles de la interacción */}
+      {viewDialogVisible && selectedInteraction && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+            <div className="flex justify-between items-center p-4 border-b">
+              <h3 className="text-lg font-medium text-gray-900">Detalles de la Interacción</h3>
+              <button
+                onClick={() => setViewDialogVisible(false)}
+                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="field">
+                  <label className="block text-gray-700 font-medium mb-1">Municipalidad</label>
+                  <p className="text-gray-800">{selectedInteraction.municipalidad ? selectedInteraction.municipalidad.nombre : 'N/A'}</p>
+                </div>
+                
+                <div className="field">
+                  <label className="block text-gray-700 font-medium mb-1">Contacto</label>
+                  <p className="text-gray-800">{selectedInteraction.contacto ? selectedInteraction.contacto.nombre_completo : 'N/A'}</p>
+                </div>
+                
+                <div className="field">
+                  <label className="block text-gray-700 font-medium mb-1">Fecha</label>
+                  <p className="text-gray-800">{new Date(selectedInteraction.fecha).toLocaleDateString()}</p>
+                </div>
+                
+                <div className="field">
+                  <label className="block text-gray-700 font-medium mb-1">Fecha de Compromiso</label>
+                  <p className="text-gray-800">
+                    {selectedInteraction.fecha_compromiso ? new Date(selectedInteraction.fecha_compromiso).toLocaleDateString() : 'N/A'}
+                  </p>
+                </div>
+                
+                <div className="field">
+                  <label className="block text-gray-700 font-medium mb-1">Tipo de Reunión</label>
+                  <p className="text-gray-800">{typeof selectedInteraction.tipo_reunion === 'string' ? selectedInteraction.tipo_reunion : 'N/A'}</p>
+                </div>
+                
+                <div className="field">
+                  <label className="block text-gray-700 font-medium mb-1">Estado</label>
+                  <p className="text-gray-800">
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                      selectedInteraction.estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                      selectedInteraction.estado === 'En Proceso' ? 'bg-blue-100 text-blue-800' :
+                      selectedInteraction.estado === 'Completado' ? 'bg-green-100 text-green-800' :
+                      selectedInteraction.estado === 'Cancelado' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {selectedInteraction.estado || 'N/A'}
+                    </span>
+                  </p>
+                </div>
+                
+                <div className="field col-span-1 md:col-span-2">
+                  <label className="block text-gray-700 font-medium mb-1">Descripción</label>
+                  <p className="text-gray-800 whitespace-pre-line">{selectedInteraction.descripcion || 'N/A'}</p>
+                </div>
+                
+                <div className="field col-span-1 md:col-span-2">
+                  <label className="block text-gray-700 font-medium mb-1">Compromiso</label>
+                  <p className="text-gray-800 whitespace-pre-line">{selectedInteraction.compromiso || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end p-4 border-t">
+              <button
+                onClick={() => setViewDialogVisible(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 focus:outline-none"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

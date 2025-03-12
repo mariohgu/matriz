@@ -12,9 +12,10 @@ return new class extends Migration
             $table->id('id_municipalidad');
             $table->string('ubigeo', 10)->unique();
             $table->text('nombre');
-            $table->string('departamento', 50);
-            $table->string('provincia', 50);
-            $table->string('distrito', 50);
+            $table->string('departamento', 80);
+            $table->string('provincia', 80);
+            $table->string('distrito', 80);
+            $table->string('region_natural', 50);
             $table->decimal('X', 10, 6)->nullable(); // Coordenada X (longitud)
             $table->decimal('Y', 10, 6)->nullable(); // Coordenada Y (latitud)
             $table->timestamps();

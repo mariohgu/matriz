@@ -24,6 +24,7 @@ export default function MunicipalidadesList() {
     nombre: '',
     departamento: '',
     region: '',
+    region_natural: '',
     provincia: '',
     distrito: '',
     ubigeo: '',
@@ -115,6 +116,7 @@ export default function MunicipalidadesList() {
         nombre: '',
         departamento: '',
         region: '',
+        region_natural: '',
         provincia: '',
         distrito: '',
         ubigeo: '',
@@ -254,6 +256,7 @@ export default function MunicipalidadesList() {
                 nombre: '',
                 departamento: '',
                 region: '',
+                region_natural: '',
                 provincia: '',
                 distrito: '',
                 ubigeo: '',
@@ -704,6 +707,10 @@ export default function MunicipalidadesList() {
                     <p className="mt-1 text-sm text-gray-900">{selectedMunicipalidad.region}</p>
                   </div>
                   <div>
+                    <p className="text-sm font-medium text-gray-500">Región Natural</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedMunicipalidad.region_natural || 'No disponible'}</p>
+                  </div>
+                  <div>
                     <p className="text-sm font-medium text-gray-500">Departamento</p>
                     <p className="mt-1 text-sm text-gray-900">{selectedMunicipalidad.departamento}</p>
                   </div>
@@ -725,7 +732,7 @@ export default function MunicipalidadesList() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">Coordenada Y (Latitud)</p>
-                    <p clas sName="mt-1 text-sm text-gray-900">{selectedMunicipalidad.Y || 'No disponible'}</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedMunicipalidad.Y || 'No disponible'}</p>
                   </div>
                 </div>
               </div>
@@ -813,6 +820,20 @@ export default function MunicipalidadesList() {
                       />
                     </div>
                     <div>
+                      <label htmlFor="region_natural" className="block text-sm font-medium text-gray-700">
+                        Región Natural
+                      </label>
+                      <input
+                        type="text"
+                        id="region_natural"
+                        value={editData.region_natural}
+                        onChange={(e) => setEditData({ ...editData, region_natural: e.target.value })}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
                       <label htmlFor="departamento" className="block text-sm font-medium text-gray-700">
                         Departamento
                       </label>
@@ -824,8 +845,6 @@ export default function MunicipalidadesList() {
                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="provincia" className="block text-sm font-medium text-gray-700">
                         Provincia
@@ -838,6 +857,8 @@ export default function MunicipalidadesList() {
                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="distrito" className="block text-sm font-medium text-gray-700">
                         Distrito
@@ -850,50 +871,50 @@ export default function MunicipalidadesList() {
                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
-                  </div>
-                  <div>
-                    <label htmlFor="ubigeo" className="block text-sm font-medium text-gray-700">
-                      Ubigeo
-                    </label>
-                    <input
-                      type="text"
-                      id="ubigeo"
-                      value={editData.ubigeo}
-                      onChange={(e) => setEditData({ ...editData, ubigeo: e.target.value })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
+                    <div>
+                      <label htmlFor="ubigeo" className="block text-sm font-medium text-gray-700">
+                        Ubigeo
+                      </label>
+                      <input
+                        type="text"
+                        id="ubigeo"
+                        value={editData.ubigeo}
+                        onChange={(e) => setEditData({ ...editData, ubigeo: e.target.value })}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
                   </div>
                   {/* Nuevos campos X y Y */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="X" className="block text-sm font-medium text-gray-700">
-                          Coordenada X (Longitud)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.000001"
-                          id="X"
-                          value={editData.X}
-                          onChange={(e) => setEditData({ ...editData, X: e.target.value })}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="-77.123456"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="Y" className="block text-sm font-medium text-gray-700">
-                          Coordenada Y (Latitud)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.000001"
-                          id="Y"
-                          value={editData.Y}
-                          onChange={(e) => setEditData({ ...editData, Y: e.target.value })}
-                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="-12.654321"
-                        />
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="X" className="block text-sm font-medium text-gray-700">
+                        Coordenada X (Longitud)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        id="X"
+                        value={editData.X}
+                        onChange={(e) => setEditData({ ...editData, X: e.target.value })}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="-77.123456"
+                      />
                     </div>
+                    <div>
+                      <label htmlFor="Y" className="block text-sm font-medium text-gray-700">
+                        Coordenada Y (Latitud)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.000001"
+                        id="Y"
+                        value={editData.Y}
+                        onChange={(e) => setEditData({ ...editData, Y: e.target.value })}
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="-12.654321"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">

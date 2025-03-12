@@ -20,6 +20,7 @@ class Municipalidad extends Model
         'provincia',
         'distrito',
         'region',
+        'region_natural',
         'nivel',
         'X',
         'Y'

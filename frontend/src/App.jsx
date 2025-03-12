@@ -25,8 +25,8 @@ function MainLayout({ children }) {
       <Sidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
       <div className="flex-1 flex flex-col">
         <Header onMenuClick={toggleSidebar} />
-        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-x-auto w-full">
-          <div className="container mx-auto w-full">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-x-auto">
+          <div className="container mx-auto">
             {children}
           </div>
         </main>
