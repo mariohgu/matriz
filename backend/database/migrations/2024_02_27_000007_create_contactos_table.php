@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('id_municipalidad')->constrained('municipalidades', 'id_municipalidad')->onDelete('cascade');
             $table->text('nombre_completo');
             $table->text('cargo');
-            $table->string('telefono', 20)->nullable();
+            $table->string('telefono', 100)->nullable();
             $table->string('email', 100)->nullable();
             $table->timestamps();
             $table->softDeletes();

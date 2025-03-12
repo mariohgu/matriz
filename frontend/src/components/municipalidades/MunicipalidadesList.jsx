@@ -4,6 +4,15 @@ import axios from 'axios';
 import { ADDRESS } from '../../utils.jsx';
 
 export default function MunicipalidadesList() {
+  // Opciones de nivel para reutilizar en los modales
+  const nivelOptions = [
+    { value: "", label: "Seleccionar nivel" },
+    { value: "Gobierno Local", label: "Gobierno Local" },
+    { value: "Gobierno Regional", label: "Gobierno Regional" },
+    { value: "Gobierno Provincial", label: "Gobierno Provincial" },
+    { value: "Asociación", label: "Asociación" }
+  ];
+
   const [municipalidades, setMunicipalidades] = useState([]);
   const [viewDialogVisible, setViewDialogVisible] = useState(false);
   const [editDialogVisible, setEditDialogVisible] = useState(false);
@@ -18,7 +27,9 @@ export default function MunicipalidadesList() {
     provincia: '',
     distrito: '',
     ubigeo: '',
-    nivel: ''
+    nivel: '',
+    X: '',
+    Y: ''
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -107,6 +118,9 @@ export default function MunicipalidadesList() {
         provincia: '',
         distrito: '',
         ubigeo: '',
+        nivel: '',
+        X: '',
+        Y: ''
       });
       loadMunicipalidades();
     } catch (error) {
@@ -705,6 +719,14 @@ export default function MunicipalidadesList() {
                     <p className="text-sm font-medium text-gray-500">Ubigeo</p>
                     <p className="mt-1 text-sm text-gray-900">{selectedMunicipalidad.ubigeo}</p>
                   </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Coordenada X (Longitud)</p>
+                    <p className="mt-1 text-sm text-gray-900">{selectedMunicipalidad.X || 'No disponible'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Coordenada Y (Latitud)</p>
+                    <p clas sName="mt-1 text-sm text-gray-900">{selectedMunicipalidad.Y || 'No disponible'}</p>
+                  </div>
                 </div>
               </div>
               <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
@@ -763,21 +785,20 @@ export default function MunicipalidadesList() {
                     />
                   </div>
                   <div>
-                  <label htmlFor="nivel" className="block text-sm font-medium text-gray-700">
-                    Nivel
-                  </label>
-                  <select
-                    id="nivel"
-                    value={editData.nivel}
-                    onChange={(e) => setEditData({ ...editData, nivel: e.target.value })}
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">Seleccionar nivel</option>
-                    <option value="GL">GL</option>
-                    <option value="GR">GR</option>
-                    <option value="GP">GP</option>
-                  </select>
-                </div>
+                    <label htmlFor="nivel" className="block text-sm font-medium text-gray-700">
+                      Nivel
+                    </label>
+                    <select
+                      id="nivel"
+                      value={editData.nivel}
+                      onChange={(e) => setEditData({ ...editData, nivel: e.target.value })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      {nivelOptions.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="region" className="block text-sm font-medium text-gray-700">
@@ -842,6 +863,37 @@ export default function MunicipalidadesList() {
                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
+                  {/* Nuevos campos X y Y */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="X" className="block text-sm font-medium text-gray-700">
+                          Coordenada X (Longitud)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.000001"
+                          id="X"
+                          value={editData.X}
+                          onChange={(e) => setEditData({ ...editData, X: e.target.value })}
+                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="-77.123456"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="Y" className="block text-sm font-medium text-gray-700">
+                          Coordenada Y (Latitud)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.000001"
+                          id="Y"
+                          value={editData.Y}
+                          onChange={(e) => setEditData({ ...editData, Y: e.target.value })}
+                          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="-12.654321"
+                        />
+                      </div>
+                    </div>
                 </div>
               </div>
               <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
@@ -880,7 +932,7 @@ export default function MunicipalidadesList() {
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div className="sm:flex sm:items-start">
                   <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                    <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                   </div>

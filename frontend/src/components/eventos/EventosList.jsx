@@ -21,7 +21,9 @@ export default function EventosList() {
     'contacto.nombre_completo': { value: null, matchMode: 'contains' },
     'tipo_acercamiento': { value: null, matchMode: 'contains' },
     'lugar': { value: null, matchMode: 'contains' },
-    'fecha': { value: null, matchMode: 'contains' }
+    'fecha': { value: null, matchMode: 'contains' },
+    'modalidad': { value: null, matchMode: 'contains' },
+    'descripcion': { value: null, matchMode: 'contains' }
   });
   const [editData, setEditData] = useState({
     id_evento: '',
@@ -29,7 +31,9 @@ export default function EventosList() {
     id_contacto: '',
     tipo_acercamiento: '',
     lugar: '',
-    fecha: null
+    fecha: null,
+    modalidad: '',
+    descripcion: ''
   });
   
   // Variables para los dropdowns con búsqueda
@@ -167,7 +171,7 @@ export default function EventosList() {
   };
 
   const handleSave = async () => {
-    if (!editData.id_municipalidad || !editData.id_contacto || !editData.tipo_acercamiento || !editData.lugar || !editData.fecha) {
+    if (!editData.id_municipalidad || !editData.id_contacto || !editData.tipo_acercamiento || !editData.lugar || !editData.fecha || !editData.modalidad) {
       const toastDiv = toast.current;
       if (toastDiv) {
         toastDiv.innerHTML = `
@@ -594,7 +598,9 @@ export default function EventosList() {
                   id_contacto: '',
                   tipo_acercamiento: '',
                   lugar: '',
-                  fecha: null
+                  fecha: null,
+                  modalidad: '',
+                  descripcion: ''
                 });
                 setCreateDialogVisible(true);
               }}
@@ -763,6 +769,34 @@ export default function EventosList() {
                   )}
                 </th>
                 
+                <th 
+                  scope="col" 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort('modalidad')}
+                >
+                  <div className="flex items-center">
+                    <span>Modalidad</span>
+                    {getSortIcon('modalidad')}
+                  </div>
+                  {!isMobile && (
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        className="w-full p-1 text-sm border border-gray-300 rounded"
+                        placeholder="Filtrar..."
+                        value={filters['modalidad'].value || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setFilters(prev => ({
+                            ...prev,
+                            'modalidad': { value: value || null, matchMode: 'contains' }
+                          }));
+                        }}
+                      />
+                    </div>
+                  )}
+                </th>
+                
                 <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acciones
                 </th>
@@ -826,6 +860,13 @@ export default function EventosList() {
                       </div>
                     </td>
                     
+                    <td className="px-6 py-4 whitespace-normal">
+                      <div className="text-sm text-gray-900">
+                        {evento.modalidad || 'N/A'}
+                      </div>
+                    </td>
+                    
+                                        
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex justify-center space-x-2">
                         <button
@@ -1208,6 +1249,24 @@ export default function EventosList() {
                   />
                 </div>
 
+                <div className="mb-4">
+                  <label htmlFor="modalidad" className="block text-sm font-medium text-gray-700 mb-1">
+                    Modalidad
+                  </label>
+                  <select
+                    id="modalidad"
+                    value={editData.modalidad}
+                    onChange={(e) => setEditData(prev => ({ ...prev, modalidad: e.target.value }))}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Seleccione una modalidad</option>
+                    <option value="DOCUMENTOS OFICIALES">DOCUMENTOS OFICIALES</option>
+                    <option value="EVENTOS OFICIALES">EVENTOS OFICIALES</option>
+                    <option value="PLATAFORMA DE COMUNICACIÓN">PLATAFORMA DE COMUNICACIÓN</option>
+                    <option value="REUNIONES">REUNIONES</option>
+                  </select>
+                </div>
+
                 <div className="mb-4 col-span-full">
                   <label htmlFor="tipo_acercamiento" className="block text-sm font-medium text-gray-700 mb-1">
                     Tipo de Acercamiento
@@ -1216,6 +1275,19 @@ export default function EventosList() {
                     id="tipo_acercamiento"
                     value={editData.tipo_acercamiento}
                     onChange={(e) => setEditData(prev => ({ ...prev, tipo_acercamiento: e.target.value }))}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={4}
+                  />
+                </div>
+
+                <div className="mb-4 col-span-full">
+                  <label htmlFor="descripcion" className="block text-sm font-medium text-gray-700 mb-1">
+                    Descripción
+                  </label>
+                  <textarea
+                    id="descripcion"
+                    value={editData.descripcion}
+                    onChange={(e) => setEditData(prev => ({ ...prev, descripcion: e.target.value }))}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     rows={4}
                   />

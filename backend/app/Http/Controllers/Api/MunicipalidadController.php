@@ -25,6 +25,8 @@ class MunicipalidadController extends Controller
             'distrito' => 'required|string|max:50',
             'region' => 'required|string|max:50',
             'nivel' => 'nullable|string|max:30',
+            'X' => 'nullable|numeric',
+            'Y' => 'nullable|numeric',
         ]);
 
         $municipalidad = Municipalidad::create($validated);
@@ -58,6 +60,8 @@ class MunicipalidadController extends Controller
             'distrito' => 'required|string|max:50',
             'region' => 'required|string|max:50',
             'nivel' => 'nullable|string|max:30',
+            'X' => 'nullable|numeric',
+            'Y' => 'nullable|numeric',
         ]);
 
         $municipalidad->update($validated);

@@ -15,6 +15,8 @@ return new class extends Migration
             $table->string('departamento', 50);
             $table->string('provincia', 50);
             $table->string('distrito', 50);
+            $table->decimal('X', 10, 6)->nullable(); // Coordenada X (longitud)
+            $table->decimal('Y', 10, 6)->nullable(); // Coordenada Y (latitud)
             $table->timestamps();
             $table->softDeletes();
             

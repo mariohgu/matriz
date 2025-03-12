@@ -20,6 +20,8 @@ class Evento extends Model
         'tipo_acercamiento',
         'lugar',
         'fecha',
+        'modalidad',
+        'descripcion',
         'creado_por',
         'actualizado_por'
     ];

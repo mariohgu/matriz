@@ -15,6 +15,8 @@ return new class extends Migration
             $table->text('tipo_acercamiento');
             $table->text('lugar');
             $table->date('fecha');
+            $table->string('modalidad', 40)->nullable();
+            $table->text('descripcion')->nullable();
             $table->foreignId('creado_por')->constrained('users', 'id');
             $table->foreignId('actualizado_por')->constrained('users', 'id');
             $table->timestamps();

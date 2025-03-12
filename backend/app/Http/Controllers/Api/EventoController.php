@@ -28,6 +28,8 @@ class EventoController extends Controller
                 'tipo_acercamiento' => 'required',
                 'lugar' => 'required',
                 'fecha' => 'required|date',
+                'modalidad' => 'nullable|string|max:40',
+                'descripcion' => 'nullable|string',
             ]);
 
             // Agregar usuario actual como creador y actualizador
@@ -73,6 +75,8 @@ class EventoController extends Controller
                 'tipo_acercamiento' => 'required',
                 'lugar' => 'required',
                 'fecha' => 'required|date',
+                'modalidad' => 'nullable|string|max:40',
+                'descripcion' => 'nullable|string',
             ]);
 
             // Actualizar el usuario que modifica

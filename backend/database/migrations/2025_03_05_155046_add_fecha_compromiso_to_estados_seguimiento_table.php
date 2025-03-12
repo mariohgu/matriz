@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('estados_seguimiento', function (Blueprint $table) {
-            $table->date('fecha_compromiso')->nullable()->after('compromiso');
+            if (!Schema::hasColumn('estados_seguimiento', 'fecha_compromiso')) {
+                $table->date('fecha_compromiso')->nullable()->after('compromiso');
+            }
         });
     }
 
@@ -22,7 +24,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('estados_seguimiento', function (Blueprint $table) {
-            $table->dropColumn('fecha_compromiso');
+            // No eliminamos la columna en down ya que podría existir desde la migración original
+            // y no queremos eliminarla si no la creamos en este archivo
         });
     }
 };
