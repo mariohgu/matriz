@@ -35,9 +35,7 @@ export default function Sidebar({ isOpen, onToggle }) {
       title: "Items de Carga",
       icon: <FaBuilding />,
       subItems: [
-        { href: "/municipalidades", title: "Municipalidades" },
-        { href: "/oficios", title: "Oficios" },
-        { href: "/convenios", title: "Convenios" },
+        { href: "/municipalidades", title: "Municipalidades" },        
         { href: "/contactos", title: "Contactos" },
         { href: "/tipos-reunion", title: "Tipos de Reunión" },
       ]
@@ -56,6 +54,8 @@ export default function Sidebar({ isOpen, onToggle }) {
       icon: <FaClipboardList />,
       subItems: [
         { href: "/estado-seguimiento", title: "Lista" },
+        { href: "/oficios", title: "Oficios" },
+        { href: "/convenios", title: "Convenios" },
         { href: "/seguimiento/historial", title: "Historial" },
       ]
     },
