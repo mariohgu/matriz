@@ -8,6 +8,7 @@ export default function EstadoSeguimientosList() {
   const [eventos, setEventos] = useState([]);
   const [contactos, setContactos] = useState([]);
   const [tiposReunion, setTiposReunion] = useState([]);
+  const [estados, setEstados] = useState([]); // Nuevo estado para almacenar los estados
   const [editDialogVisible, setEditDialogVisible] = useState(false);
   const [createDialogVisible, setCreateDialogVisible] = useState(false);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
@@ -19,7 +20,7 @@ export default function EstadoSeguimientosList() {
     id_contacto: '',
     id_tipo_reunion: '',
     fecha: null,
-    estado: '',
+    id_estado_ref: '', // Nuevo campo para almacenar el id_estado_ref
     descripcion: '',
     compromiso: '',
     fecha_compromiso: null
@@ -59,13 +60,6 @@ export default function EstadoSeguimientosList() {
   const [showTipoReunionDropdown, setShowTipoReunionDropdown] = useState(false);
   const tipoReunionDropdownRef = useRef(null);
 
-  const estadoOptions = [
-    { label: 'Pendiente', value: 'Pendiente' },
-    { label: 'En Proceso', value: 'En Proceso' },
-    { label: 'Completado', value: 'Completado' },
-    { label: 'Cancelado', value: 'Cancelado' }
-  ];
-
   const loadEstadosSeguimiento = async () => {
     setLoading(true);
     try {
@@ -85,17 +79,19 @@ export default function EstadoSeguimientosList() {
 
   const loadRelatedData = async () => {
     try {
-      const [eventosResponse, municipalidadesResponse, contactosResponse, tiposReunionResponse] = 
+      const [eventosResponse, municipalidadesResponse, contactosResponse, tiposReunionResponse, estadosResponse] = 
         await Promise.all([
           axios.get(`${ADDRESS}api/eventos`),
           axios.get(`${ADDRESS}api/municipalidades`),
           axios.get(`${ADDRESS}api/contactos`),
-          axios.get(`${ADDRESS}api/tipos-reunion`)
+          axios.get(`${ADDRESS}api/tipos-reunion`),
+          axios.get(`${ADDRESS}api/estados`) // Nuevo llamado a la API para cargar los estados
         ]);
       
       setEventos(eventosResponse.data || []);
       setContactos(contactosResponse.data || []);
       setTiposReunion(tiposReunionResponse.data || []);
+      setEstados(estadosResponse.data || []); // Actualizar el estado con los datos de la API
       
       window.municipalidadesData = municipalidadesResponse.data || [];
     } catch (error) {
@@ -280,7 +276,7 @@ export default function EstadoSeguimientosList() {
         id_contacto: '',
         id_tipo_reunion: '',
         fecha: null,
-        estado: '',
+        id_estado_ref: '',
         descripcion: '',
         compromiso: '',
         fecha_compromiso: null
@@ -365,9 +361,7 @@ export default function EstadoSeguimientosList() {
        formatDate(estado.fecha).toLowerCase().includes(columnFilters.fecha.toLowerCase()));
     
     const matchesEstado = columnFilters.estado === '' || 
-      (estado.estado && 
-       estado.estado.toLowerCase().includes(columnFilters.estado.toLowerCase()));
-    
+      getEstadoDescripcion(estado).toLowerCase().includes(columnFilters.estado.toLowerCase());    
     const matchesFechaCompromiso = columnFilters.fecha_compromiso === '' || 
       (estado.fecha_compromiso && 
        formatDate(estado.fecha_compromiso).toLowerCase().includes(columnFilters.fecha_compromiso.toLowerCase()));
@@ -612,6 +606,17 @@ export default function EstadoSeguimientosList() {
     return 'N/A';
   };
 
+  const getEstadoDescripcion = (estadoSeguimiento) => {
+    if (!estadoSeguimiento.id_estado_ref) return 'N/A';
+    
+    const estadoRef = estados.find(e => e.id_estado == estadoSeguimiento.id_estado_ref);
+    if (estadoRef) {
+      return estadoRef.descripcion || 'N/A';
+    }
+    
+    return 'N/A';
+  };
+
   return (
     <div className="p-6 bg-white rounded-lg shadow w-full max-w-full">
       {toastMessage && (
@@ -639,7 +644,7 @@ export default function EstadoSeguimientosList() {
                 id_contacto: '',
                 id_tipo_reunion: '',
                 fecha: null,
-                estado: '',
+                id_estado_ref: '',
                 descripcion: '',
                 compromiso: '',
                 fecha_compromiso: null
@@ -876,13 +881,13 @@ export default function EstadoSeguimientosList() {
                   
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                      estado.estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
-                      estado.estado === 'En Proceso' ? 'bg-blue-100 text-blue-800' :
-                      estado.estado === 'Completado' ? 'bg-green-100 text-green-800' :
-                      estado.estado === 'Cancelado' ? 'bg-red-100 text-red-800' :
+                      getEstadoDescripcion(estado) === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                      getEstadoDescripcion(estado) === 'En Proceso' ? 'bg-blue-100 text-blue-800' :
+                      getEstadoDescripcion(estado) === 'Completado' ? 'bg-green-100 text-green-800' :
+                      getEstadoDescripcion(estado) === 'Cancelado' ? 'bg-red-100 text-red-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {estado.estado || 'N/A'}
+                      {getEstadoDescripcion(estado)}
                     </span>
                   </td>
                   
@@ -913,7 +918,7 @@ export default function EstadoSeguimientosList() {
                             id_contacto: estado.id_contacto,
                             id_tipo_reunion: estado.id_tipo_reunion,
                             fecha: estado.fecha ? new Date(estado.fecha) : null,
-                            estado: estado.estado,
+                            id_estado_ref: estado.id_estado_ref,
                             descripcion: estado.descripcion || '',
                             compromiso: estado.compromiso || '',
                             fecha_compromiso: estado.fecha_compromiso ? new Date(estado.fecha_compromiso) : null
@@ -1126,15 +1131,16 @@ export default function EstadoSeguimientosList() {
                 <div className="field">
                   <label className="block text-gray-700 font-medium mb-1">Estado</label>
                   <p className="text-gray-800">
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                      selectedEstadoSeguimiento.estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
-                      selectedEstadoSeguimiento.estado === 'En Proceso' ? 'bg-blue-100 text-blue-800' :
-                      selectedEstadoSeguimiento.estado === 'Completado' ? 'bg-green-100 text-green-800' :
-                      selectedEstadoSeguimiento.estado === 'Cancelado' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {selectedEstadoSeguimiento.estado || 'N/A'}
-                    </span>
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                      getEstadoDescripcion(selectedEstadoSeguimiento) === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                      getEstadoDescripcion(selectedEstadoSeguimiento) === 'En Proceso' ? 'bg-blue-100 text-blue-800' :
+                      getEstadoDescripcion(selectedEstadoSeguimiento) === 'Completado' ? 'bg-green-100 text-green-800' :
+                      getEstadoDescripcion(selectedEstadoSeguimiento) === 'Cancelado' ? 'bg-red-100 text-red-800' :
+                       'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    {getEstadoDescripcion(selectedEstadoSeguimiento)}
+                  </span>
                   </p>
                 </div>
                 
@@ -1426,6 +1432,25 @@ export default function EstadoSeguimientosList() {
                 </div>
                 
                 <div className="field">
+                  <label htmlFor="estado" className="block text-gray-700 font-medium mb-2">
+                    Estado
+                  </label>
+                  <select
+                    id="estado"
+                    value={editData.id_estado_ref || ''}
+                    onChange={(e) => setEditData({ ...editData, id_estado_ref: e.target.value })}
+                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Seleccione un estado</option>
+                    {estados.map(estado => (
+                      <option key={estado.id_estado} value={estado.id_estado}>
+                        {estado.descripcion}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="field">
                   <label htmlFor="fecha" className="block text-gray-700 font-medium mb-2">
                     Fecha
                   </label>
@@ -1448,25 +1473,6 @@ export default function EstadoSeguimientosList() {
                     rows={3}
                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                </div>
-                
-                <div className="field">
-                  <label htmlFor="estado" className="block text-gray-700 font-medium mb-2">
-                    Estado
-                  </label>
-                  <select
-                    id="estado"
-                    value={editData.estado}
-                    onChange={(e) => setEditData({ ...editData, estado: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Seleccione un estado</option>
-                    {estadoOptions.map(option => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
                 </div>
                 
                 <div className="field">

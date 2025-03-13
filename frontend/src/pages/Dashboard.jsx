@@ -14,6 +14,7 @@ function Dashboard() {
   const [estadosSeguimiento, setEstadosSeguimiento] = useState([]);
   const [contactos, setContactos] = useState([]);
   const [eventos, setEventos] = useState([]);
+  const [estados, setEstados] = useState([]); // Añadir estado para almacenar los estados
   const [loading, setLoading] = useState(true);
   const [lastUpdateDate, setLastUpdateDate] = useState(new Date());
   
@@ -44,6 +45,18 @@ function Dashboard() {
       month: '2-digit',
       year: 'numeric'
     });
+  };
+
+  // Función para obtener la descripción del estado
+  const getEstadoDescripcion = (estadoSeguimiento) => {
+    if (!estadoSeguimiento.id_estado_ref) return 'N/A';
+    
+    const estadoRef = estados.find(e => e.id_estado == estadoSeguimiento.id_estado_ref);
+    if (estadoRef) {
+      return estadoRef.descripcion || 'N/A';
+    }
+    
+    return 'N/A';
   };
 
   // Componente TailwindCalendar para fechas
@@ -216,18 +229,21 @@ function Dashboard() {
           municipalidadesRes, 
           estadosSeguimientoRes, 
           contactosRes,
-          eventosRes
+          eventosRes,
+          estadosRes // Añadir llamada para obtener los estados
         ] = await Promise.all([
           axios.get(`${ADDRESS}api/municipalidades`),
           axios.get(`${ADDRESS}api/estados-seguimiento`),
           axios.get(`${ADDRESS}api/contactos`),
-          axios.get(`${ADDRESS}api/eventos`)
+          axios.get(`${ADDRESS}api/eventos`),
+          axios.get(`${ADDRESS}api/estados`) // Añadir llamada para obtener los estados
         ]);
         
         setMunicipalidades(municipalidadesRes.data || []);
         setEstadosSeguimiento(estadosSeguimientoRes.data || []);
         setContactos(contactosRes.data || []);
         setEventos(eventosRes.data || []);
+        setEstados(estadosRes.data || []); // Añadir asignación para los estados
         setLastUpdateDate(new Date());
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -280,7 +296,7 @@ function Dashboard() {
     }
     
     const interactionCounts = filteredInteractions.reduce((acc, estado) => {
-      const estadoValue = estado.estado || 'Sin Estado';
+      const estadoValue = getEstadoDescripcion(estado);
       acc[estadoValue] = (acc[estadoValue] || 0) + 1;
       return acc;
     }, {});
@@ -511,18 +527,21 @@ function Dashboard() {
         municipalidadesRes, 
         estadosSeguimientoRes, 
         contactosRes,
-        eventosRes
+        eventosRes,
+        estadosRes // Añadir llamada para obtener los estados
       ] = await Promise.all([
         axios.get(`${ADDRESS}api/municipalidades`),
         axios.get(`${ADDRESS}api/estados-seguimiento`),
         axios.get(`${ADDRESS}api/contactos`),
-        axios.get(`${ADDRESS}api/eventos`)
+        axios.get(`${ADDRESS}api/eventos`),
+        axios.get(`${ADDRESS}api/estados`) // Añadir llamada para obtener los estados
       ]);
       
       setMunicipalidades(municipalidadesRes.data || []);
       setEstadosSeguimiento(estadosSeguimientoRes.data || []);
       setContactos(contactosRes.data || []);
       setEventos(eventosRes.data || []);
+      setEstados(estadosRes.data || []); // Añadir asignación para los estados
       setLastUpdateDate(new Date());
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -815,11 +834,12 @@ function Dashboard() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                          ${estado.estado === 'Completado' ? 'bg-green-100 text-green-800' : 
-                            estado.estado === 'En Proceso' ? 'bg-yellow-100 text-yellow-800' : 
-                            estado.estado === 'Pendiente' ? 'bg-blue-100 text-blue-800' : 
-                            'bg-red-100 text-red-800'}`}>
-                          {estado.estado || 'Sin Estado'}
+                          ${getEstadoDescripcion(estado) === 'Completado' ? 'bg-green-100 text-green-800' : 
+                            getEstadoDescripcion(estado) === 'En Proceso' ? 'bg-yellow-100 text-yellow-800' : 
+                            getEstadoDescripcion(estado) === 'Pendiente' ? 'bg-blue-100 text-blue-800' : 
+                            getEstadoDescripcion(estado) === 'Cancelado' ? 'bg-red-100 text-red-800' : 
+                            'bg-gray-100 text-gray-800'}`}>
+                          {getEstadoDescripcion(estado)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -914,7 +934,7 @@ function Dashboard() {
                       selectedInteraction.estado === 'Cancelado' ? 'bg-red-100 text-red-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
-                      {selectedInteraction.estado || 'N/A'}
+                      {getEstadoDescripcion(selectedInteraction)}
                     </span>
                   </p>
                 </div>
