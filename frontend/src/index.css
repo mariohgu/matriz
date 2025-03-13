@@ -77,6 +77,36 @@ button:focus-visible {
 }
 }
 
+/* Estilos globales para evitar barras de desplazamiento horizontal */
+/* Este enfoque asegura que el contenido se ajuste correctamente sin causar scroll horizontal */
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.container {
+  width: 100%;
+  max-width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* Eliminar margen y padding derecho que pueden estar causando el espacio en blanco */
+.bg-gray-100, 
+.flex-1, 
+.w-full {
+  box-sizing: border-box;
+}
+
 .card {
   @apply bg-white rounded-lg shadow-md p-6;
 }

@@ -592,8 +592,16 @@ const PeruMap = ({ departamentosData, onSelectDepartamento, selectedDepartamento
     }
   }, [selectedDepartamento, departamentosData]);
 
+  // Acotar el tamaño de visualización para evitar problemas de espacio
+  const mapContainerStyle = {
+    height: '100%',
+    width: '100%',
+    maxWidth: '100%',
+    overflow: 'hidden'
+  };
+
   return (
-    <div className="h-full w-full relative">
+    <div style={mapContainerStyle}>
       {/* Leyenda */}
       <div className="absolute bottom-5 right-5 bg-white p-2 rounded-md shadow-md z-10">
         <div className="text-sm font-bold mb-1">Avance:</div>

@@ -15,6 +15,7 @@ import Sidebar from './components/common/Sidebar';
 import Header from './components/common/Header';
 import { AuthProvider } from './context/AuthContext';
 
+// Aplicar estilos directamente al componente MainLayout
 function MainLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
@@ -22,15 +23,40 @@ function MainLayout({ children }) {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
+  // Estilos para contener rígidamente el layout y evitar overflow
+  const rootStyle = {
+    display: 'flex',
+    minHeight: '100vh',
+    width: '100%',
+    maxWidth: '100vw',
+    overflow: 'hidden',
+    backgroundColor: 'rgb(243, 244, 246)'
+  };
+
+  const contentWrapperStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    flex: 1,
+    width: '100%',
+    maxWidth: '100%',
+    overflowX: 'hidden'
+  };
+
+  const mainContentStyle = {
+    flex: 1,
+    overflowX: 'hidden',
+    padding: '0',
+    margin: '0',
+    width: '100%'
+  };
+
   return (    
-    <div className="flex min-h-screen bg-gray-100 overflow-hidden">
+    <div style={rootStyle}>
       <Sidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div style={contentWrapperStyle}>
         <Header onMenuClick={toggleSidebar} />
-        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
-          <div className="w-full max-w-full mx-auto">
-            {children}
-          </div>
+        <main style={mainContentStyle}>
+          {children}
         </main>
       </div>
     </div>
@@ -40,100 +66,59 @@ function MainLayout({ children }) {
 function AppRoutes() {
   return (
     <Routes>
-      <Route
-        path="/dashboard"
-        element={
-          <MainLayout>
-            <Dashboard />
-          </MainLayout>
-        }
-      />
-      
-      
-      <Route
-        path="/dashboard/departamentos"
-        element={
-          <MainLayout>
-            <DashboardDepartamentos />
-          </MainLayout>
-        }
-      />
-      
-      <Route
-        path="/municipalidades"
-        element={
-          <MainLayout>
-            <MunicipalidadesList />
-          </MainLayout>
-        }
-      />
-      <Route
-        path="/contactos"
-        element={
-          <MainLayout>
-            <ContactosList />
-          </MainLayout>
-        }
-      />
-      <Route
-        path="/tipos-reunion"
-        element={
-          <MainLayout>
-            <TipoReunionList />
-          </MainLayout>
-        }
-      />
-      <Route
-        path="/estados"
-        element={
-          <MainLayout>
-            <EstadosList />
-          </MainLayout>
-        }
-      />
-
-      <Route
-        path="/eventos"
-        element={
-          <MainLayout>
-            <EventosList />
-          </MainLayout>
-        }
-      />
-      <Route
-        path="/estado-seguimiento"
-        element={
-          <MainLayout>
-            <EstadoSeguimientosList />
-          </MainLayout>
-        }
-      />
-      <Route
-        path="/oficios"
-        element={
-          <MainLayout>
-            <OficiosList />
-          </MainLayout>
-        }
-      />
-      <Route
-        path="/convenios"
-        element={
-          <MainLayout>
-            <ConveniosList />
-          </MainLayout>
-        }
-      />
-
-      <Route 
-        path="/" 
-        element={<Navigate to="/dashboard" replace />} 
-      />
-
-      <Route 
-        path="*" 
-        element={<Navigate to="/" replace />} 
-      />
+      <Route path="/login" element={<LoginScreen />} />
+      <Route path="/dashboard" element={
+        <MainLayout>
+          <Dashboard />
+        </MainLayout>
+      } />
+      <Route path="/dashboard/departamentos" element={
+        <MainLayout>
+          <DashboardDepartamentos />
+        </MainLayout>
+      } />
+      <Route path="/municipalidades" element={
+        <MainLayout>
+          <MunicipalidadesList />
+        </MainLayout>
+      } />
+      <Route path="/contactos" element={
+        <MainLayout>
+          <ContactosList />
+        </MainLayout>
+      } />
+      <Route path="/tipos-reunion" element={
+        <MainLayout>
+          <TipoReunionList />
+        </MainLayout>
+      } />
+      <Route path="/eventos" element={
+        <MainLayout>
+          <EventosList />
+        </MainLayout>
+      } />
+      <Route path="/estado-seguimiento" element={
+        <MainLayout>
+          <EstadoSeguimientosList />
+        </MainLayout>
+      } />
+      <Route path="/oficios" element={
+        <MainLayout>
+          <OficiosList />
+        </MainLayout>
+      } />
+      <Route path="/convenios" element={
+        <MainLayout>
+          <ConveniosList />
+        </MainLayout>
+      } />
+      <Route path="/estados" element={
+        <MainLayout>
+          <EstadosList />
+        </MainLayout>
+      } />
+      <Route path="/" element={<Navigate replace to="/dashboard" />} />
+      <Route path="*" element={<Navigate replace to="/" />} />
     </Routes>
   );
 }

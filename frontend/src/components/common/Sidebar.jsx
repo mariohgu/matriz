@@ -87,12 +87,20 @@ export default function Sidebar({ isOpen, onToggle }) {
 
   const isActive = (href) => location.pathname === href;
 
-  // Clase base para el sidebar
+  // Estilo específico para el sidebar con ancho fijo
+  const sidebarStyle = {
+    width: isOpen ? '16rem' : '5rem',
+    minWidth: isOpen ? '16rem' : '5rem',
+    maxWidth: isOpen ? '16rem' : '5rem',
+    transition: 'width 0.3s, min-width 0.3s, max-width 0.3s',
+    overflowX: 'hidden'
+  };
+
+  // Clase base para el sidebar con ancho fijo
   const sidebarClasses = `
     fixed md:sticky top-0 left-0 z-20 h-screen bg-gray-800 text-white 
     transform transition-transform duration-300 ease-in-out md:transform-none
     ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-    ${isOpen ? 'w-72' : 'w-20 md:w-20'}
   `;
 
   // Overlay para móvil
@@ -103,30 +111,25 @@ export default function Sidebar({ isOpen, onToggle }) {
 
   return (
     <>
+      {/* Overlay para móvil */}
       <div className={overlayClasses} onClick={onToggle}></div>
-      <nav className={sidebarClasses}>
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-gray-600 rounded-lg flex items-center justify-center">
-              <FaBuilding className="text-2xl" />
-            </div>
-            {isOpen && (
-              <a href="/dashboard" className="text-xl font-bold">
-                Matriz
-              </a>
-            )}
-          </div>
-          <button
-            className="p-2 bg-white text-gray-800 rounded-full shadow-md"
-            onClick={onToggle}
-          >
-            {isOpen ? <FaTimes size={20} /> : <FaAngleRight size={20} />}
+      
+      {/* Sidebar */}
+      <div className={sidebarClasses} style={sidebarStyle}>
+        {/* Título y botón de cerrar */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          <h1 className={`font-bold text-xl transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 md:opacity-100'}`}>
+            MATRIZ
+          </h1>
+          <button onClick={onToggle} className="p-2 rounded-full hover:bg-gray-700 md:hidden">
+            <FaTimes className="h-5 w-5" />
           </button>
         </div>
-
-        <ul className="flex-1 mt-4 space-y-2 px-3">
+        
+        {/* Links principales */}
+        <nav className="mt-4 px-2 space-y-1">
           {links.map((link, index) => (
-            <li key={index}>
+            <div key={index}>
               {link.subItems.length > 0 ? (
                 <Accordion
                   summary={
@@ -177,9 +180,9 @@ export default function Sidebar({ isOpen, onToggle }) {
                   {isOpen && <span className="text-lg">{link.title}</span>}
                 </a>
               )}
-            </li>
+            </div>
           ))}
-        </ul>
+        </nav>
 
         <div className="mt-auto border-t border-gray-700">
           <ul className="p-3 space-y-2">
@@ -215,7 +218,7 @@ export default function Sidebar({ isOpen, onToggle }) {
             )}
           </button>
         </div>
-      </nav>
+      </div>
     </>
   );
 }
