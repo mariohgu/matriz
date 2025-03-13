@@ -263,22 +263,22 @@ const DashboardDepartamentos = () => {
   };
 
   return (
-    <div className="mt-2">
-      <h1 className="text-2xl font-bold mb-6">Dashboard Geográfico - Departamentos</h1>
-      
-      {/* Última actualización */}
-      <div className="text-sm text-gray-500 mb-4">
-        Última actualización: {formatDate(lastUpdateDate)} {lastUpdateDate.toLocaleTimeString()}
-        <button
-          onClick={loadData}
-          className="ml-2 text-blue-500 hover:text-blue-700"
-        >
-          Actualizar
-        </button>
-      </div>
+    <div className="w-full max-w-full">
+      {/* Encabezado y filtro de departamento */}
+      <div className="flex flex-wrap items-center justify-between mb-6">
+        <div className="w-full md:w-auto mb-4 md:mb-0">
+          <h1 className="text-2xl font-bold text-gray-800">Dashboard por Departamentos</h1>
+          <p className="text-sm text-gray-600">
+            Última actualización: {lastUpdateDate ? formatDate(lastUpdateDate) : 'Nunca'}
+            <button 
+              onClick={loadData} 
+              className="ml-2 text-blue-600 hover:text-blue-800 focus:outline-none text-xs"
+            >
+              Actualizar
+            </button>
+          </p>
+        </div>
 
-      {/* Selector de departamento */}
-      <div className="mb-6">
         <div className="relative w-full md:w-1/2 lg:w-1/3">
           <div className="relative">
             <div
@@ -449,7 +449,7 @@ const DashboardDepartamentos = () => {
       </div>
       
       {/* Tabla de estadísticas por departamento */}
-      <div className="bg-white p-6 rounded-lg shadow mb-6">
+      <div className="bg-white p-6 rounded-lg shadow mb-6 overflow-x-auto">
         <h3 className="text-lg font-semibold mb-4">Estadísticas por Departamento</h3>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -521,7 +521,7 @@ const DashboardDepartamentos = () => {
       
       {/* Lista de últimas interacciones en el departamento seleccionado */}
       {selectedDepartamento && (
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
+        <div className="bg-white p-6 rounded-lg shadow mb-6 overflow-x-auto">
           <h3 className="text-lg font-semibold mb-4">
             Últimas Interacciones en {selectedDepartamento}
           </h3>

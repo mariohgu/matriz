@@ -1,13 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 // Importar configuración de iconos
 import '../common/leaflet-icons';
 import { createDepartmentIcon } from '../common/leaflet-icons';
-
-// Nota: Necesitarás instalar: npm install react-leaflet leaflet
-// También necesitarás importar los estilos CSS de Leaflet en tu index.js o App.js:
-// import 'leaflet/dist/leaflet.css';
 
 // Datos GeoJSON simplificados para Perú con departamentos
 const PERU_GEO_DATA = {
@@ -297,16 +293,43 @@ const DEPARTMENT_CAPITALS = {
 
 const PeruMap = ({ departamentosData, onSelectDepartamento, selectedDepartamento }) => {
   const [hoveredDepartamento, setHoveredDepartamento] = useState(null);
-  const mapRef = React.useRef(null);
-  const mapInstanceRef = React.useRef(null);
-  const geoJsonLayerRef = React.useRef(null);
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const geoJsonLayerRef = useRef(null);
+  const markersRef = useRef({});
+  const featuresRef = useRef({});
+
+  // Función para convertir nombres de departamentos a formato Capitalizado
+  const formatDepartmentName = (name) => {
+    if (!name) return name;
+    // Convertir a minúsculas y capitalizar primera letra de cada palabra
+    return name.toLowerCase().split(' ').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
+
+  // Función para buscar correspondencia en departamentosData (insensible a mayúsculas/minúsculas)
+  const getDepartmentKey = (name) => {
+    if (!departamentosData || !name) return null;
+    // Buscar la clave exacta o la versión en mayúsculas
+    const normalizedName = name.toUpperCase();
+    return Object.keys(departamentosData).find(key => 
+      key.toUpperCase() === normalizedName
+    );
+  };
 
   // Función para determinar el color basado en el porcentaje
   const getColor = (departamento) => {
-    if (!departamentosData || departamentosData[departamento] === undefined) {
+    if (!departamentosData) return '#CCCCCC';
+    
+    // Encontrar la clave correcta en departamentosData
+    const key = getDepartmentKey(departamento);
+    
+    if (!key || departamentosData[key] === undefined) {
       return '#CCCCCC'; // Color por defecto si no hay datos
     }
-    const porcentaje = departamentosData[departamento];
+    
+    const porcentaje = departamentosData[key];
     if (porcentaje >= 75) return '#10B981'; // Verde
     if (porcentaje >= 50) return '#3B82F6'; // Azul
     if (porcentaje >= 25) return '#F59E0B'; // Amarillo
@@ -315,14 +338,17 @@ const PeruMap = ({ departamentosData, onSelectDepartamento, selectedDepartamento
 
   // Estilo para cada feature (departamento)
   const styleFeature = (feature) => {
-    const departamento = feature.properties.NAME_1;
+    const departamentoRaw = feature.properties.NAME_1;
+    const departamentoFormatted = formatDepartmentName(departamentoRaw);
+    const isSelected = selectedDepartamento === departamentoFormatted;
+    
     return {
-      fillColor: getColor(departamento),
-      weight: 2,
+      fillColor: getColor(departamentoRaw),
+      weight: isSelected ? 4 : 2,
       opacity: 1,
-      color: 'white',
-      dashArray: '3',
-      fillOpacity: 0.7
+      color: isSelected ? '#666' : 'white',
+      dashArray: isSelected ? '' : '3',
+      fillOpacity: isSelected ? 0.9 : 0.7
     };
   };
 
@@ -351,7 +377,11 @@ const PeruMap = ({ departamentosData, onSelectDepartamento, selectedDepartamento
 
     // Añadir capa de GeoJSON para departamentos
     const onEachFeature = (feature, layer) => {
-      const departamento = feature.properties.NAME_1;
+      const departamentoRaw = feature.properties.NAME_1;
+      const departamentoFormatted = formatDepartmentName(departamentoRaw);
+      
+      // Guardar referencia a la capa para acceso posterior
+      featuresRef.current[departamentoRaw] = layer;
       
       // Eventos de hover y click
       layer.on({
@@ -363,17 +393,30 @@ const PeruMap = ({ departamentosData, onSelectDepartamento, selectedDepartamento
             fillOpacity: 0.9
           });
           layer.bringToFront();
-          setHoveredDepartamento(departamento);
+          setHoveredDepartamento(departamentoFormatted);
         },
         mouseout: (e) => {
           if (geoJsonLayerRef.current) {
             geoJsonLayerRef.current.resetStyle(layer);
+            
+            // Si este departamento está seleccionado, vuelve a aplicar el estilo de selección
+            if (selectedDepartamento === departamentoFormatted) {
+              layer.setStyle({
+                weight: 4,
+                color: '#666',
+                dashArray: '',
+                fillOpacity: 0.9
+              });
+              layer.bringToFront();
+            }
           }
           setHoveredDepartamento(null);
         },
-        click: () => {
-          if (onSelectDepartamento) {
-            onSelectDepartamento(departamento);
+        click: (e) => {
+          console.log("Click en departamento:", departamentoRaw, "-> formateado:", departamentoFormatted);
+          // Aplicar el estilo seleccionado a este departamento
+          if (onSelectDepartamento && typeof onSelectDepartamento === 'function') {
+            onSelectDepartamento(departamentoFormatted);
           }
         }
       });
@@ -386,52 +429,59 @@ const PeruMap = ({ departamentosData, onSelectDepartamento, selectedDepartamento
     }).addTo(mapInstanceRef.current);
 
     // Añadir marcadores para capitales
-    Object.entries(DEPARTMENT_CAPITALS)
-      .forEach(([dpto, data]) => {
-        const { coords, name } = data;
-        // Solo mostrar marcadores para departamentos importantes o el seleccionado inicialmente
-        const importantes = ["LIMA", "AREQUIPA", "CUSCO", "PIURA"];
-        if (selectedDepartamento === dpto || importantes.includes(dpto)) {
-          const marker = L.marker(coords, {
-            icon: createDepartmentIcon(getColor(dpto))
-          }).addTo(mapInstanceRef.current);
+    Object.entries(DEPARTMENT_CAPITALS).forEach(([dptoRaw, data]) => {
+      const { coords, name } = data;
+      const dpto = formatDepartmentName(dptoRaw);
+      
+      // Solo mostrar marcadores para departamentos importantes o el seleccionado inicialmente
+      const importantes = ["LIMA", "AREQUIPA", "CUSCO", "PIURA"].map(d => formatDepartmentName(d));
+      if (selectedDepartamento === dpto || importantes.includes(dpto)) {
+        const marker = L.marker(coords, {
+          icon: createDepartmentIcon(getColor(dptoRaw))
+        }).addTo(mapInstanceRef.current);
 
-          // Contenido del popup
-          let popupContent = `
-            <div class="text-center">
-              <div class="font-bold">${name}</div>
-              <div class="text-sm text-gray-600">Capital de ${dpto}</div>
-          `;
+        // Guardar referencia al marcador
+        markersRef.current[dptoRaw] = marker;
 
-          if (departamentosData && departamentosData[dpto] !== undefined) {
-            const porcentaje = departamentosData[dpto];
-            const colorClass = porcentaje >= 75 ? "bg-green-500" : 
-                              porcentaje >= 50 ? "bg-blue-500" : 
-                              porcentaje >= 25 ? "bg-yellow-500" : 
-                              "bg-red-500";
-            
-            popupContent += `
-              <div class="mt-2">
-                <div class="text-xs text-gray-500">Avance</div>
-                <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
-                  <div class="h-2 rounded-full ${colorClass}" style="width: ${Math.min(100, porcentaje)}%"></div>
-                </div>
-                <div class="text-right mt-1 text-xs font-medium">${porcentaje.toFixed(1)}%</div>
-              </div>
-            `;
-          }
+        // Contenido del popup
+        let popupContent = `
+          <div class="text-center">
+            <div class="font-bold">${name}</div>
+            <div class="text-sm text-gray-600">Capital de ${dpto}</div>
+        `;
 
-          popupContent += `</div>`;
-          marker.bindPopup(popupContent);
+        // Buscar la clave correcta para los datos de porcentaje
+        const key = getDepartmentKey(dptoRaw);
+        if (key && departamentosData && departamentosData[key] !== undefined) {
+          const porcentaje = departamentosData[key];
+          const colorClass = porcentaje >= 75 ? "bg-green-500" : 
+                             porcentaje >= 50 ? "bg-blue-500" : 
+                             porcentaje >= 25 ? "bg-yellow-500" : 
+                             "bg-red-500";
           
-          // Evento de click para el marcador
-          marker.on('click', () => {
-            if (onSelectDepartamento) {
-              onSelectDepartamento(dpto);
-            }
-          });
+          popupContent += `
+            <div class="mt-2">
+              <div class="text-xs text-gray-500">Avance</div>
+              <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+                <div class="h-2 rounded-full ${colorClass}" style="width: ${Math.min(100, porcentaje)}%"></div>
+              </div>
+              <div class="text-right mt-1 text-xs font-medium">${porcentaje.toFixed(1)}%</div>
+            </div>
+          `;
         }
-      });
+
+        popupContent += `</div>`;
+        marker.bindPopup(popupContent);
+        
+        // Evento de click para el marcador
+        marker.on('click', () => {
+          console.log("Click en marcador:", dptoRaw, "-> formateado:", dpto);
+          if (onSelectDepartamento && typeof onSelectDepartamento === 'function') {
+            onSelectDepartamento(dpto);
+          }
+        });
+      }
+    });
 
     // Limpieza al desmontar
     return () => {
@@ -444,15 +494,94 @@ const PeruMap = ({ departamentosData, onSelectDepartamento, selectedDepartamento
 
   // Efecto para actualizar el mapa cuando cambia el departamento seleccionado
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
+    if (!mapInstanceRef.current || !geoJsonLayerRef.current) return;
+
+    console.log("Departamento seleccionado cambiado a:", selectedDepartamento);
+
+    // Actualizar estilos para todos los departamentos
+    Object.entries(featuresRef.current).forEach(([dptoRaw, layer]) => {
+      const dptoFormatted = formatDepartmentName(dptoRaw);
+      if (dptoFormatted === selectedDepartamento) {
+        layer.setStyle({
+          weight: 4,
+          color: '#666',
+          dashArray: '',
+          fillOpacity: 0.9
+        });
+        layer.bringToFront();
+      } else {
+        layer.setStyle({
+          weight: 2,
+          color: 'white',
+          dashArray: '3',
+          fillOpacity: 0.7
+        });
+      }
+    });
+
+    // Buscar la capital correspondiente (versión mayúscula)
+    const selectedDepartamentoUpper = selectedDepartamento ? selectedDepartamento.toUpperCase() : null;
+    const capitalKey = Object.keys(DEPARTMENT_CAPITALS).find(key => 
+      formatDepartmentName(key) === selectedDepartamento
+    );
 
     // Actualizar el zoom y centro del mapa cuando cambia el departamento seleccionado
-    if (selectedDepartamento && DEPARTMENT_CAPITALS[selectedDepartamento]) {
+    if (selectedDepartamento && capitalKey && DEPARTMENT_CAPITALS[capitalKey]) {
+      // Si es un departamento válido, hacer zoom a sus coordenadas
       mapInstanceRef.current.setView(
-        DEPARTMENT_CAPITALS[selectedDepartamento].coords, 
+        DEPARTMENT_CAPITALS[capitalKey].coords, 
         7, 
         { animate: true, duration: 1 }
       );
+
+      // Asegurar que el marcador existe para este departamento
+      if (!markersRef.current[capitalKey]) {
+        const { coords, name } = DEPARTMENT_CAPITALS[capitalKey];
+        const marker = L.marker(coords, {
+          icon: createDepartmentIcon(getColor(capitalKey))
+        }).addTo(mapInstanceRef.current);
+
+        // Guardar referencia al marcador
+        markersRef.current[capitalKey] = marker;
+
+        // Configurar popup similar al inicial
+        let popupContent = `
+          <div class="text-center">
+            <div class="font-bold">${name}</div>
+            <div class="text-sm text-gray-600">Capital de ${selectedDepartamento}</div>
+        `;
+
+        // Buscar la clave correcta para los datos de porcentaje
+        const key = getDepartmentKey(capitalKey);
+        if (key && departamentosData && departamentosData[key] !== undefined) {
+          const porcentaje = departamentosData[key];
+          const colorClass = porcentaje >= 75 ? "bg-green-500" : 
+                             porcentaje >= 50 ? "bg-blue-500" : 
+                             porcentaje >= 25 ? "bg-yellow-500" : 
+                             "bg-red-500";
+          
+          popupContent += `
+            <div class="mt-2">
+              <div class="text-xs text-gray-500">Avance</div>
+              <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+                <div class="h-2 rounded-full ${colorClass}" style="width: ${Math.min(100, porcentaje)}%"></div>
+              </div>
+              <div class="text-right mt-1 text-xs font-medium">${porcentaje.toFixed(1)}%</div>
+            </div>
+          `;
+        }
+
+        popupContent += `</div>`;
+        marker.bindPopup(popupContent);
+        
+        // Evento de click para el marcador
+        marker.on('click', () => {
+          console.log("Click en marcador (nuevo):", capitalKey, "-> formateado:", selectedDepartamento);
+          if (onSelectDepartamento && typeof onSelectDepartamento === 'function') {
+            onSelectDepartamento(selectedDepartamento);
+          }
+        });
+      }
     } else {
       // Si no hay departamento seleccionado, mostrar todo Perú
       mapInstanceRef.current.setView(
@@ -461,15 +590,7 @@ const PeruMap = ({ departamentosData, onSelectDepartamento, selectedDepartamento
         { animate: true }
       );
     }
-  }, [selectedDepartamento]);
-
-  // Efecto para actualizar los colores cuando cambian los datos
-  useEffect(() => {
-    if (!geoJsonLayerRef.current) return;
-    
-    // Re-aplicar los estilos cuando cambian los datos
-    geoJsonLayerRef.current.setStyle(styleFeature);
-  }, [departamentosData]);
+  }, [selectedDepartamento, departamentosData]);
 
   return (
     <div className="h-full w-full relative">
