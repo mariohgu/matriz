@@ -28,6 +28,7 @@ export default function Sidebar({ isOpen, onToggle }) {
       subItems: [
         { href: "/dashboard/overview", title: "Vista General" },
         { href: "/dashboard/analytics", title: "Análisis" },
+        { href: "/dashboard/departamentos", title: "Por Departamentos" },
       ]
     },
     {

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LoginScreen from './components/LoginScreen';
 import Dashboard from './pages/Dashboard';
+import DashboardDepartamentos from './pages/DashboardDepartamentos';
 import MunicipalidadesList from './components/municipalidades/MunicipalidadesList';
 import ContactosList from './components/contactos/ContactosList';
 import TipoReunionList from './components/tipos-reunion/TipoReunionList';
@@ -44,6 +45,15 @@ function AppRoutes() {
         element={
           <MainLayout>
             <Dashboard />
+          </MainLayout>
+        }
+      />
+      
+      <Route
+        path="/dashboard/departamentos"
+        element={
+          <MainLayout>
+            <DashboardDepartamentos />
           </MainLayout>
         }
       />
