@@ -19,7 +19,7 @@ class EstadoSeguimiento extends Model
         'id_contacto',
         'id_tipo_reunion',
         'fecha',
-        'estado',
+        'id_estado_ref',
         'descripcion',
         'compromiso',
         'fecha_compromiso',
@@ -48,6 +48,12 @@ class EstadoSeguimiento extends Model
     public function tipoReunion(): BelongsTo
     {
         return $this->belongsTo(TipoReunion::class, 'id_tipo_reunion', 'id_tipo_reunion');
+    }
+
+    // Relación con Estado
+    public function estado(): BelongsTo
+    {
+        return $this->belongsTo(Estado::class, 'id_estado_ref', 'id_estado');
     }
 
     // Relación con Usuario que creó

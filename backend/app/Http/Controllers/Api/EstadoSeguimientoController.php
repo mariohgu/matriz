@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\EstadoSeguimiento;
 use App\Models\Evento;
+use App\Models\Estado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -13,7 +14,7 @@ class EstadoSeguimientoController extends Controller
 {
     public function index()
     {
-        $estados = EstadoSeguimiento::with(['evento', 'contacto', 'tipoReunion', 'creadoPor:id,name', 'actualizadoPor:id,name'])
+        $estados = EstadoSeguimiento::with(['evento', 'contacto', 'tipoReunion', 'estado', 'creadoPor:id,name', 'actualizadoPor:id,name'])
             ->orderBy('fecha', 'desc')
             ->get();
         return response()->json($estados);
@@ -27,7 +28,7 @@ class EstadoSeguimientoController extends Controller
                 'id_contacto' => 'required|exists:contactos,id_contacto',
                 'id_tipo_reunion' => 'required|exists:tipos_reunion,id_tipo_reunion',
                 'fecha' => 'required|date',
-                'estado' => 'required',
+                'id_estado_ref' => 'required|exists:estados,id_estado',
                 'descripcion' => 'nullable',
                 'compromiso' => 'nullable',
                 'fecha_compromiso' => 'nullable|date',
@@ -40,7 +41,7 @@ class EstadoSeguimientoController extends Controller
             $estado = EstadoSeguimiento::create($validated);
             
             return response()->json(
-                $estado->load(['evento', 'contacto', 'tipoReunion', 'creadoPor:id,name', 'actualizadoPor:id,name']), 
+                $estado->load(['evento', 'contacto', 'tipoReunion', 'estado', 'creadoPor:id,name', 'actualizadoPor:id,name']), 
                 201
             );
         } catch (\Exception $e) {
@@ -52,7 +53,7 @@ class EstadoSeguimientoController extends Controller
     public function show($id)
     {
         try {
-            $estado = EstadoSeguimiento::with(['evento', 'contacto', 'tipoReunion', 'creadoPor:id,name', 'actualizadoPor:id,name'])
+            $estado = EstadoSeguimiento::with(['evento', 'contacto', 'tipoReunion', 'estado', 'creadoPor:id,name', 'actualizadoPor:id,name'])
                 ->find($id);
 
             if (!$estado) {
@@ -80,7 +81,7 @@ class EstadoSeguimientoController extends Controller
                 'id_contacto' => 'required|exists:contactos,id_contacto',
                 'id_tipo_reunion' => 'required|exists:tipos_reunion,id_tipo_reunion',
                 'fecha' => 'required|date',
-                'estado' => 'required',
+                'id_estado_ref' => 'required|exists:estados,id_estado',
                 'descripcion' => 'nullable',
                 'compromiso' => 'nullable',
                 'fecha_compromiso' => 'nullable|date',
@@ -92,7 +93,7 @@ class EstadoSeguimientoController extends Controller
             $estado->update($validated);
             
             return response()->json(
-                $estado->load(['evento', 'contacto', 'tipoReunion', 'creadoPor:id,name', 'actualizadoPor:id,name'])
+                $estado->load(['evento', 'contacto', 'tipoReunion', 'estado', 'creadoPor:id,name', 'actualizadoPor:id,name'])
             );
         } catch (\Exception $e) {
             Log::error('Error al actualizar estado de seguimiento: ' . $e->getMessage());
@@ -126,7 +127,7 @@ class EstadoSeguimientoController extends Controller
                 return response()->json(['message' => 'Evento no encontrado'], 404);
             }
 
-            $estados = EstadoSeguimiento::with(['evento', 'contacto', 'tipoReunion', 'creadoPor:id,name', 'actualizadoPor:id,name'])
+            $estados = EstadoSeguimiento::with(['evento', 'contacto', 'tipoReunion', 'estado', 'creadoPor:id,name', 'actualizadoPor:id,name'])
                 ->where('id_evento', $id_evento)
                 ->orderBy('fecha', 'desc')
                 ->get();
@@ -146,7 +147,7 @@ class EstadoSeguimientoController extends Controller
                 'fecha_fin' => 'required|date|after_or_equal:fecha_inicio'
             ]);
 
-            $estados = EstadoSeguimiento::with(['evento', 'contacto', 'tipoReunion', 'creadoPor:id,name', 'actualizadoPor:id,name'])
+            $estados = EstadoSeguimiento::with(['evento', 'contacto', 'tipoReunion', 'estado', 'creadoPor:id,name', 'actualizadoPor:id,name'])
                 ->whereBetween('fecha', [$validated['fecha_inicio'], $validated['fecha_fin']])
                 ->orderBy('fecha', 'desc')
                 ->get();

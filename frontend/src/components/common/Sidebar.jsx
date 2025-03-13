@@ -38,6 +38,7 @@ export default function Sidebar({ isOpen, onToggle }) {
         { href: "/municipalidades", title: "Municipalidades" },        
         { href: "/contactos", title: "Contactos" },
         { href: "/tipos-reunion", title: "Tipos de Reunión" },
+        { href: "/estados", title: "Estados" },
       ]
     },
     {

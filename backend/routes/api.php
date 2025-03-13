@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\EventoController;
 use App\Http\Controllers\Api\EstadoSeguimientoController;
 use App\Http\Controllers\Api\OficioController;
 use App\Http\Controllers\Api\ConvenioController;
+use App\Http\Controllers\Api\EstadoController;
 
 // Ruta del controlador Hello
 Route::get('/hello', [HelloController::class, 'index']);
@@ -27,6 +28,9 @@ Route::get('municipalidades/{id}/contactos', [ContactoController::class, 'porMun
 
 // Rutas para el CRUD de Tipos de Reunión
 Route::apiResource('tipos-reunion', TipoReunionController::class);
+
+// Rutas para el CRUD de Estados
+Route::apiResource('estados', EstadoController::class);
 
 // Rutas para el CRUD de Eventos
 Route::apiResource('eventos', EventoController::class);

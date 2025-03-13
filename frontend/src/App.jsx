@@ -9,6 +9,7 @@ import EventosList from './components/eventos/EventosList';
 import EstadoSeguimientosList from './components/estado-seguimiento/EstadoSeguimientosList';
 import OficiosList from './components/oficios/OficiosList';
 import ConveniosList from './components/convenios/ConveniosList';
+import EstadosList from './components/estados/EstadoList';
 import Sidebar from './components/common/Sidebar';
 import Header from './components/common/Header';
 import { AuthProvider } from './context/AuthContext';
@@ -68,6 +69,14 @@ function AppRoutes() {
         element={
           <MainLayout>
             <TipoReunionList />
+          </MainLayout>
+        }
+      />
+      <Route
+        path="/estados"
+        element={
+          <MainLayout>
+            <EstadosList />
           </MainLayout>
         }
       />
