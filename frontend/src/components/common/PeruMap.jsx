@@ -1,178 +1,501 @@
 import React, { useState, useEffect } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+// Importar configuración de iconos
+import '../common/leaflet-icons';
+import { createDepartmentIcon } from '../common/leaflet-icons';
+
+// Nota: Necesitarás instalar: npm install react-leaflet leaflet
+// También necesitarás importar los estilos CSS de Leaflet en tu index.js o App.js:
+// import 'leaflet/dist/leaflet.css';
+
+// Datos GeoJSON simplificados para Perú con departamentos
+const PERU_GEO_DATA = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "LIMA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-77.1, -11.8], [-76.5, -11.8], [-76.5, -12.2], [-77.1, -12.2], [-77.1, -11.8]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "AREQUIPA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-72.5, -15.5], [-71.0, -15.5], [-71.0, -17.0], [-72.5, -17.0], [-72.5, -15.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "CUSCO"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-73.5, -12.5], [-71.5, -12.5], [-71.5, -14.0], [-73.5, -14.0], [-73.5, -12.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "PUNO"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-71.0, -14.0], [-69.5, -14.0], [-69.5, -17.0], [-71.0, -17.0], [-71.0, -14.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "LORETO"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-77.0, -3.0], [-73.0, -3.0], [-73.0, -6.0], [-77.0, -6.0], [-77.0, -3.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "PIURA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-81.0, -4.5], [-79.5, -4.5], [-79.5, -6.0], [-81.0, -6.0], [-81.0, -4.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "LA LIBERTAD"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-79.5, -7.5], [-78.0, -7.5], [-78.0, -9.0], [-79.5, -9.0], [-79.5, -7.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "LAMBAYEQUE"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-80.5, -6.0], [-79.0, -6.0], [-79.0, -7.0], [-80.5, -7.0], [-80.5, -6.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "CAJAMARCA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-79.0, -5.5], [-77.5, -5.5], [-77.5, -7.5], [-79.0, -7.5], [-79.0, -5.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "AMAZONAS"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-78.5, -4.0], [-77.0, -4.0], [-77.0, -6.0], [-78.5, -6.0], [-78.5, -4.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "SAN MARTIN"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-77.5, -6.0], [-76.0, -6.0], [-76.0, -8.5], [-77.5, -8.5], [-77.5, -6.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "ANCASH"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-78.5, -8.5], [-77.0, -8.5], [-77.0, -10.5], [-78.5, -10.5], [-78.5, -8.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "HUANUCO"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-77.0, -8.5], [-75.5, -8.5], [-75.5, -10.0], [-77.0, -10.0], [-77.0, -8.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "PASCO"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-76.5, -10.0], [-75.0, -10.0], [-75.0, -11.0], [-76.5, -11.0], [-76.5, -10.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "JUNIN"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-76.0, -11.0], [-74.5, -11.0], [-74.5, -12.5], [-76.0, -12.5], [-76.0, -11.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "UCAYALI"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-75.0, -8.0], [-73.0, -8.0], [-73.0, -11.0], [-75.0, -11.0], [-75.0, -8.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "MADRE DE DIOS"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-72.0, -11.0], [-69.5, -11.0], [-69.5, -13.0], [-72.0, -13.0], [-72.0, -11.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "HUANCAVELICA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-75.5, -12.5], [-74.5, -12.5], [-74.5, -13.5], [-75.5, -13.5], [-75.5, -12.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "AYACUCHO"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-74.5, -13.0], [-73.5, -13.0], [-73.5, -15.0], [-74.5, -15.0], [-74.5, -13.0]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "APURIMAC"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-73.5, -13.5], [-72.5, -13.5], [-72.5, -14.5], [-73.5, -14.5], [-73.5, -13.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "ICA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-76.5, -13.5], [-75.0, -13.5], [-75.0, -15.0], [-76.5, -15.0], [-76.5, -13.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "MOQUEGUA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-71.5, -16.5], [-70.5, -16.5], [-70.5, -17.5], [-71.5, -17.5], [-71.5, -16.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "TACNA"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-71.0, -17.5], [-69.5, -17.5], [-69.5, -18.5], [-71.0, -18.5], [-71.0, -17.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "TUMBES"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-81.0, -3.5], [-80.0, -3.5], [-80.0, -4.5], [-81.0, -4.5], [-81.0, -3.5]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "NAME_1": "CALLAO"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-77.2, -11.9], [-77.1, -11.9], [-77.1, -12.0], [-77.2, -12.0], [-77.2, -11.9]]]
+      }
+    }
+  ]
+};
+
+// Centros aproximados de cada departamento (capitales)
+const DEPARTMENT_CAPITALS = {
+  "LIMA": { coords: [-12.0464, -77.0428], name: "Lima" },
+  "AREQUIPA": { coords: [-16.4090, -71.5375], name: "Arequipa" },
+  "CUSCO": { coords: [-13.5319, -71.9675], name: "Cusco" },
+  "PUNO": { coords: [-15.8402, -70.0219], name: "Puno" },
+  "LORETO": { coords: [-3.7491, -73.2538], name: "Iquitos" },
+  "PIURA": { coords: [-5.1944, -80.6328], name: "Piura" },
+  "LA LIBERTAD": { coords: [-8.1159, -79.0300], name: "Trujillo" },
+  "LAMBAYEQUE": { coords: [-6.7701, -79.8448], name: "Chiclayo" },
+  "CAJAMARCA": { coords: [-7.1638, -78.5003], name: "Cajamarca" },
+  "AMAZONAS": { coords: [-6.2276, -77.8711], name: "Chachapoyas" },
+  "SAN MARTIN": { coords: [-6.4858, -76.3472], name: "Moyobamba" },
+  "ANCASH": { coords: [-9.5277, -77.5277], name: "Huaraz" },
+  "HUANUCO": { coords: [-9.9306, -76.2422], name: "Huánuco" },
+  "PASCO": { coords: [-10.6833, -76.2500], name: "Cerro de Pasco" },
+  "JUNIN": { coords: [-12.0651, -75.2049], name: "Huancayo" },
+  "UCAYALI": { coords: [-8.3791, -74.5539], name: "Pucallpa" },
+  "MADRE DE DIOS": { coords: [-12.5933, -69.1891], name: "Puerto Maldonado" },
+  "HUANCAVELICA": { coords: [-12.7869, -74.9731], name: "Huancavelica" },
+  "AYACUCHO": { coords: [-13.1588, -74.2232], name: "Ayacucho" },
+  "APURIMAC": { coords: [-13.6349, -72.8813], name: "Abancay" },
+  "ICA": { coords: [-14.0678, -75.7286], name: "Ica" },
+  "MOQUEGUA": { coords: [-17.1939, -70.9347], name: "Moquegua" },
+  "TACNA": { coords: [-18.0146, -70.2536], name: "Tacna" },
+  "TUMBES": { coords: [-3.5667, -80.4515], name: "Tumbes" },
+  "CALLAO": { coords: [-12.0565, -77.1181], name: "Callao" }
+};
 
 const PeruMap = ({ departamentosData, onSelectDepartamento, selectedDepartamento }) => {
-  // Estado para almacenar el departamento sobre el que se está pasando el ratón
   const [hoveredDepartamento, setHoveredDepartamento] = useState(null);
-  
-  // Definir colores basados en el porcentaje de avance
+  const mapRef = React.useRef(null);
+  const mapInstanceRef = React.useRef(null);
+  const geoJsonLayerRef = React.useRef(null);
+
+  // Función para determinar el color basado en el porcentaje
   const getColor = (departamento) => {
-    if (!departamentosData || !departamentosData[departamento]) return '#e5e7eb'; // Gris si no hay datos
-    
+    if (!departamentosData || departamentosData[departamento] === undefined) {
+      return '#CCCCCC'; // Color por defecto si no hay datos
+    }
     const porcentaje = departamentosData[departamento];
-    
-    if (porcentaje >= 75) return '#10b981'; // Verde
-    if (porcentaje >= 50) return '#3b82f6'; // Azul
-    if (porcentaje >= 25) return '#f59e0b'; // Amarillo
-    return '#ef4444'; // Rojo
-  };
-  
-  // Determinar la opacidad de un departamento
-  const getOpacity = (departamento) => {
-    if (selectedDepartamento && selectedDepartamento !== departamento) return 0.5;
-    if (hoveredDepartamento && hoveredDepartamento !== departamento) return 0.5;
-    return 1;
+    if (porcentaje >= 75) return '#10B981'; // Verde
+    if (porcentaje >= 50) return '#3B82F6'; // Azul
+    if (porcentaje >= 25) return '#F59E0B'; // Amarillo
+    return '#EF4444'; // Rojo
   };
 
-  // Diccionario de coordenadas para mostrar etiquetas de texto en el mapa
-  const departamentoLabels = {
-    'AMAZONAS': { x: 300, y: 160 },
-    'ANCASH': { x: 260, y: 260 },
-    'APURIMAC': { x: 340, y: 375 },
-    'AREQUIPA': { x: 330, y: 450 },
-    'AYACUCHO': { x: 320, y: 350 },
-    'CAJAMARCA': { x: 250, y: 180 },
-    'CALLAO': { x: 230, y: 300 },
-    'CUSCO': { x: 380, y: 380 },
-    'HUANCAVELICA': { x: 300, y: 340 },
-    'HUANUCO': { x: 300, y: 250 },
-    'ICA': { x: 270, y: 380 },
-    'JUNIN': { x: 320, y: 300 },
-    'LA LIBERTAD': { x: 230, y: 220 },
-    'LAMBAYEQUE': { x: 220, y: 190 },
-    'LIMA': { x: 250, y: 320 },
-    'LORETO': { x: 380, y: 130 },
-    'MADRE DE DIOS': { x: 450, y: 360 },
-    'MOQUEGUA': { x: 330, y: 480 },
-    'PASCO': { x: 300, y: 270 },
-    'PIURA': { x: 200, y: 160 },
-    'PUNO': { x: 380, y: 450 },
-    'SAN MARTIN': { x: 330, y: 200 },
-    'TACNA': { x: 350, y: 510 },
-    'TUMBES': { x: 180, y: 130 },
-    'UCAYALI': { x: 380, y: 290 }
+  // Estilo para cada feature (departamento)
+  const styleFeature = (feature) => {
+    const departamento = feature.properties.NAME_1;
+    return {
+      fillColor: getColor(departamento),
+      weight: 2,
+      opacity: 1,
+      color: 'white',
+      dashArray: '3',
+      fillOpacity: 0.7
+    };
   };
+
+  // Inicialización del mapa usando useEffect
+  useEffect(() => {
+    // Si ya existe un mapa, no crear otro
+    if (mapInstanceRef.current) return;
+
+    // Crear mapa
+    mapInstanceRef.current = L.map(mapRef.current, {
+      center: [-9.1900, -75.0152], // Centro de Perú
+      zoom: 5,
+      zoomControl: false
+    });
+
+    // Añadir capa base de OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      opacity: 0.5
+    }).addTo(mapInstanceRef.current);
+
+    // Añadir control de zoom
+    L.control.zoom({
+      position: 'bottomright'
+    }).addTo(mapInstanceRef.current);
+
+    // Añadir capa de GeoJSON para departamentos
+    const onEachFeature = (feature, layer) => {
+      const departamento = feature.properties.NAME_1;
+      
+      // Eventos de hover y click
+      layer.on({
+        mouseover: (e) => {
+          layer.setStyle({
+            weight: 3,
+            color: '#666',
+            dashArray: '',
+            fillOpacity: 0.9
+          });
+          layer.bringToFront();
+          setHoveredDepartamento(departamento);
+        },
+        mouseout: (e) => {
+          if (geoJsonLayerRef.current) {
+            geoJsonLayerRef.current.resetStyle(layer);
+          }
+          setHoveredDepartamento(null);
+        },
+        click: () => {
+          if (onSelectDepartamento) {
+            onSelectDepartamento(departamento);
+          }
+        }
+      });
+    };
+
+    // Añadir la capa GeoJSON
+    geoJsonLayerRef.current = L.geoJSON(PERU_GEO_DATA, {
+      style: styleFeature,
+      onEachFeature: onEachFeature
+    }).addTo(mapInstanceRef.current);
+
+    // Añadir marcadores para capitales
+    Object.entries(DEPARTMENT_CAPITALS)
+      .forEach(([dpto, data]) => {
+        const { coords, name } = data;
+        // Solo mostrar marcadores para departamentos importantes o el seleccionado inicialmente
+        const importantes = ["LIMA", "AREQUIPA", "CUSCO", "PIURA"];
+        if (selectedDepartamento === dpto || importantes.includes(dpto)) {
+          const marker = L.marker(coords, {
+            icon: createDepartmentIcon(getColor(dpto))
+          }).addTo(mapInstanceRef.current);
+
+          // Contenido del popup
+          let popupContent = `
+            <div class="text-center">
+              <div class="font-bold">${name}</div>
+              <div class="text-sm text-gray-600">Capital de ${dpto}</div>
+          `;
+
+          if (departamentosData && departamentosData[dpto] !== undefined) {
+            const porcentaje = departamentosData[dpto];
+            const colorClass = porcentaje >= 75 ? "bg-green-500" : 
+                              porcentaje >= 50 ? "bg-blue-500" : 
+                              porcentaje >= 25 ? "bg-yellow-500" : 
+                              "bg-red-500";
+            
+            popupContent += `
+              <div class="mt-2">
+                <div class="text-xs text-gray-500">Avance</div>
+                <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+                  <div class="h-2 rounded-full ${colorClass}" style="width: ${Math.min(100, porcentaje)}%"></div>
+                </div>
+                <div class="text-right mt-1 text-xs font-medium">${porcentaje.toFixed(1)}%</div>
+              </div>
+            `;
+          }
+
+          popupContent += `</div>`;
+          marker.bindPopup(popupContent);
+          
+          // Evento de click para el marcador
+          marker.on('click', () => {
+            if (onSelectDepartamento) {
+              onSelectDepartamento(dpto);
+            }
+          });
+        }
+      });
+
+    // Limpieza al desmontar
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []); // Solo se ejecuta una vez al montar
+
+  // Efecto para actualizar el mapa cuando cambia el departamento seleccionado
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    // Actualizar el zoom y centro del mapa cuando cambia el departamento seleccionado
+    if (selectedDepartamento && DEPARTMENT_CAPITALS[selectedDepartamento]) {
+      mapInstanceRef.current.setView(
+        DEPARTMENT_CAPITALS[selectedDepartamento].coords, 
+        7, 
+        { animate: true, duration: 1 }
+      );
+    } else {
+      // Si no hay departamento seleccionado, mostrar todo Perú
+      mapInstanceRef.current.setView(
+        [-9.1900, -75.0152], 
+        5, 
+        { animate: true }
+      );
+    }
+  }, [selectedDepartamento]);
+
+  // Efecto para actualizar los colores cuando cambian los datos
+  useEffect(() => {
+    if (!geoJsonLayerRef.current) return;
+    
+    // Re-aplicar los estilos cuando cambian los datos
+    geoJsonLayerRef.current.setStyle(styleFeature);
+  }, [departamentosData]);
 
   return (
-    <div className="relative w-full h-full">
-      <svg viewBox="0 0 600 600" className="w-full h-full">
-        {/* Contorno del mapa de Perú - usando un path simplificado */}
-        <path 
-          d="M180,130 Q200,150 220,160 Q250,180 250,220 Q240,240 230,260 Q220,280 250,300 Q270,320 260,340 Q240,360 250,380 Q270,400 290,420 Q310,450 330,480 Q350,500 370,510 Q390,500 410,480 Q430,450 450,420 Q470,390 490,360 Q510,320 530,280 Q540,240 550,200 Q560,160 570,120 Q550,100 530,80 Q500,70 470,80 Q440,100 410,130 Q380,150 350,130 Q320,120 290,130 Q260,140 230,130 Q200,120 180,130 Z"
-          fill="#f3f4f6"
-          stroke="#d1d5db"
-          strokeWidth="2"
-        />
-        
-        {/* Aquí se agregarían los paths detallados para cada departamento */}
-        {/* Por ejemplo (usando formas muy simplificadas): */}
-        
-        {/* LIMA */}
-        <path 
-          d="M230,280 Q240,290 250,300 Q260,310 250,320 Q240,330 230,320 Q220,310 230,280 Z"
-          fill={getColor('LIMA')}
-          fillOpacity={getOpacity('LIMA')}
-          stroke="#fff"
-          strokeWidth="1"
-          onMouseEnter={() => setHoveredDepartamento('LIMA')}
-          onMouseLeave={() => setHoveredDepartamento(null)}
-          onClick={() => onSelectDepartamento('LIMA')}
-          style={{ cursor: 'pointer' }}
-        />
-        
-        {/* AREQUIPA */}
-        <path 
-          d="M300,430 Q320,440 340,450 Q360,460 350,480 Q330,490 310,480 Q290,470 300,430 Z"
-          fill={getColor('AREQUIPA')}
-          fillOpacity={getOpacity('AREQUIPA')}
-          stroke="#fff"
-          strokeWidth="1"
-          onMouseEnter={() => setHoveredDepartamento('AREQUIPA')}
-          onMouseLeave={() => setHoveredDepartamento(null)}
-          onClick={() => onSelectDepartamento('AREQUIPA')}
-          style={{ cursor: 'pointer' }}
-        />
-        
-        {/* CUSCO */}
-        <path 
-          d="M350,360 Q370,370 390,380 Q410,390 400,410 Q380,420 360,410 Q340,400 350,360 Z"
-          fill={getColor('CUSCO')}
-          fillOpacity={getOpacity('CUSCO')}
-          stroke="#fff"
-          strokeWidth="1"
-          onMouseEnter={() => setHoveredDepartamento('CUSCO')}
-          onMouseLeave={() => setHoveredDepartamento(null)}
-          onClick={() => onSelectDepartamento('CUSCO')}
-          style={{ cursor: 'pointer' }}
-        />
-        
-        {/* PUNO */}
-        <path 
-          d="M360,420 Q380,430 400,440 Q420,450 410,470 Q390,480 370,470 Q350,460 360,420 Z"
-          fill={getColor('PUNO')}
-          fillOpacity={getOpacity('PUNO')}
-          stroke="#fff"
-          strokeWidth="1"
-          onMouseEnter={() => setHoveredDepartamento('PUNO')}
-          onMouseLeave={() => setHoveredDepartamento(null)}
-          onClick={() => onSelectDepartamento('PUNO')}
-          style={{ cursor: 'pointer' }}
-        />
-        
-        {/* LORETO */}
-        <path 
-          d="M380,100 Q420,120 460,140 Q500,160 480,200 Q450,230 420,210 Q390,190 360,170 Q330,150 360,110 Q370,90 380,100 Z"
-          fill={getColor('LORETO')}
-          fillOpacity={getOpacity('LORETO')}
-          stroke="#fff"
-          strokeWidth="1"
-          onMouseEnter={() => setHoveredDepartamento('LORETO')}
-          onMouseLeave={() => setHoveredDepartamento(null)}
-          onClick={() => onSelectDepartamento('LORETO')}
-          style={{ cursor: 'pointer' }}
-        />
-        
-        {/* Etiquetas de texto para los departamentos principales */}
-        {Object.entries(departamentoLabels).map(([departamento, position]) => (
-          <text
-            key={departamento}
-            x={position.x}
-            y={position.y}
-            fontSize="8"
-            fontWeight={hoveredDepartamento === departamento || selectedDepartamento === departamento ? 'bold' : 'normal'}
-            fill={hoveredDepartamento === departamento || selectedDepartamento === departamento ? '#000' : '#666'}
-            textAnchor="middle"
-            pointerEvents="none"
-          >
-            {departamento}
-          </text>
-        ))}
-        
-        {/* Tooltip para departamento hover */}
-        {hoveredDepartamento && departamentosData && departamentosData[hoveredDepartamento] !== undefined && (
-          <g>
-            <rect
-              x={departamentoLabels[hoveredDepartamento]?.x - 50 || 0}
-              y={departamentoLabels[hoveredDepartamento]?.y - 30 || 0}
-              width="100"
-              height="20"
-              fill="white"
-              stroke="#ccc"
-              rx="4"
-              ry="4"
-            />
-            <text
-              x={departamentoLabels[hoveredDepartamento]?.x || 0}
-              y={departamentoLabels[hoveredDepartamento]?.y - 15 || 0}
-              fontSize="10"
-              fontWeight="bold"
-              textAnchor="middle"
-              fill="#333"
-            >
-              {hoveredDepartamento}: {departamentosData[hoveredDepartamento].toFixed(2)}%
-            </text>
-          </g>
-        )}
-      </svg>
+    <div className="h-full w-full relative">
+      {/* Leyenda */}
+      <div className="absolute bottom-5 right-5 bg-white p-2 rounded-md shadow-md z-10">
+        <div className="text-sm font-bold mb-1">Avance:</div>
+        <div className="flex items-center mb-1">
+          <div className="w-4 h-4 bg-red-500 mr-1"></div>
+          <span className="text-xs">0-25%</span>
+        </div>
+        <div className="flex items-center mb-1">
+          <div className="w-4 h-4 bg-yellow-500 mr-1"></div>
+          <span className="text-xs">25-50%</span>
+        </div>
+        <div className="flex items-center mb-1">
+          <div className="w-4 h-4 bg-blue-500 mr-1"></div>
+          <span className="text-xs">50-75%</span>
+        </div>
+        <div className="flex items-center">
+          <div className="w-4 h-4 bg-green-500 mr-1"></div>
+          <span className="text-xs">75-100%</span>
+        </div>
+      </div>
+      
+      {/* Div que contiene el mapa */}
+      <div ref={mapRef} className="h-full w-full"></div>
     </div>
   );
 };

@@ -6,6 +6,9 @@ import { FiUsers, FiCalendar, FiActivity, FiSearch, FiMapPin } from 'react-icons
 import PeruMap from '../components/common/PeruMap';
 import { ADDRESS } from '../utils.jsx';
 
+// Importar estilos de Leaflet
+import 'leaflet/dist/leaflet.css';
+
 // Registrar todos los componentes de ChartJS
 ChartJS.register(...registerables);
 
