@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiSearch, FiPlus, FiTrash2, FiEdit, FiEye, FiChevronDown, FiChevronUp, FiChevronLeft, FiChevronRight, FiX, FiCalendar } from 'react-icons/fi';
-import axios from 'axios';
 import { ADDRESS } from '../../utils.jsx';
+import { api } from '../../services/authService';
 
 export default function ConveniosList() {
   const [convenios, setConvenios] = useState([]);
@@ -152,7 +152,7 @@ export default function ConveniosList() {
   const loadConvenios = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${ADDRESS}api/convenios`);
+      const response = await api.get(`api/convenios`);
       setConvenios(response.data || []);
     } catch (error) {
       console.error('Error al cargar convenios:', error);
@@ -164,7 +164,7 @@ export default function ConveniosList() {
 
   const loadMunicipalidades = async () => {
     try {
-      const response = await axios.get(`${ADDRESS}api/municipalidades`);
+      const response = await api.get(`api/municipalidades`);
       const municipalidadesData = response.data || [];
       setMunicipalidades(municipalidadesData);
       setMunicipalidadesFiltered(municipalidadesData);
@@ -196,10 +196,10 @@ export default function ConveniosList() {
       console.log('Datos a enviar:', dataToSend);
       
       if (dataToSend.id_convenio) {
-        await axios.put(`${ADDRESS}api/convenios/${dataToSend.id_convenio}`, dataToSend);
+        await api.put(`api/convenios/${dataToSend.id_convenio}`, dataToSend);
         showToast('success', 'Éxito', 'Convenio actualizado correctamente');
       } else {
-        await axios.post(`${ADDRESS}api/convenios`, dataToSend);
+        await api.post(`api/convenios`, dataToSend);
         showToast('success', 'Éxito', 'Convenio creado correctamente');
       }
       
@@ -223,7 +223,7 @@ export default function ConveniosList() {
 
   const handleDelete = async () => {
     try {
-      await axios.delete(`${ADDRESS}api/convenios/${selectedConvenio.id_convenio}`);
+      await api.delete(`api/convenios/${selectedConvenio.id_convenio}`);
       showToast('success', 'Éxito', 'Convenio eliminado correctamente');
       setDeleteDialogVisible(false);
       loadConvenios();
@@ -892,7 +892,7 @@ export default function ConveniosList() {
               >
                 <span className="sr-only">Siguiente</span>
                 <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010 1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                 </svg>
               </button>
               <button
@@ -906,10 +906,10 @@ export default function ConveniosList() {
               >
                 <span className="sr-only">Última página</span>
                 <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010 1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                 </svg>
                 <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010 1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                 </svg>
               </button>
             </nav>

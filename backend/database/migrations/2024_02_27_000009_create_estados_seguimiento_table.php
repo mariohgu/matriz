@@ -15,6 +15,7 @@ return new class extends Migration
             $table->foreignId('id_tipo_reunion')->constrained('tipos_reunion', 'id_tipo_reunion');
             $table->date('fecha');
             $table->text('estado');
+            $table->text('descripcion')->nullable();
             $table->text('compromiso')->nullable();
             $table->date('fecha_compromiso')->nullable();
             $table->foreignId('creado_por')->constrained('users', 'id');

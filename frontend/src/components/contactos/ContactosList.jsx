@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiEdit, FiTrash2, FiEye, FiChevronUp, FiChevronDown, FiPlus, FiSearch, FiX } from 'react-icons/fi';
-import axios from 'axios';
 import { ADDRESS } from '../../utils.jsx';
+import { api, apiService } from '../../services/authService';
 
 export default function ContactosList() {
   const [contactos, setContactos] = useState([]);
@@ -95,8 +95,8 @@ export default function ContactosList() {
   const loadContactos = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${ADDRESS}api/contactos`);
-      setContactos(response.data || []);
+      const data = await apiService.getAll('contactos');
+      setContactos(data || []);
     } catch (error) {
       console.error('Error al cargar contactos:', error);
       setToastMessage({
@@ -111,8 +111,8 @@ export default function ContactosList() {
 
   const loadMunicipalidades = async () => {
     try {
-      const response = await axios.get(`${ADDRESS}api/municipalidades`);
-      setMunicipalidades(response.data || []);
+      const data = await apiService.getAll('municipalidades');
+      setMunicipalidades(data || []);
     } catch (error) {
       console.error('Error al cargar municipalidades:', error);
       setToastMessage({
@@ -126,14 +126,14 @@ export default function ContactosList() {
   const handleSave = async () => {
     try {
       if (editData.id_contacto) {
-        await axios.put(`${ADDRESS}api/contactos/${editData.id_contacto}`, editData);
+        await apiService.update('contactos', editData.id_contacto, editData);
         setToastMessage({
           severity: 'success',
           summary: 'Éxito',
           detail: 'Contacto actualizado correctamente'
         });
       } else {
-        await axios.post(`${ADDRESS}api/contactos`, editData);
+        await apiService.create('contactos', editData);
         setToastMessage({
           severity: 'success',
           summary: 'Éxito',
@@ -163,7 +163,7 @@ export default function ContactosList() {
 
   const confirmDelete = async (rowData) => {
     try {
-      await axios.delete(`${ADDRESS}api/contactos/${rowData.id_contacto}`);
+      await apiService.delete('contactos', rowData.id_contacto);
       setToastMessage({
         severity: 'success',
         summary: 'Éxito',
@@ -615,9 +615,7 @@ export default function ContactosList() {
                 onClick={() => goToPage(currentPage + 1)}
                 disabled={currentPage === totalPages}
                 className={`relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium ${
-                  currentPage === totalPages
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-500 hover:bg-gray-50'
+                  currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'
                 }`}
               >
                 <span className="sr-only">Siguiente</span>
@@ -629,9 +627,7 @@ export default function ContactosList() {
                 onClick={() => goToPage(totalPages)}
                 disabled={currentPage === totalPages}
                 className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
-                  currentPage === totalPages
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-500 hover:bg-gray-50'
+                  currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'
                 }`}
               >
                 <span className="sr-only">Última página</span>
@@ -797,7 +793,7 @@ export default function ContactosList() {
                                 {editData.id_municipalidad == municipalidad.id_municipalidad && (
                                   <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
                                     <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                                     </svg>
                                   </span>
                                 )}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { FiEdit, FiTrash2, FiEye, FiChevronUp, FiChevronDown, FiPlus } from 'react-icons/fi';
-import axios from 'axios';
+import { FiEdit, FiTrash2, FiChevronUp, FiChevronDown, FiPlus, FiSearch, FiEye } from 'react-icons/fi';
 import { ADDRESS } from '../../utils.jsx';
+import { api, authService, apiService } from '../../services/authService';
 
 export default function MunicipalidadesList() {
   // Opciones de nivel para reutilizar en los modales
@@ -78,8 +78,8 @@ export default function MunicipalidadesList() {
   const loadMunicipalidades = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${ADDRESS}api/municipalidades`);
-      setMunicipalidades(response.data || []);
+      const data = await apiService.getAll('municipalidades');
+      setMunicipalidades(data || []);
     } catch (error) {
       console.error('Error al cargar municipalidades:', error);
       setToastMessage({
@@ -95,14 +95,14 @@ export default function MunicipalidadesList() {
   const handleSave = async () => {
     try {
       if (editData.id_municipalidad) {
-        await axios.put(`${ADDRESS}api/municipalidades/${editData.id_municipalidad}`, editData);
+        await api.put(`api/municipalidades/${editData.id_municipalidad}`, editData);
         setToastMessage({
           severity: 'success',
           summary: 'Éxito',
           detail: 'Municipalidad actualizada correctamente'
         });
       } else {
-        await axios.post(`${ADDRESS}api/municipalidades`, editData);
+        await api.post(`api/municipalidades`, editData);
         setToastMessage({
           severity: 'success',
           summary: 'Éxito',
@@ -137,7 +137,7 @@ export default function MunicipalidadesList() {
 
   const confirmDelete = async (rowData) => {
     try {
-      await axios.delete(`${ADDRESS}api/municipalidades/${rowData.id_municipalidad}`);
+      await api.delete(`api/municipalidades/${rowData.id_municipalidad}`);
       setToastMessage({
         severity: 'success',
         summary: 'Éxito',
@@ -589,11 +589,11 @@ export default function MunicipalidadesList() {
                 }`}
               >
                 <span className="sr-only">Primera página</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
-                <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               </button>
               <button
@@ -604,8 +604,8 @@ export default function MunicipalidadesList() {
                 }`}
               >
                 <span className="sr-only">Anterior</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               </button>
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -643,8 +643,8 @@ export default function MunicipalidadesList() {
                 }`}
               >
                 <span className="sr-only">Siguiente</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                 </svg>
               </button>
               <button
@@ -657,11 +657,11 @@ export default function MunicipalidadesList() {
                 }`}
               >
                 <span className="sr-only">Última página</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                 </svg>
-                <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                 </svg>
               </button>
             </nav>

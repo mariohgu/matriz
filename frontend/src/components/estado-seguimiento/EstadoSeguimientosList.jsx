@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiEdit, FiTrash2, FiEye, FiChevronUp, FiChevronDown, FiPlus, FiCalendar, FiSearch } from 'react-icons/fi';
-import axios from 'axios';
 import { ADDRESS } from '../../utils.jsx';
+import { api, apiService } from '../../services/authService';
 
 export default function EstadoSeguimientosList() {
   const [estadosSeguimiento, setEstadosSeguimiento] = useState([]);
@@ -63,8 +63,8 @@ export default function EstadoSeguimientosList() {
   const loadEstadosSeguimiento = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${ADDRESS}api/estados-seguimiento`);
-      setEstadosSeguimiento(response.data || []);
+      const data = await apiService.getAll('estados-seguimiento');
+      setEstadosSeguimiento(data || []);
     } catch (error) {
       console.error('Error al cargar estados de seguimiento:', error);
       setToastMessage({
@@ -79,27 +79,27 @@ export default function EstadoSeguimientosList() {
 
   const loadRelatedData = async () => {
     try {
-      const [eventosResponse, municipalidadesResponse, contactosResponse, tiposReunionResponse, estadosResponse] = 
+      const [eventos, municipalidades, contactos, tiposReunion, estados] = 
         await Promise.all([
-          axios.get(`${ADDRESS}api/eventos`),
-          axios.get(`${ADDRESS}api/municipalidades`),
-          axios.get(`${ADDRESS}api/contactos`),
-          axios.get(`${ADDRESS}api/tipos-reunion`),
-          axios.get(`${ADDRESS}api/estados`) // Nuevo llamado a la API para cargar los estados
+          apiService.getAll('eventos'),
+          apiService.getAll('municipalidades'),
+          apiService.getAll('contactos'),
+          apiService.getAll('tipos-reunion'),
+          apiService.getAll('estados')
         ]);
       
-      setEventos(eventosResponse.data || []);
-      setContactos(contactosResponse.data || []);
-      setTiposReunion(tiposReunionResponse.data || []);
-      setEstados(estadosResponse.data || []); // Actualizar el estado con los datos de la API
+      setEventos(eventos || []);
+      setContactos(contactos || []);
+      setTiposReunion(tiposReunion || []);
+      setEstados(estados || []);
       
-      window.municipalidadesData = municipalidadesResponse.data || [];
+      window.municipalidadesData = municipalidades || [];
     } catch (error) {
       console.error('Error al cargar datos relacionados:', error);
       setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'No se pudieron cargar algunos datos relacionados'
+        detail: 'No se pudieron cargar los datos relacionados'
       });
     }
   };
@@ -190,8 +190,8 @@ export default function EstadoSeguimientosList() {
 
   const loadEventos = async () => {
     try {
-      const response = await axios.get(`${ADDRESS}api/eventos`);
-      setEventos(response.data || []);
+      const response = await apiService.getAll('eventos');
+      setEventos(response || []);
     } catch (error) {
       console.error('Error al cargar eventos:', error);
       setToastMessage({
@@ -204,8 +204,8 @@ export default function EstadoSeguimientosList() {
 
   const loadTiposReunion = async () => {
     try {
-      const response = await axios.get(`${ADDRESS}api/tipos-reunion`);
-      setTiposReunion(response.data || []);
+      const response = await apiService.getAll('tipos-reunion');
+      setTiposReunion(response || []);
     } catch (error) {
       console.error('Error al cargar tipos de reunión:', error);
       setToastMessage({
@@ -218,11 +218,11 @@ export default function EstadoSeguimientosList() {
 
   const loadContactosPorEvento = async (eventoId) => {
     try {
-      const eventoResponse = await axios.get(`${ADDRESS}api/eventos/${eventoId}`);
+      const eventoResponse = await apiService.get('eventos', eventoId);
       const evento = eventoResponse.data;
       
       if (evento && evento.id_municipalidad) {
-        const response = await axios.get(`${ADDRESS}api/municipalidades/${evento.id_municipalidad}/contactos`);
+        const response = await apiService.getAll(`municipalidades/${evento.id_municipalidad}/contactos`);
         const contactosFiltrados = response.data.filter(
           contacto => contacto.id_municipalidad === parseInt(evento.id_municipalidad)
         );
@@ -253,14 +253,14 @@ export default function EstadoSeguimientosList() {
       }
       
       if (dataToSend.id_estado) {
-        await axios.put(`${ADDRESS}api/estados-seguimiento/${dataToSend.id_estado}`, dataToSend);
+        await apiService.update('estados-seguimiento', dataToSend.id_estado, dataToSend);
         setToastMessage({
           severity: 'success',
           summary: 'Éxito',
           detail: 'Estado de seguimiento actualizado correctamente'
         });
       } else {
-        await axios.post(`${ADDRESS}api/estados-seguimiento`, dataToSend);
+        await apiService.create('estados-seguimiento', dataToSend);
         setToastMessage({
           severity: 'success',
           summary: 'Éxito',
@@ -294,7 +294,7 @@ export default function EstadoSeguimientosList() {
 
   const confirmDelete = async (rowData) => {
     try {
-      await axios.delete(`${ADDRESS}api/estados-seguimiento/${rowData.id_estado}`);
+      await apiService.delete('estados-seguimiento', rowData.id_estado);
       setToastMessage({
         severity: 'success',
         summary: 'Éxito',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiEdit, FiTrash2, FiChevronUp, FiChevronDown, FiPlus } from 'react-icons/fi';
-import axios from 'axios';
 import { ADDRESS } from '../../utils.jsx';
+import { api } from '../../services/authService';
 
 export default function EstadoList() {
   const [estados, setEstados] = useState([]);
@@ -53,7 +53,7 @@ export default function EstadoList() {
   const loadEstados = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${ADDRESS}api/estados`);
+      const response = await api.get(`api/estados`);
       setEstados(response.data || []);
     } catch (error) {
       console.error('Error al cargar estados:', error);
@@ -70,14 +70,14 @@ export default function EstadoList() {
   const handleSave = async () => {
     try {
       if (editData.id_estado) {
-        await axios.put(`${ADDRESS}api/estados/${editData.id_estado}`, editData);
+        await api.put(`api/estados/${editData.id_estado}`, editData);
         setToastMessage({
           severity: 'success',
           summary: 'Éxito',
           detail: 'Estado actualizado correctamente'
         });
       } else {
-        await axios.post(`${ADDRESS}api/estados`, editData);
+        await api.post(`api/estados`, editData);
         setToastMessage({
           severity: 'success',
           summary: 'Éxito',
@@ -104,7 +104,7 @@ export default function EstadoList() {
 
   const confirmDelete = async (rowData) => {
     try {
-      await axios.delete(`${ADDRESS}api/estados/${rowData.id_estado}`);
+      await api.delete(`api/estados/${rowData.id_estado}`);
       setToastMessage({
         severity: 'success',
         summary: 'Éxito',
@@ -352,7 +352,7 @@ export default function EstadoList() {
                   setItemsPerPage(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="border border-gray-300 rounded-md text-sm py-1 pl-2 pr-8 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border border-gray-300 rounded-md text-sm py-1 pl-2 pr-8 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value={5}>5 por página</option>
                 <option value={10}>10 por página</option>

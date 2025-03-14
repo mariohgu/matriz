@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import LoginScreen from './components/LoginScreen';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import DashboardDepartamentos from './pages/DashboardDepartamentos';
 import MunicipalidadesList from './components/municipalidades/MunicipalidadesList';
@@ -13,7 +14,10 @@ import ConveniosList from './components/convenios/ConveniosList';
 import EstadosList from './components/estados/EstadoList';
 import Sidebar from './components/common/Sidebar';
 import Header from './components/common/Header';
-import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import UnauthorizedPage from './pages/UnauthorizedPage';
+import { Box, Typography, Container, Paper } from '@mui/material';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Aplicar estilos directamente al componente MainLayout
 function MainLayout({ children }) {
@@ -63,61 +67,83 @@ function MainLayout({ children }) {
   );
 }
 
+// Componente para la ruta raíz que utiliza el contexto de autenticación
+function RootRedirect() {
+  const { auth, loading } = useAuth();
+  
+  if (loading) {
+    return <div>Cargando...</div>;
+  }
+  
+  return auth ? <Navigate replace to="/dashboard" /> : <Navigate replace to="/login" />;
+}
+
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginScreen />} />
-      <Route path="/dashboard" element={
-        <MainLayout>
-          <Dashboard />
-        </MainLayout>
-      } />
-      <Route path="/dashboard/departamentos" element={
-        <MainLayout>
-          <DashboardDepartamentos />
-        </MainLayout>
-      } />
-      <Route path="/municipalidades" element={
-        <MainLayout>
-          <MunicipalidadesList />
-        </MainLayout>
-      } />
-      <Route path="/contactos" element={
-        <MainLayout>
-          <ContactosList />
-        </MainLayout>
-      } />
-      <Route path="/tipos-reunion" element={
-        <MainLayout>
-          <TipoReunionList />
-        </MainLayout>
-      } />
-      <Route path="/eventos" element={
-        <MainLayout>
-          <EventosList />
-        </MainLayout>
-      } />
-      <Route path="/estado-seguimiento" element={
-        <MainLayout>
-          <EstadoSeguimientosList />
-        </MainLayout>
-      } />
-      <Route path="/oficios" element={
-        <MainLayout>
-          <OficiosList />
-        </MainLayout>
-      } />
-      <Route path="/convenios" element={
-        <MainLayout>
-          <ConveniosList />
-        </MainLayout>
-      } />
-      <Route path="/estados" element={
-        <MainLayout>
-          <EstadosList />
-        </MainLayout>
-      } />
-      <Route path="/" element={<Navigate replace to="/dashboard" />} />
+      {/* Rutas públicas */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/unauthorized" element={<UnauthorizedPage />} />
+      
+      {/* Rutas protegidas - requieren autenticación */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/dashboard" element={
+          <MainLayout>
+            <Dashboard />
+          </MainLayout>
+        } />
+        <Route path="/dashboard/departamentos" element={
+          <MainLayout>
+            <DashboardDepartamentos />
+          </MainLayout>
+        } />
+      
+        {/* Rutas protegidas con permisos específicos */}
+        <Route path="/municipalidades" element={
+          <MainLayout>
+            <MunicipalidadesList />
+          </MainLayout>
+        } />
+        <Route path="/contactos" element={
+          <MainLayout>
+            <ContactosList />
+          </MainLayout>
+        } />
+        <Route path="/tipos-reunion" element={
+          <MainLayout>
+            <TipoReunionList />
+          </MainLayout>
+        } />
+        <Route path="/eventos" element={
+          <MainLayout>
+            <EventosList />
+          </MainLayout>
+        } />
+        <Route path="/estado-seguimiento" element={
+          <MainLayout>
+            <EstadoSeguimientosList />
+          </MainLayout>
+        } />
+        <Route path="/oficios" element={
+          <MainLayout>
+            <OficiosList />
+          </MainLayout>
+        } />
+        <Route path="/convenios" element={
+          <MainLayout>
+            <ConveniosList />
+          </MainLayout>
+        } />
+        <Route path="/estados" element={
+          <MainLayout>
+            <EstadosList />
+          </MainLayout>
+        } />
+      </Route>
+      
+      {/* Redirecciones por defecto */}
+      <Route path="/" element={<RootRedirect />} />
       <Route path="*" element={<Navigate replace to="/" />} />
     </Routes>
   );
@@ -125,11 +151,11 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
         <AppRoutes />
-      </BrowserRouter>
-    </AuthProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

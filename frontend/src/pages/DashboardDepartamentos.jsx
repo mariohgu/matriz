@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Bar, Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, registerables } from 'chart.js';
 import { 
@@ -14,6 +13,7 @@ import {
 import PeruMap from '../components/common/PeruMap';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { ADDRESS } from '../utils.jsx';
+import { api } from '../services/authService';
 
 // Registrar todos los componentes de ChartJS
 ChartJS.register(...registerables);
@@ -53,23 +53,23 @@ const DashboardDepartamentos = () => {
     setLoading(true);
     try {
       // Cargar municipalidades
-      const municipalidadesRes = await axios.get(`${ADDRESS}api/municipalidades`);
+      const municipalidadesRes = await api.get(`api/municipalidades`);
       setMunicipalidades(municipalidadesRes.data || []);
       
       // Cargar estados de seguimiento
-      const estadosSeguimientoRes = await axios.get(`${ADDRESS}api/estados-seguimiento`);
+      const estadosSeguimientoRes = await api.get(`api/estados-seguimiento`);
       setEstadosSeguimiento(estadosSeguimientoRes.data || []);
       
       // Cargar contactos
-      const contactosRes = await axios.get(`${ADDRESS}api/contactos`);
+      const contactosRes = await api.get(`api/contactos`);
       setContactos(contactosRes.data || []);
       
       // Cargar eventos
-      const eventosRes = await axios.get(`${ADDRESS}api/eventos`);
+      const eventosRes = await api.get(`api/eventos`);
       setEventos(eventosRes.data || []);
       
       // Cargar estados
-      const estadosRes = await axios.get(`${ADDRESS}api/estados`);
+      const estadosRes = await api.get(`api/estados`);
       setEstados(estadosRes.data || []);
       
       // Actualizar fecha de última actualización

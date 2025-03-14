@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiEdit, FiTrash2, FiChevronUp, FiChevronDown, FiPlus } from 'react-icons/fi';
-import axios from 'axios';
 import { ADDRESS } from '../../utils.jsx';
+import { api } from '../../services/authService';
 
 export default function TipoReunionList() {
   const [tiposReunion, setTiposReunion] = useState([]);
@@ -53,7 +53,7 @@ export default function TipoReunionList() {
   const loadTiposReunion = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${ADDRESS}api/tipos-reunion`);
+      const response = await api.get(`api/tipos-reunion`);
       setTiposReunion(response.data || []);
     } catch (error) {
       console.error('Error al cargar tipos de reunión:', error);
@@ -69,53 +69,63 @@ export default function TipoReunionList() {
 
   const handleSave = async () => {
     try {
-      if (editData.id_tipo_reunion) {
-        await axios.put(`${ADDRESS}api/tipos-reunion/${editData.id_tipo_reunion}`, editData);
+      const dataToSend = { ...editData };
+      
+      // Validar que el campo descripción no esté vacío
+      if (!dataToSend.descripcion.trim()) {
+        setToastMessage({
+          severity: 'warn',
+          summary: 'Advertencia',
+          detail: 'La descripción no puede estar vacía'
+        });
+        return;
+      }
+      
+      if (dataToSend.id_tipo_reunion) {
+        await api.put(`api/tipos-reunion/${dataToSend.id_tipo_reunion}`, dataToSend);
         setToastMessage({
           severity: 'success',
           summary: 'Éxito',
           detail: 'Tipo de reunión actualizado correctamente'
         });
       } else {
-        await axios.post(`${ADDRESS}api/tipos-reunion`, editData);
+        await api.post(`api/tipos-reunion`, dataToSend);
         setToastMessage({
           severity: 'success',
           summary: 'Éxito',
           detail: 'Tipo de reunión creado correctamente'
         });
       }
+      
       setEditDialogVisible(false);
       setCreateDialogVisible(false);
-      setEditData({
-        id_tipo_reunion: '',
-        descripcion: '',
-      });
-      loadTiposReunion();
+      loadTiposReunion(); // Recargar la lista de tipos de reunión
     } catch (error) {
-      console.error('Error al guardar:', error);
+      console.error('Error al guardar tipo de reunión:', error);
       setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'Error al guardar el tipo de reunión'
+        detail: 'No se pudo guardar el tipo de reunión'
       });
     }
   };
 
-  const confirmDelete = async (rowData) => {
+  const handleDelete = async () => {
     try {
-      await axios.delete(`${ADDRESS}api/tipos-reunion/${rowData.id_tipo_reunion}`);
+      await api.delete(`api/tipos-reunion/${selectedTipoReunion.id_tipo_reunion}`);
       setToastMessage({
         severity: 'success',
         summary: 'Éxito',
         detail: 'Tipo de reunión eliminado correctamente'
       });
-      loadTiposReunion();
+      setDeleteDialogVisible(false);
+      loadTiposReunion(); // Recargar la lista de tipos de reunión
     } catch (error) {
-      console.error('Error al eliminar:', error);
+      console.error('Error al eliminar tipo de reunión:', error);
       setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'Error al eliminar el tipo de reunión'
+        detail: 'No se pudo eliminar el tipo de reunión'
       });
     }
   };
@@ -350,7 +360,7 @@ export default function TipoReunionList() {
                   setItemsPerPage(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="border border-gray-300 rounded-md text-sm py-1 pl-2 pr-8 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="border border-gray-300 rounded-md text-sm py-1 pl-2 pr-8 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value={5}>5 por página</option>
                 <option value={10}>10 por página</option>
@@ -545,10 +555,7 @@ export default function TipoReunionList() {
                 <button
                   type="button"
                   className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
-                  onClick={() => {
-                    confirmDelete(selectedTipoReunion);
-                    setDeleteDialogVisible(false);
-                  }}
+                  onClick={handleDelete}
                 >
                   Eliminar
                 </button>

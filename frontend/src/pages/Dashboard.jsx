@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import { api, authService, apiService } from '../services/authService';
 import { ADDRESS } from '../utils.jsx';
 import { FiCalendar, FiUsers, FiActivity, FiBarChart2, FiClock, FiFilter, FiSearch, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from 'chart.js';
@@ -226,24 +226,24 @@ function Dashboard() {
       setLoading(true);
       try {
         const [
-          municipalidadesRes, 
-          estadosSeguimientoRes, 
+          municipalidadesRes,
+          estadosSeguimientoRes,
           contactosRes,
           eventosRes,
           estadosRes // Añadir llamada para obtener los estados
         ] = await Promise.all([
-          axios.get(`${ADDRESS}api/municipalidades`),
-          axios.get(`${ADDRESS}api/estados-seguimiento`),
-          axios.get(`${ADDRESS}api/contactos`),
-          axios.get(`${ADDRESS}api/eventos`),
-          axios.get(`${ADDRESS}api/estados`) // Añadir llamada para obtener los estados
+          apiService.getAll('municipalidades'),
+          apiService.getAll('estados-seguimiento'),
+          apiService.getAll('contactos'),
+          apiService.getAll('eventos'),
+          apiService.getAll('estados') // Añadir llamada para obtener los estados
         ]);
         
-        setMunicipalidades(municipalidadesRes.data || []);
-        setEstadosSeguimiento(estadosSeguimientoRes.data || []);
-        setContactos(contactosRes.data || []);
-        setEventos(eventosRes.data || []);
-        setEstados(estadosRes.data || []); // Añadir asignación para los estados
+        setMunicipalidades(municipalidadesRes || []);
+        setEstadosSeguimiento(estadosSeguimientoRes || []);
+        setContactos(contactosRes || []);
+        setEventos(eventosRes || []);
+        setEstados(estadosRes || []); // Añadir asignación para los estados
         setLastUpdateDate(new Date());
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -524,24 +524,24 @@ function Dashboard() {
     setLoading(true);
     try {
       const [
-        municipalidadesRes, 
-        estadosSeguimientoRes, 
+        municipalidadesRes,
+        estadosSeguimientoRes,
         contactosRes,
         eventosRes,
         estadosRes // Añadir llamada para obtener los estados
       ] = await Promise.all([
-        axios.get(`${ADDRESS}api/municipalidades`),
-        axios.get(`${ADDRESS}api/estados-seguimiento`),
-        axios.get(`${ADDRESS}api/contactos`),
-        axios.get(`${ADDRESS}api/eventos`),
-        axios.get(`${ADDRESS}api/estados`) // Añadir llamada para obtener los estados
+        apiService.getAll('municipalidades'),
+        apiService.getAll('estados-seguimiento'),
+        apiService.getAll('contactos'),
+        apiService.getAll('eventos'),
+        apiService.getAll('estados') // Añadir llamada para obtener los estados
       ]);
       
-      setMunicipalidades(municipalidadesRes.data || []);
-      setEstadosSeguimiento(estadosSeguimientoRes.data || []);
-      setContactos(contactosRes.data || []);
-      setEventos(eventosRes.data || []);
-      setEstados(estadosRes.data || []); // Añadir asignación para los estados
+      setMunicipalidades(municipalidadesRes || []);
+      setEstadosSeguimiento(estadosSeguimientoRes || []);
+      setContactos(contactosRes || []);
+      setEventos(eventosRes || []);
+      setEstados(estadosRes || []); // Añadir asignación para los estados
       setLastUpdateDate(new Date());
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -854,20 +854,23 @@ function Dashboard() {
                         <button
                           onClick={() => {
                             // Preparar los datos para la visualización
-                            const tipoReunionDesc = estado.id_tipo_reunion 
-                              ? axios.get(`${ADDRESS}api/tipos-reunion/${estado.id_tipo_reunion}`)
-                                  .then(response => response.data?.descripcion || 'N/A')
-                                  .catch(() => 'N/A')
-                              : Promise.resolve('N/A');
-                              
-                            // Una vez que tenemos la descripción, mostrar el modal
-                            tipoReunionDesc.then(descripcion => {
+                            const getTipoReunion = async () => {
+                              if (estado.id_tipo_reunion) {
+                                try {
+                                  const response = await api.get(`api/tipos-reunion/${estado.id_tipo_reunion}`);
+                                  return response.data?.descripcion || 'N/A';
+                                } catch (error) {
+                                  console.error("Error al obtener tipo de reunión:", error);
+                                  return 'N/A';
+                                }
+                              }
+                              return 'N/A';
+                            };
+                            
+                            getTipoReunion().then(descripcion => {
                               setSelectedInteraction({
                                 ...estado,
-                                evento,
-                                municipalidad,
-                                contacto,
-                                tipo_reunion: descripcion
+                                tipoReunionDesc: descripcion
                               });
                               setViewDialogVisible(true);
                             });
@@ -926,7 +929,7 @@ function Dashboard() {
                 
                 <div className="field">
                   <label className="block text-gray-700 font-medium mb-1">Tipo de Reunión</label>
-                  <p className="text-gray-800">{typeof selectedInteraction.tipo_reunion === 'string' ? selectedInteraction.tipo_reunion : 'N/A'}</p>
+                  <p className="text-gray-800">{typeof selectedInteraction.tipoReunionDesc === 'string' ? selectedInteraction.tipoReunionDesc : 'N/A'}</p>
                 </div>
                 
                 <div className="field">

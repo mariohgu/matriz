@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiSearch, FiPlus, FiTrash2, FiEdit, FiEye, FiChevronDown, FiChevronUp, FiChevronLeft, FiChevronRight, FiX, FiCalendar } from 'react-icons/fi';
-import axios from 'axios';
 import { ADDRESS } from '../../utils.jsx';
+import { api } from '../../services/authService';
 
 export default function OficiosList() {
   const [oficios, setOficios] = useState([]);
@@ -101,7 +101,7 @@ export default function OficiosList() {
   const loadOficios = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${ADDRESS}api/oficios`);
+      const response = await api.get(`api/oficios`);
       setOficios(response.data || []);
     } catch (error) {
       console.error('Error al cargar oficios:', error);
@@ -113,7 +113,7 @@ export default function OficiosList() {
 
   const loadMunicipalidades = async () => {
     try {
-      const response = await axios.get(`${ADDRESS}api/municipalidades`);
+      const response = await api.get(`api/municipalidades`);
       setMunicipalidades(response.data || []);
     } catch (error) {
       console.error('Error al cargar municipalidades:', error);
@@ -138,10 +138,10 @@ export default function OficiosList() {
       console.log('Datos a enviar:', dataToSend);
       
       if (dataToSend.id_oficio) {
-        await axios.put(`${ADDRESS}api/oficios/${dataToSend.id_oficio}`, dataToSend);
+        await api.put(`api/oficios/${dataToSend.id_oficio}`, dataToSend);
         showToast('success', 'Éxito', 'Oficio actualizado correctamente');
       } else {
-        await axios.post(`${ADDRESS}api/oficios`, dataToSend);
+        await api.post(`api/oficios`, dataToSend);
         showToast('success', 'Éxito', 'Oficio creado correctamente');
       }
       
@@ -165,7 +165,7 @@ export default function OficiosList() {
 
   const handleDelete = async () => {
     try {
-      await axios.delete(`${ADDRESS}api/oficios/${selectedOficio.id_oficio}`);
+      await api.delete(`api/oficios/${selectedOficio.id_oficio}`);
       showToast('success', 'Éxito', 'Oficio eliminado correctamente');
       setDeleteDialogVisible(false);
       loadOficios();

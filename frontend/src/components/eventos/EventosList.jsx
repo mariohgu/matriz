@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import axios from 'axios';
+import { api, apiService } from '../../services/authService';
 import { FaEdit, FaTrashAlt, FaPlus, FaSearch, FaSort, FaSortUp, FaSortDown, FaCalendarAlt } from 'react-icons/fa';
 import { FiChevronDown, FiChevronUp, FiSearch } from 'react-icons/fi';
 import { ADDRESS } from '../../utils.jsx';
@@ -76,8 +76,8 @@ export default function EventosList() {
   const loadEventos = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${ADDRESS}api/eventos`);
-      setEventos(response.data);
+      const data = await apiService.getAll('eventos');
+      setEventos(data);
       setLoading(false);
     } catch (error) {
       console.error('Error al cargar eventos:', error);
@@ -104,8 +104,8 @@ export default function EventosList() {
 
   const loadMunicipalidades = async () => {
     try {
-      const response = await axios.get(`${ADDRESS}api/municipalidades`);
-      setMunicipalidades(response.data);
+      const data = await apiService.getAll('municipalidades');
+      setMunicipalidades(data);
     } catch (error) {
       console.error('Error al cargar municipalidades:', error);
       const toastDiv = toast.current;
@@ -136,7 +136,7 @@ export default function EventosList() {
     
     try {
       // Usar el endpoint estándar de contactos y filtrar por id_municipalidad
-      const response = await axios.get(`${ADDRESS}api/contactos`);
+      const response = await api.get(`api/contactos`);
       // Filtrar los contactos que pertenecen a la municipalidad seleccionada
       const contactosFiltrados = response.data.filter(
         contacto => contacto.id_municipalidad === parseInt(id_municipalidad)
@@ -199,7 +199,7 @@ export default function EventosList() {
 
     try {
       if (eventoData.id_evento) {
-        await axios.put(`${ADDRESS}api/eventos/${eventoData.id_evento}`, eventoData);
+        await apiService.update('eventos', eventoData.id_evento, eventoData);
         
         const toastDiv = toast.current;
         if (toastDiv) {
@@ -219,7 +219,7 @@ export default function EventosList() {
           }, 3000);
         }
       } else {
-        await axios.post(`${ADDRESS}api/eventos`, eventoData);
+        await apiService.create('eventos', eventoData);
         
         const toastDiv = toast.current;
         if (toastDiv) {
@@ -268,7 +268,7 @@ export default function EventosList() {
 
   const confirmDelete = async (evento) => {
     try {
-      await axios.delete(`${ADDRESS}api/eventos/${evento.id_evento}`);
+      await apiService.delete('eventos', evento.id_evento);
       
       const toastDiv = toast.current;
       if (toastDiv) {
@@ -587,7 +587,7 @@ export default function EventosList() {
       
       <div className="bg-white rounded-xl shadow-lg overflow-hidden w-full">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-white border-b border-gray-200">
-        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             <h2 className="text-2xl font-bold text-gray-800">Eventos</h2>
             <button
               className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all w-full sm:w-auto flex items-center justify-center gap-2"
@@ -640,19 +640,28 @@ export default function EventosList() {
                   </div>
                   {!isMobile && (
                     <div className="mt-2">
-                      <input
-                        type="text"
-                        className="w-full p-1 text-sm border border-gray-300 rounded"
-                        placeholder="Filtrar..."
-                        value={filters['municipalidad.nombre'].value || ''}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setFilters(prev => ({
-                            ...prev,
-                            'municipalidad.nombre': { value: value || null, matchMode: 'contains' }
-                          }));
-                        }}
-                      />
+                      <div className="relative">
+                        <div className="relative mt-1 flex h-10 w-full items-center overflow-hidden rounded-md bg-white border border-gray-300">
+                          <div className="grid h-full w-full">
+                            <input
+                              className="peer h-full w-full outline-none border-none bg-transparent px-3 py-2.5 text-sm text-gray-700 focus:ring-0"
+                              type="text"
+                              placeholder="Buscar municipalidad"
+                              value={filters['municipalidad.nombre'].value || ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setFilters(prev => ({
+                                  ...prev,
+                                  'municipalidad.nombre': { value: value || null, matchMode: 'contains' }
+                                }));
+                              }}
+                            />
+                          </div>
+                          <div className="grid h-full w-12 place-items-center text-gray-400">
+                            <FiSearch className="h-5 w-5 text-gray-400" />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </th>
@@ -668,19 +677,28 @@ export default function EventosList() {
                       {getSortIcon('contacto.nombre_completo')}
                     </div>
                     <div className="mt-2">
-                      <input
-                        type="text"
-                        className="w-full p-1 text-sm border border-gray-300 rounded"
-                        placeholder="Filtrar..."
-                        value={filters['contacto.nombre_completo'].value || ''}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setFilters(prev => ({
-                            ...prev,
-                            'contacto.nombre_completo': { value: value || null, matchMode: 'contains' }
-                          }));
-                        }}
-                      />
+                      <div className="relative">
+                        <div className="relative mt-1 flex h-10 w-full items-center overflow-hidden rounded-md bg-white border border-gray-300">
+                          <div className="grid h-full w-full">
+                            <input
+                              className="peer h-full w-full outline-none border-none bg-transparent px-3 py-2.5 text-sm text-gray-700 focus:ring-0"
+                              type="text"
+                              placeholder="Buscar contacto"
+                              value={filters['contacto.nombre_completo'].value || ''}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setFilters(prev => ({
+                                  ...prev,
+                                  'contacto.nombre_completo': { value: value || null, matchMode: 'contains' }
+                                }));
+                              }}
+                            />
+                          </div>
+                          <div className="grid h-full w-12 place-items-center text-gray-400">
+                            <FiSearch className="h-5 w-5 text-gray-400" />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </th>
                 )}
@@ -957,10 +975,10 @@ export default function EventosList() {
                 >
                   <span className="sr-only">Primera página</span>
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                   <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 </button>
                 <button
@@ -972,7 +990,7 @@ export default function EventosList() {
                 >
                   <span className="sr-only">Anterior</span>
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                   </svg>
                 </button>
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -1011,7 +1029,7 @@ export default function EventosList() {
                 >
                   <span className="sr-only">Siguiente</span>
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                   </svg>
                 </button>
                 <button
@@ -1025,10 +1043,10 @@ export default function EventosList() {
                 >
                   <span className="sr-only">Última página</span>
                   <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                   </svg>
                   <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                   </svg>
                 </button>
               </nav>
@@ -1073,59 +1091,62 @@ export default function EventosList() {
                       <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
                         <div className="sticky top-0 z-10 bg-white p-2">
                           <div className="relative">
-                            <input
-                              type="text"
-                              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                              placeholder="Buscar municipalidad..."
-                              value={municipalidadSearchQuery}
-                              onChange={(e) => setMunicipalidadSearchQuery(e.target.value)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <FiSearch className="h-5 w-5 text-gray-400" />
+                            <div className="relative mt-1 flex h-10 w-full items-center overflow-hidden rounded-md bg-white border border-gray-300">
+                              <div className="grid h-full w-full">
+                                <input
+                                  className="peer h-full w-full outline-none border-none bg-transparent px-3 py-2.5 text-sm text-gray-700 focus:ring-0"
+                                  type="text"
+                                  placeholder="Buscar municipalidad"
+                                  value={municipalidadSearchQuery}
+                                  onChange={(e) => setMunicipalidadSearchQuery(e.target.value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                              <div className="grid h-full w-12 place-items-center text-gray-400">
+                                <FiSearch className="h-5 w-5 text-gray-400" />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        
-                        {municipalidades.filter(muni => 
-                          municipalidadSearchQuery.trim() === '' || 
-                          (muni.nombre && muni.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase())) ||
-                          (muni.ubigeo && muni.ubigeo.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()))
-                        ).length === 0 ? (
-                          <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
-                        ) : (
-                          municipalidades.filter(muni => 
+                          {municipalidades.filter(muni => 
                             municipalidadSearchQuery.trim() === '' || 
                             (muni.nombre && muni.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase())) ||
                             (muni.ubigeo && muni.ubigeo.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()))
-                          ).map((muni) => (
-                            <div
-                              key={muni.id_municipalidad}
-                              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
-                                parseInt(editData.id_municipalidad) === muni.id_municipalidad ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                              }`}
-                              onClick={() => {
-                                handleMunicipalidadChange(muni.id_municipalidad.toString());
-                                setShowMunicipalidadDropdown(false);
-                              }}
-                            >
-                              <div className="flex flex-col">
-                                <span className="font-medium truncate">{muni.nombre}</span>
-                                {muni.ubigeo && (
-                                  <span className="text-xs text-gray-500">Ubigeo: {muni.ubigeo}</span>
+                          ).length === 0 ? (
+                            <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
+                          ) : (
+                            municipalidades.filter(muni => 
+                              municipalidadSearchQuery.trim() === '' || 
+                              (muni.nombre && muni.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase())) ||
+                              (muni.ubigeo && muni.ubigeo.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()))
+                            ).map((muni) => (
+                              <div
+                                key={muni.id_municipalidad}
+                                className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
+                                  parseInt(editData.id_municipalidad) === muni.id_municipalidad ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                                }`}
+                                onClick={() => {
+                                  handleMunicipalidadChange(muni.id_municipalidad.toString());
+                                  setShowMunicipalidadDropdown(false);
+                                }}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-medium truncate">{muni.nombre}</span>
+                                  {muni.ubigeo && (
+                                    <span className="text-xs text-gray-500">Ubigeo: {muni.ubigeo}</span>
+                                  )}
+                                </div>
+                                
+                                {parseInt(editData.id_municipalidad) === muni.id_municipalidad && (
+                                  <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  </span>
                                 )}
                               </div>
-                              
-                              {parseInt(editData.id_municipalidad) === muni.id_municipalidad && (
-                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
-                                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                </span>
-                              )}
-                            </div>
-                          ))
-                        )}
+                            ))
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1166,59 +1187,62 @@ export default function EventosList() {
                       <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
                         <div className="sticky top-0 z-10 bg-white p-2">
                           <div className="relative">
-                            <input
-                              type="text"
-                              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                              placeholder="Buscar contacto..."
-                              value={contactoSearchQuery}
-                              onChange={(e) => setContactoSearchQuery(e.target.value)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <FiSearch className="h-5 w-5 text-gray-400" />
+                            <div className="relative mt-1 flex h-10 w-full items-center overflow-hidden rounded-md bg-white border border-gray-300">
+                              <div className="grid h-full w-full">
+                                <input
+                                  className="peer h-full w-full outline-none border-none bg-transparent px-3 py-2.5 text-sm text-gray-700 focus:ring-0"
+                                  type="text"
+                                  placeholder="Buscar contacto"
+                                  value={contactoSearchQuery}
+                                  onChange={(e) => setContactoSearchQuery(e.target.value)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                              <div className="grid h-full w-12 place-items-center text-gray-400">
+                                <FiSearch className="h-5 w-5 text-gray-400" />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        
-                        {contactos.filter(contacto => 
-                          contactoSearchQuery.trim() === '' || 
-                          (contacto.nombre_completo && contacto.nombre_completo.toLowerCase().includes(contactoSearchQuery.toLowerCase())) ||
-                          (contacto.cargo && contacto.cargo.toLowerCase().includes(contactoSearchQuery.toLowerCase()))
-                        ).length === 0 ? (
-                          <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
-                        ) : (
-                          contactos.filter(contacto => 
+                          {contactos.filter(contacto => 
                             contactoSearchQuery.trim() === '' || 
                             (contacto.nombre_completo && contacto.nombre_completo.toLowerCase().includes(contactoSearchQuery.toLowerCase())) ||
                             (contacto.cargo && contacto.cargo.toLowerCase().includes(contactoSearchQuery.toLowerCase()))
-                          ).map((contacto) => (
-                            <div
-                              key={contacto.id_contacto}
-                              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
-                                parseInt(editData.id_contacto) === contacto.id_contacto ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                              }`}
-                              onClick={() => {
-                                setEditData(prev => ({ ...prev, id_contacto: contacto.id_contacto.toString() }));
-                                setShowContactoDropdown(false);
-                              }}
-                            >
-                              <div className="flex flex-col">
-                                <span className="font-medium truncate">{contacto.nombre_completo}</span>
-                                {contacto.cargo && (
-                                  <span className="text-xs text-gray-500">Cargo: {contacto.cargo}</span>
+                          ).length === 0 ? (
+                            <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
+                          ) : (
+                            contactos.filter(contacto => 
+                              contactoSearchQuery.trim() === '' || 
+                              (contacto.nombre_completo && contacto.nombre_completo.toLowerCase().includes(contactoSearchQuery.toLowerCase())) ||
+                              (contacto.cargo && contacto.cargo.toLowerCase().includes(contactoSearchQuery.toLowerCase()))
+                            ).map((contacto) => (
+                              <div
+                                key={contacto.id_contacto}
+                                className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
+                                  parseInt(editData.id_contacto) === contacto.id_contacto ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                                }`}
+                                onClick={() => {
+                                  setEditData(prev => ({ ...prev, id_contacto: contacto.id_contacto.toString() }));
+                                  setShowContactoDropdown(false);
+                                }}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-medium truncate">{contacto.nombre_completo}</span>
+                                  {contacto.cargo && (
+                                    <span className="text-xs text-gray-500">Cargo: {contacto.cargo}</span>
+                                  )}
+                                </div>
+                                
+                                {parseInt(editData.id_contacto) === contacto.id_contacto && (
+                                  <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  </span>
                                 )}
                               </div>
-                              
-                              {parseInt(editData.id_contacto) === contacto.id_contacto && (
-                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
-                                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                </span>
-                              )}
-                            </div>
-                          ))
-                        )}
+                            ))
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

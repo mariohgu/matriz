@@ -1,10 +1,36 @@
-import React from 'react';
-import { FaBell, FaSearch, FaBars } from 'react-icons/fa';
-import { useAuth } from '../../context/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { FaBell, FaSearch, FaBars, FaUserCircle } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import { authService } from '../../services/authService';
+import { Menu, MenuItem, Button, Avatar, IconButton, Badge, Popover } from '@mui/material';
 
 function Header({ onMenuClick }) {
-  const { user } = useAuth();
-  const userName = user?.name || 'Usuario Temporal';
+  const [user, setUser] = useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Cargar información del usuario al montar el componente
+    const currentUser = authService.getCurrentUser();
+    setUser(currentUser);
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
+  };
+
+  const handleUserMenuOpen = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleUserMenuClose = () => {
+    setAnchorEl(null);
+  };
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-10">
@@ -40,13 +66,23 @@ function Header({ onMenuClick }) {
           </button>
 
           <div className="hidden md:flex items-center space-x-4">
-            <span className="text-gray-700">{userName}</span>
-            <button
-              onClick={() => console.log('Implementar logout')}
-              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition-colors"
+            <span className="text-gray-700">{user?.name || 'Usuario'}</span>
+            <IconButton 
+              onClick={handleUserMenuOpen}
+              size="small"
+              className="focus:outline-none"
             >
-              Cerrar Sesión
-            </button>
+              <FaUserCircle className="h-8 w-8 text-gray-600" />
+            </IconButton>
+            <Menu
+              anchorEl={anchorEl}
+              open={Boolean(anchorEl)}
+              onClose={handleUserMenuClose}
+            >
+              <MenuItem onClick={handleUserMenuClose}>Mi Perfil</MenuItem>
+              <MenuItem onClick={handleUserMenuClose}>Configuración</MenuItem>
+              <MenuItem onClick={handleLogout}>Cerrar Sesión</MenuItem>
+            </Menu>
           </div>
 
           {/* Menú móvil */}
