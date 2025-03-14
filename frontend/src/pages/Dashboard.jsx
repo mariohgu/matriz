@@ -551,7 +551,12 @@ function Dashboard() {
   };
 
   return (
-    <div>
+    <div className="p-6 max-w-full" style={{ 
+      paddingRight: '1.5rem', 
+      paddingLeft: '1.5rem', 
+      boxSizing: 'border-box', 
+      width: '100%' 
+    }}>
       <div className="flex flex-col md:flex-row justify-between items-center mb-6">
         <h2 className="text-2xl font-bold mb-4 md:mb-0">Dashboard de Interacciones</h2>
         
