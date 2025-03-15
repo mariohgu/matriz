@@ -1,0 +1,48 @@
+/* Estilos personalizados para los componentes UI basados en Tailwind */
+
+/* Animación para el mensaje toast */
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(-20px); }
+  10% { opacity: 1; transform: translateY(0); }
+  90% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-20px); }
+}
+
+.toast-animation {
+  animation: fadeInOut 3s ease-in-out;
+}
+
+/* Estilos para texto con múltiples líneas en celdas de tabla */
+.cell-multiline {
+  white-space: normal;
+  word-break: break-word;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+/* Transiciones suaves para hover y focus */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Efecto de overlay para modal */
+.modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+/* Asegurar que los modales no se tapen con la barra lateral */
+.modal-centered {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Media queries para responsividad */
+@media (max-width: 768px) {
+  .table-responsive th:not(.show-mobile),
+  .table-responsive td:not(.show-mobile) {
+    display: none;
+  }
+}
