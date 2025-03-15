@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { api, apiService } from '../../services/authService';
-import { FaEdit, FaTrashAlt, FaPlus, FaCalendarAlt } from 'react-icons/fa';
+import { FiEdit, FiTrash2, FiPlus, FiEye } from 'react-icons/fi';
+import { FaEdit, FaTrashAlt, FaPlus, FaCalendarAlt  } from 'react-icons/fa';
 import { FiChevronDown, FiChevronUp, FiSearch } from 'react-icons/fi';
 import { ADDRESS } from '../../utils.jsx';
 import { Table, Pagination, Modal, ConfirmDialog, useToast } from '../ui';
@@ -14,6 +15,7 @@ export default function EventosList() {
   const [editDialogVisible, setEditDialogVisible] = useState(false);
   const [createDialogVisible, setCreateDialogVisible] = useState(false);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+  const [viewDialogVisible, setViewDialogVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState('fecha');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -277,191 +279,6 @@ export default function EventosList() {
     return `${day}/${month}/${year}`;
   };
 
-  // Componente de calendario personalizado
-  const TailwindCalendar = ({ selectedDate, onChange, id, className }) => {
-    const [currentDate, setCurrentDate] = useState(selectedDate ? new Date(selectedDate) : new Date());
-    const [isOpen, setIsOpen] = useState(false);
-    const calendarRef = useRef(null);
-
-    const daysOfWeek = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    const months = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
-
-    useEffect(() => {
-      if (selectedDate) {
-        setCurrentDate(new Date(selectedDate));
-      }
-    }, [selectedDate]);
-
-    useEffect(() => {
-      const handleClickOutside = (event) => {
-        if (calendarRef.current && !calendarRef.current.contains(event.target)) {
-          setIsOpen(false);
-        }
-      };
-
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }, []);
-
-    const handlePrevMonth = () => {
-      setCurrentDate(prev => {
-        const newDate = new Date(prev);
-        newDate.setMonth(newDate.getMonth() - 1);
-        return newDate;
-      });
-    };
-
-    const handleNextMonth = () => {
-      setCurrentDate(prev => {
-        const newDate = new Date(prev);
-        newDate.setMonth(newDate.getMonth() + 1);
-        return newDate;
-      });
-    };
-
-    const handleDayClick = (day) => {
-      const newDate = new Date(currentDate);
-      newDate.setDate(day);
-      onChange({ value: newDate });
-      setIsOpen(false);
-    };
-
-    const renderCalendarDays = () => {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      
-      const firstDayOfMonth = new Date(year, month, 1).getDay();
-      
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      
-      const days = [];
-      
-      for (let i = 0; i < firstDayOfMonth; i++) {
-        days.push(
-          <div key={`empty-${i}`} className="h-8 w-8"></div>
-        );
-      }
-      
-      for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(year, month, day);
-        const isToday = new Date().toDateString() === date.toDateString();
-        
-        // Verificar si hay una fecha seleccionada y compararla correctamente
-        let isSelected = false;
-        if (selectedDate) {
-          const selDate = new Date(selectedDate);
-          isSelected = selDate.getDate() === day && 
-                      selDate.getMonth() === month && 
-                      selDate.getFullYear() === year;
-        }
-        
-        days.push(
-          <div 
-            key={day}
-            onClick={() => handleDayClick(day)}
-            className={`h-8 w-8 flex items-center justify-center text-sm rounded-full cursor-pointer
-              ${isToday ? 'bg-blue-100 text-blue-800' : ''}
-              ${isSelected ? 'bg-blue-500 text-white' : 'hover:bg-gray-100'}
-            `}
-          >
-            {day}
-          </div>
-        );
-      }
-      
-      return days;
-    };
-
-    return (
-      <div className={`relative ${className}`} ref={calendarRef}>
-        <div 
-          className="flex items-center border border-gray-300 rounded-md p-2 cursor-pointer"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          <input
-            id={id}
-            type="text"
-            className="flex-grow outline-none cursor-pointer bg-transparent"
-            value={selectedDate ? formatDate(selectedDate) : ''}
-            readOnly
-            placeholder="Seleccione una fecha"
-          />
-          <FaCalendarAlt className="text-gray-400" />
-        </div>
-
-        {isOpen && (
-          <div className="absolute mt-1 z-50 bg-white rounded-md shadow-lg p-4 border border-gray-200 w-64">
-            <div className="flex justify-between items-center mb-4">
-              <button 
-                type="button"
-                onClick={handlePrevMonth}
-                className="p-1 rounded-full hover:bg-gray-100"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <div className="font-semibold">
-                {months[currentDate.getMonth()]} {currentDate.getFullYear()}
-              </div>
-              <button 
-                type="button"
-                onClick={handleNextMonth}
-                className="p-1 rounded-full hover:bg-gray-100"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {daysOfWeek.map(day => (
-                <div key={day} className="h-8 w-8 flex items-center justify-center text-xs text-gray-500">
-                  {day}
-                </div>
-              ))}
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1">
-              {renderCalendarDays()}
-            </div>
-            
-            <div className="mt-4 flex justify-between">
-              <button 
-                type="button"
-                onClick={() => {
-                  const today = new Date();
-                  setCurrentDate(today);
-                  onChange({ value: today });
-                  setIsOpen(false);
-                }}
-                className="px-3 py-1 text-sm bg-blue-500 text-white rounded"
-              >
-                Hoy
-              </button>
-              <button 
-                type="button"
-                onClick={() => {
-                  onChange({ value: null });
-                  setIsOpen(false);
-                }}
-                className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-              >
-                Limpiar
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   // Filtrado de datos
   const applyFilters = () => {
     if (!eventos || eventos.length === 0) return [];
@@ -561,7 +378,37 @@ export default function EventosList() {
   
   // Obtener número total de páginas
   const totalPages = Math.ceil(applyFilters().length / itemsPerPage);
-  
+
+  // Acciones para cada fila
+  const renderActions = (rowData) => (
+    <div className="flex justify-end gap-2">
+      <button
+        onClick={() => {
+          setSelectedEvento(rowData);
+          setViewDialogVisible(true);
+        }}
+        className="p-2 text-gray-600 hover:bg-gray-100 rounded-full"
+        title="Ver detalle"
+      >
+        <FiEye className="h-4 w-4" />
+      </button>
+      <button
+        onClick={() => handleEdit(rowData)}
+        className="p-2 text-blue-600 hover:bg-blue-100 rounded-full"
+        title="Editar"
+      >
+        <FiEdit className="h-4 w-4" />
+      </button>
+      <button
+        onClick={() => confirmDelete(rowData)}
+        className="p-2 text-red-600 hover:bg-red-100 rounded-full"
+        title="Eliminar"
+      >
+        <FiTrash2 className="h-4 w-4" />
+      </button>
+    </div>
+  );
+
   // Definir columnas para la tabla
   const columns = [
     {
@@ -651,255 +498,163 @@ export default function EventosList() {
     }
   ];
   
-  // Acciones para cada fila
-  const actionColumn = {
-    field: 'acciones',
-    header: 'ACCIONES',
-    body: (rowData) => (
-      <div className="flex space-x-2 justify-center">
-        <button
-          onClick={() => handleEdit(rowData)}
-          className="text-blue-600 hover:text-blue-800 p-1"
-          title="Editar"
-        >
-          <FaEdit />
-        </button>
-        <button
-          onClick={() => confirmDelete(rowData)}
-          className="text-red-600 hover:text-red-800 p-1"
-          title="Eliminar"
-        >
-          <FaTrashAlt />
-        </button>
-      </div>
-    )
-  };
-  
   // Añadir columna de acciones al final
-  const tableColumns = [...columns, actionColumn];
-  
+  const tableColumns = [...columns, { field: 'acciones', header: 'ACCIONES', body: renderActions }];
+
   // Columnas a mostrar en versión móvil (solo municipalidad y fecha)
   const mobileColumns = ['municipalidad.nombre', 'fecha', 'acciones'];
   
   // Obtener datos paginados
   const { data: paginatedData, totalRecords } = getPaginatedData();
 
-  // Renderizar componente de acciones
-  const renderActions = (rowData) => (
-    <div className="flex space-x-2 justify-center">
-      <button
-        onClick={() => handleEdit(rowData)}
-        className="text-blue-600 hover:text-blue-800 p-1"
-        title="Editar"
-      >
-        <FaEdit />
-      </button>
-      <button
-        onClick={() => confirmDelete(rowData)}
-        className="text-red-600 hover:text-red-800 p-1"
-        title="Eliminar"
-      >
-        <FaTrashAlt />
-      </button>
-    </div>
-  );
-
   // Render principal del componente
   return (
     <div className="p-4">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-        <h1 className="text-2xl font-bold text-gray-800">Eventos</h1>
-        
-        <div className="w-full md:w-auto flex items-center">
-          <div className="relative flex-grow mr-2">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FiSearch className="text-gray-400" />
-            </div>
-            <input
-              type="text"
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              placeholder="Buscar eventos..."
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-            />
+      <h1 className="text-2xl font-bold mb-4">Eventos</h1>
+      
+      {/* Barra de búsqueda y botón de crear */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+        <div className="relative w-full sm:w-auto flex-grow max-w-md">
+          <input
+            type="text"
+            className="py-2 pl-10 pr-4 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Buscar eventos..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+            <FiSearch className="text-gray-400" />
           </div>
-          
-          <button
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
-            onClick={handleCreate}
-          >
-            <FaPlus className="h-4 w-4" />
-            <span>Nuevo Evento</span>
-          </button>
         </div>
+        <button
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center"
+          onClick={() => {
+            setEditData({
+              id_evento: '',
+              id_municipalidad: '',
+              id_contacto: '',
+              tipo_acercamiento: '',
+              lugar: '',
+              fecha: new Date().toISOString().split('T')[0],
+              modalidad: '',
+              descripcion: ''
+            });
+            setCreateDialogVisible(true);
+          }}
+        >
+          <FiPlus className="mr-2" /> Nuevo Evento
+        </button>
       </div>
-
-      {/* Tabla con nuestro componente Table personalizado */}
-      <Table
-        data={paginatedData}
-        columns={tableColumns}
-        loading={loading}
-        sortField={sortField}
-        sortOrder={sortOrder}
-        onSort={handleSort}
-        onSearch={handleSearch}
-        searchQuery={searchQuery}
-        columnFilters={columnFilters}
-        onColumnFilterChange={handleColumnFilterChange}
-        emptyMessage="No hay eventos disponibles"
-        isMobile={isMobile}
-        mobileColumns={mobileColumns}
-        actions={renderActions}
-        className="mb-4"
-      />
-
+      
+      {/* Tabla de eventos */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <Table
+          data={paginatedData}
+          columns={tableColumns}
+          loading={loading}
+          sortField={sortField}
+          sortOrder={sortOrder}
+          onSort={(field, order) => {
+            setSortField(field);
+            setSortOrder(order);
+          }}
+          emptyMessage="No hay eventos disponibles"
+          searchQuery={searchQuery}
+          onSearch={setSearchQuery}
+          columnFilters={columnFilters}
+          onFilterChange={(field, value) => {
+            setColumnFilters({
+              ...columnFilters,
+              [field]: value
+            });
+          }}
+          isMobile={window.innerWidth < 768}
+          mobileColumns={mobileColumns}
+        />
+      </div>
+      
       {/* Paginación */}
-      {!loading && totalRecords > 0 && (
-        <div className="mt-4 flex justify-center">
+      {totalRecords > 0 && (
+        <div className="mt-4">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
-            onItemsPerPageChange={setItemsPerPage}
+            totalRecords={totalRecords}
             itemsPerPage={itemsPerPage}
-            itemsPerPageOptions={[5, 10, 25, 50]}
-            totalItems={totalRecords}
+            onItemsPerPageChange={setItemsPerPage}
           />
         </div>
       )}
-
-      {/* Modal para crear/editar evento */}
+      
+      {/* Modal de creación */}
       <Modal
-        isOpen={createDialogVisible || editDialogVisible}
-        onClose={() => {
-          setCreateDialogVisible(false);
-          setEditDialogVisible(false);
-        }}
-        title={editDialogVisible ? 'Editar Evento' : 'Crear Evento'}
-        contentClassName="max-w-2xl mx-auto"
+        isOpen={createDialogVisible}
+        onClose={() => setCreateDialogVisible(false)}
+        title="Crear Evento"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+              onClick={() => setCreateDialogVisible(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              onClick={handleSave}
+            >
+              Guardar
+            </button>
+          </div>
+        }
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-          {/* Selector de Municipalidad */}
-          <div className="relative" ref={municipalidadDropdownRef}>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
               Municipalidad <span className="text-red-500">*</span>
             </label>
-            <div
-              className="relative"
-              onClick={() => setShowMunicipalidadDropdown(!showMunicipalidadDropdown)}
-            >
-              <div className="flex justify-between items-center w-full border border-gray-300 rounded-md p-2 cursor-pointer">
-                <span>
-                  {editData.id_municipalidad
-                    ? municipalidades.find(m => m.id_municipalidad === parseInt(editData.id_municipalidad))?.nombre || ''
-                    : 'Seleccione una municipalidad'}
-                </span>
-                {showMunicipalidadDropdown ? (
-                  <FiChevronUp className="text-gray-400" />
-                ) : (
-                  <FiChevronDown className="text-gray-400" />
-                )}
-              </div>
-            </div>
-            
-            {showMunicipalidadDropdown && (
-              <div className="absolute mt-1 w-full z-50 bg-white rounded-md shadow-lg max-h-60 overflow-y-auto border border-gray-200">
-                <div className="p-2">
-                  <input
-                    type="text"
-                    className="w-full p-2 border border-gray-300 rounded-md mb-2"
-                    placeholder="Buscar municipalidad..."
-                    value={municipalidadSearchQuery}
-                    onChange={(e) => setMunicipalidadSearchQuery(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-                
-                <ul className="py-1">
-                  {municipalidades
-                    .filter(m => m.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()))
-                    .map(municipalidad => (
-                      <li
-                        key={municipalidad.id_municipalidad}
-                        className="px-4 py-2 cursor-pointer hover:bg-gray-100"
-                        onClick={() => {
-                          handleMunicipalidadChange(municipalidad.id_municipalidad);
-                          setShowMunicipalidadDropdown(false);
-                        }}
-                      >
-                        {municipalidad.nombre}
-                      </li>
-                    ))}
-                </ul>
-              </div>
-            )}
-          </div>
-          
-          {/* Selector de Contacto */}
-          <div className="relative" ref={contactoDropdownRef}>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Contacto <span className="text-red-500">*</span>
-            </label>
-            <div
-              className="relative"
-              onClick={() => {
-                if (editData.id_municipalidad) {
-                  setShowContactoDropdown(!showContactoDropdown);
-                } else {
-                  toast.showWarning('Advertencia', 'Primero debe seleccionar una municipalidad');
+            <select
+              className="w-full border border-gray-300 rounded-md p-2"
+              value={editData.id_municipalidad || ''}
+              onChange={(e) => {
+                const id = e.target.value;
+                setEditData(prev => ({ ...prev, id_municipalidad: id, id_contacto: '' }));
+                if (id) {
+                  loadContactosPorMunicipalidad(id);
                 }
               }}
             >
-              <div className={`flex justify-between items-center w-full border border-gray-300 rounded-md p-2 ${editData.id_municipalidad ? 'cursor-pointer' : 'cursor-not-allowed bg-gray-50'}`}>
-                <span>
-                  {editData.id_contacto
-                    ? contactos.find(c => c.id_contacto === parseInt(editData.id_contacto))?.nombre_completo || ''
-                    : 'Seleccione un contacto'}
-                </span>
-                {showContactoDropdown ? (
-                  <FiChevronUp className="text-gray-400" />
-                ) : (
-                  <FiChevronDown className="text-gray-400" />
-                )}
-              </div>
-            </div>
-            
-            {showContactoDropdown && (
-              <div className="absolute mt-1 w-full z-50 bg-white rounded-md shadow-lg max-h-60 overflow-y-auto border border-gray-200">
-                <div className="p-2">
-                  <input
-                    type="text"
-                    className="w-full p-2 border border-gray-300 rounded-md mb-2"
-                    placeholder="Buscar contacto..."
-                    value={contactoSearchQuery}
-                    onChange={(e) => setContactoSearchQuery(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-                
-                <ul className="py-1">
-                  {contactos
-                    .filter(c => c.nombre_completo.toLowerCase().includes(contactoSearchQuery.toLowerCase()))
-                    .map(contacto => (
-                      <li
-                        key={contacto.id_contacto}
-                        className="px-4 py-2 cursor-pointer hover:bg-gray-100"
-                        onClick={() => {
-                          setEditData(prev => ({ ...prev, id_contacto: contacto.id_contacto }));
-                          setShowContactoDropdown(false);
-                        }}
-                      >
-                        {contacto.nombre_completo}
-                      </li>
-                    ))}
-                </ul>
-              </div>
-            )}
+              <option value="">Seleccione una municipalidad</option>
+              {municipalidades.map(muni => (
+                <option key={muni.id_municipalidad} value={muni.id_municipalidad}>
+                  {muni.nombre}
+                </option>
+              ))}
+            </select>
           </div>
           
-          {/* Tipo de Acercamiento */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Contacto <span className="text-red-500">*</span>
+            </label>
+            <select
+              className="w-full border border-gray-300 rounded-md p-2"
+              value={editData.id_contacto || ''}
+              onChange={(e) => setEditData(prev => ({ ...prev, id_contacto: e.target.value }))}
+              disabled={!editData.id_municipalidad}
+            >
+              <option value="">Seleccione un contacto</option>
+              {contactos.map(contacto => (
+                <option key={contacto.id_contacto} value={contacto.id_contacto}>
+                  {contacto.nombre_completo}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
               Tipo de Acercamiento <span className="text-red-500">*</span>
             </label>
             <input
@@ -910,9 +665,8 @@ export default function EventosList() {
             />
           </div>
           
-          {/* Lugar */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-500 mb-1">
               Lugar <span className="text-red-500">*</span>
             </label>
             <input
@@ -923,21 +677,20 @@ export default function EventosList() {
             />
           </div>
           
-          {/* Fecha */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-500 mb-1">
               Fecha <span className="text-red-500">*</span>
             </label>
-            <TailwindCalendar
-              id="fecha"
-              selectedDate={editData.fecha}
-              onChange={(e) => setEditData(prev => ({ ...prev, fecha: e.value }))}
+            <input
+              type="date"
+              className="w-full border border-gray-300 rounded-md p-2"
+              value={editData.fecha || ''}
+              onChange={(e) => setEditData(prev => ({ ...prev, fecha: e.target.value }))}
             />
           </div>
           
-          {/* Modalidad */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-500 mb-1">
               Modalidad <span className="text-red-500">*</span>
             </label>
             <select
@@ -952,9 +705,8 @@ export default function EventosList() {
             </select>
           </div>
           
-          {/* Descripción - ocupa 2 columnas */}
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="col-span-1 md:col-span-2">
+            <label className="block text-sm font-medium text-gray-500 mb-1">
               Descripción
             </label>
             <textarea
@@ -964,37 +716,203 @@ export default function EventosList() {
             />
           </div>
         </div>
-        
-        <div className="flex justify-end gap-2 p-4 border-t">
-          <button
-            type="button"
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
-            onClick={() => {
-              setCreateDialogVisible(false);
-              setEditDialogVisible(false);
-            }}
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            onClick={handleSave}
-          >
-            Guardar
-          </button>
+      </Modal>
+      
+      {/* Modal de edición */}
+      <Modal
+        isOpen={editDialogVisible}
+        onClose={() => setEditDialogVisible(false)}
+        title="Editar Evento"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+              onClick={() => setEditDialogVisible(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              onClick={handleSave}
+            >
+              Guardar
+            </button>
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Municipalidad <span className="text-red-500">*</span>
+            </label>
+            <select
+              className="w-full border border-gray-300 rounded-md p-2"
+              value={editData.id_municipalidad || ''}
+              onChange={(e) => {
+                const id = e.target.value;
+                setEditData(prev => ({ ...prev, id_municipalidad: id, id_contacto: '' }));
+                if (id) {
+                  loadContactosPorMunicipalidad(id);
+                }
+              }}
+            >
+              <option value="">Seleccione una municipalidad</option>
+              {municipalidades.map(muni => (
+                <option key={muni.id_municipalidad} value={muni.id_municipalidad}>
+                  {muni.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Contacto <span className="text-red-500">*</span>
+            </label>
+            <select
+              className="w-full border border-gray-300 rounded-md p-2"
+              value={editData.id_contacto || ''}
+              onChange={(e) => setEditData(prev => ({ ...prev, id_contacto: e.target.value }))}
+              disabled={!editData.id_municipalidad}
+            >
+              <option value="">Seleccione un contacto</option>
+              {contactos.map(contacto => (
+                <option key={contacto.id_contacto} value={contacto.id_contacto}>
+                  {contacto.nombre_completo}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Tipo de Acercamiento <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded-md p-2"
+              value={editData.tipo_acercamiento || ''}
+              onChange={(e) => setEditData(prev => ({ ...prev, tipo_acercamiento: e.target.value }))}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Lugar <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded-md p-2"
+              value={editData.lugar || ''}
+              onChange={(e) => setEditData(prev => ({ ...prev, lugar: e.target.value }))}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Fecha <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              className="w-full border border-gray-300 rounded-md p-2"
+              value={editData.fecha || ''}
+              onChange={(e) => setEditData(prev => ({ ...prev, fecha: e.target.value }))}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Modalidad <span className="text-red-500">*</span>
+            </label>
+            <select
+              className="w-full border border-gray-300 rounded-md p-2"
+              value={editData.modalidad || ''}
+              onChange={(e) => setEditData(prev => ({ ...prev, modalidad: e.target.value }))}
+            >
+              <option value="">Seleccione una modalidad</option>
+              <option value="Presencial">Presencial</option>
+              <option value="Virtual">Virtual</option>
+              <option value="Híbrido">Híbrido</option>
+            </select>
+          </div>
+          
+          <div className="col-span-1 md:col-span-2">
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Descripción
+            </label>
+            <textarea
+              className="w-full border border-gray-300 rounded-md p-2 h-32"
+              value={editData.descripcion || ''}
+              onChange={(e) => setEditData(prev => ({ ...prev, descripcion: e.target.value }))}
+            />
+          </div>
         </div>
       </Modal>
       
-      {/* Modal de confirmación de eliminación */}
+      {/* Modal de visualización */}
+      <Modal
+        isOpen={viewDialogVisible}
+        onClose={() => setViewDialogVisible(false)}
+        title="Detalles del Evento"
+        footer={
+          <div className="flex justify-end">
+            <button
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+              onClick={() => setViewDialogVisible(false)}
+            >
+              Cerrar
+            </button>
+          </div>
+        }
+      >
+        {selectedEvento && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">MUNICIPALIDAD</h3>
+                <p className="mt-1">{selectedEvento.municipalidad && selectedEvento.municipalidad.nombre ? selectedEvento.municipalidad.nombre : 'N/A'}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">CONTACTO</h3>
+                <p className="mt-1">{selectedEvento.contacto && selectedEvento.contacto.nombre_completo ? selectedEvento.contacto.nombre_completo : 'N/A'}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">TIPO DE ACERCAMIENTO</h3>
+                <p className="mt-1">{selectedEvento.tipo_acercamiento || 'N/A'}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">LUGAR</h3>
+                <p className="mt-1">{selectedEvento.lugar || 'N/A'}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">FECHA</h3>
+                <p className="mt-1">{formatDate(selectedEvento.fecha) || 'N/A'}</p>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">MODALIDAD</h3>
+                <p className="mt-1">{selectedEvento.modalidad || 'N/A'}</p>
+              </div>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-gray-500">DESCRIPCIÓN</h3>
+              <p className="mt-1 whitespace-pre-wrap">{selectedEvento.descripcion || 'N/A'}</p>
+            </div>
+          </div>
+        )}
+      </Modal>
+      
+      {/* Diálogo de confirmación de eliminación */}
       <ConfirmDialog
         isOpen={deleteDialogVisible}
         onClose={() => setDeleteDialogVisible(false)}
-        onConfirm={handleDelete}
-        title="Confirmar Eliminación"
-        message={`¿Está seguro que desea eliminar el evento con fecha ${selectedEvento ? formatDate(selectedEvento.fecha) : ''} en ${selectedEvento?.municipalidad?.nombre || ''}?`}
-        confirmText="Eliminar"
-        cancelText="Cancelar"
+        onConfirm={() => {
+          if (selectedEvento) {
+            confirmDelete(selectedEvento);
+            setDeleteDialogVisible(false);
+          }
+        }}
+        title="Eliminar Evento"
+        message="¿Está seguro que desea eliminar este evento? Esta acción no se puede deshacer."
       />
     </div>
   );
