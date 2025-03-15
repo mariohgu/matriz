@@ -1,7 +1,3 @@
-@import 'primereact/resources/themes/lara-light-blue/theme.css';
-@import 'primereact/resources/primereact.min.css';
-@import 'primeicons/primeicons.css';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -119,23 +115,4 @@ html, body {
   @apply block text-gray-700 text-sm font-bold mb-2;
 }
 
-/* PrimeReact DataTable customizations */
-.p-datatable .p-datatable-header {
-  @apply bg-white border-none;
-}
-
-.p-datatable .p-datatable-thead > tr > th {
-  @apply bg-gray-50;
-}
-
-.p-button.p-button-outlined {
-  @apply border border-gray-300;
-}
-
-.p-dialog .p-dialog-header {
-  @apply bg-gray-50;
-}
-
-.p-dialog .p-dialog-content {
-  @apply p-6;
-}
+/* Estilos personalizados para componentes UI */

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000';
+const API_URL = "https://matriz.ddev.site";
 
 // Crear instancia de axios con configuración base
 const api = axios.create({

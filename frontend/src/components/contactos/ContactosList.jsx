@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FiEdit, FiTrash2, FiEye, FiChevronUp, FiChevronDown, FiPlus, FiSearch, FiX } from 'react-icons/fi';
 import { ADDRESS } from '../../utils.jsx';
 import { api, apiService } from '../../services/authService';
+import { Table, Pagination, Modal, ConfirmDialog } from '../ui';
+import { useToast } from '../ui/ToastContext';
 
 export default function ContactosList() {
   const [contactos, setContactos] = useState([]);
@@ -25,7 +27,6 @@ export default function ContactosList() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortField, setSortField] = useState('nombre_completo');
   const [sortOrder, setSortOrder] = useState('asc');
-  const [toastMessage, setToastMessage] = useState(null);
   const [columnFilters, setColumnFilters] = useState({
     nombre_completo: '',
     cargo: '',
@@ -38,6 +39,7 @@ export default function ContactosList() {
   const [municipalidadSearchQuery, setMunicipalidadSearchQuery] = useState('');
   const [showMunicipalidadDropdown, setShowMunicipalidadDropdown] = useState(false);
   const municipalidadDropdownRef = useRef(null);
+  const toast = useToast(); // Hook para mostrar notificaciones
 
   useEffect(() => {
     loadContactos();
@@ -82,16 +84,6 @@ export default function ContactosList() {
     }
   }, [municipalidadSearchQuery, municipalidades]);
 
-  // Toast message auto-hide
-  useEffect(() => {
-    if (toastMessage) {
-      const timer = setTimeout(() => {
-        setToastMessage(null);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [toastMessage]);
-
   const loadContactos = async () => {
     setLoading(true);
     try {
@@ -99,11 +91,7 @@ export default function ContactosList() {
       setContactos(data || []);
     } catch (error) {
       console.error('Error al cargar contactos:', error);
-      setToastMessage({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudieron cargar los contactos'
-      });
+      toast.showError('Error', 'No se pudieron cargar los contactos');
     } finally {
       setLoading(false);
     }
@@ -115,30 +103,29 @@ export default function ContactosList() {
       setMunicipalidades(data || []);
     } catch (error) {
       console.error('Error al cargar municipalidades:', error);
-      setToastMessage({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudieron cargar las municipalidades'
-      });
+      toast.showError('Error', 'No se pudieron cargar las municipalidades');
     }
   };
 
   const handleSave = async () => {
+    // Validación
+    if (!editData.id_municipalidad) {
+      toast.showWarning('Advertencia', 'Debe seleccionar una municipalidad');
+      return;
+    }
+
+    if (!editData.nombre_completo) {
+      toast.showWarning('Advertencia', 'El nombre completo es requerido');
+      return;
+    }
+
     try {
       if (editData.id_contacto) {
         await apiService.update('contactos', editData.id_contacto, editData);
-        setToastMessage({
-          severity: 'success',
-          summary: 'Éxito',
-          detail: 'Contacto actualizado correctamente'
-        });
+        toast.showSuccess('Éxito', 'Contacto actualizado correctamente');
       } else {
         await apiService.create('contactos', editData);
-        setToastMessage({
-          severity: 'success',
-          summary: 'Éxito',
-          detail: 'Contacto creado correctamente'
-        });
+        toast.showSuccess('Éxito', 'Contacto creado correctamente');
       }
       setEditDialogVisible(false);
       setCreateDialogVisible(false);
@@ -153,38 +140,19 @@ export default function ContactosList() {
       loadContactos();
     } catch (error) {
       console.error('Error al guardar:', error);
-      setToastMessage({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Error al guardar el contacto'
-      });
+      toast.showError('Error', 'Error al guardar el contacto');
     }
   };
 
   const confirmDelete = async (rowData) => {
     try {
       await apiService.delete('contactos', rowData.id_contacto);
-      setToastMessage({
-        severity: 'success',
-        summary: 'Éxito',
-        detail: 'Contacto eliminado correctamente'
-      });
+      toast.showSuccess('Éxito', 'Contacto eliminado correctamente');
       loadContactos();
     } catch (error) {
       console.error('Error al eliminar:', error);
-      setToastMessage({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Error al eliminar el contacto'
-      });
+      toast.showError('Error', 'Error al eliminar el contacto');
     }
-  };
-
-  // Sorting function
-  const handleSort = (field) => {
-    const isAsc = sortField === field && sortOrder === 'asc';
-    setSortOrder(isAsc ? 'desc' : 'asc');
-    setSortField(field);
   };
 
   // Get municipalidad name by id
@@ -192,6 +160,78 @@ export default function ContactosList() {
     const municipalidad = municipalidades.find(m => m.id_municipalidad === id_municipalidad);
     return municipalidad ? municipalidad.nombre : '';
   };
+
+  // Definición de columnas para el componente Table
+  const columns = [
+    {
+      field: 'nombre_completo',
+      header: 'Nombre',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => (
+        <div className="max-w-xs overflow-hidden">
+          <span className="whitespace-pre-wrap break-words">
+            {rowData.nombre_completo || 'N/A'}
+          </span>
+        </div>
+      )
+    },
+    {
+      field: 'cargo',
+      header: 'Cargo',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => (
+        <div className="max-w-xs overflow-hidden">
+          <span className="whitespace-pre-wrap break-words">
+            {rowData.cargo || 'N/A'}
+          </span>
+        </div>
+      )
+    },
+    {
+      field: 'telefono',
+      header: 'Teléfono',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => (
+        <div className="max-w-xs overflow-hidden">
+          <span className="whitespace-pre-wrap break-words">
+            {rowData.telefono || 'N/A'}
+          </span>
+        </div>
+      )
+    },
+    {
+      field: 'email',
+      header: 'Email',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => (
+        <div className="max-w-xs overflow-hidden">
+          <span className="whitespace-pre-wrap break-words">
+            {rowData.email || 'N/A'}
+          </span>
+        </div>
+      )
+    },
+    {
+      field: 'id_municipalidad',
+      header: 'Municipalidad',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => (
+        <div className="max-w-xs overflow-hidden">
+          <span className="whitespace-pre-wrap break-words">
+            {getMunicipalidadName(rowData.id_municipalidad) || 'N/A'}
+          </span>
+        </div>
+      )
+    }
+  ];
+
+  // Columnas a mostrar en modo móvil
+  const mobileColumns = ['nombre_completo', 'id_municipalidad'];
 
   // Filtering functions
   const filteredContactos = contactos.filter(contacto => {
@@ -230,16 +270,11 @@ export default function ContactosList() {
            matchesEmail && matchesMunicipalidad;
   });
 
-  // Pagination
-  const totalPages = Math.ceil(filteredContactos.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-
   // Sorting
   const sortedData = [...filteredContactos].sort((a, b) => {
     let aValue, bValue;
     
-    if (sortField === 'municipalidad') {
+    if (sortField === 'id_municipalidad') {
       aValue = getMunicipalidadName(a.id_municipalidad) || '';
       bValue = getMunicipalidadName(b.id_municipalidad) || '';
     } else {
@@ -254,29 +289,77 @@ export default function ContactosList() {
     }
   });
 
+  // Pagination
+  const totalPages = Math.ceil(filteredContactos.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
   const paginatedData = sortedData.slice(startIndex, endIndex);
 
-  const goToPage = (page) => {
+  // Action buttons component
+  const renderActions = (rowData) => (
+    <div className="flex justify-end gap-2">
+      <button
+        onClick={() => {
+          setSelectedContacto(rowData);
+          setViewDialogVisible(true);
+        }}
+        className="p-2 text-purple-600 hover:bg-purple-100 rounded-full"
+        title="Ver detalles"
+      >
+        <FiEye className="w-5 h-5" />
+      </button>
+      <button
+        onClick={() => {
+          setSelectedContacto(rowData);
+          setEditData(rowData);
+          setEditDialogVisible(true);
+        }}
+        className="p-2 text-blue-600 hover:bg-blue-100 rounded-full"
+        title="Editar"
+      >
+        <FiEdit className="w-5 h-5" />
+      </button>
+      <button
+        onClick={() => {
+          setSelectedContacto(rowData);
+          setDeleteDialogVisible(true);
+        }}
+        className="p-2 text-red-600 hover:bg-red-100 rounded-full"
+        title="Eliminar"
+      >
+        <FiTrash2 className="w-5 h-5" />
+      </button>
+    </div>
+  );
+
+  // Event handlers
+  const handleSort = (field) => {
+    const isAsc = sortField === field && sortOrder === 'asc';
+    setSortOrder(isAsc ? 'desc' : 'asc');
+    setSortField(field);
+  };
+
+  const handleSearch = (value) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
+
+  const handleColumnFilterChange = (filters) => {
+    setColumnFilters(filters);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page) => {
     setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (value) => {
+    setItemsPerPage(value);
+    setCurrentPage(1);
   };
 
   return (
     <div className="p-6 bg-white rounded-lg shadow w-full max-w-full">
-      {/* Toast Message */}
-      {toastMessage && (
-        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
-          toastMessage.severity === 'success' ? 'bg-green-100 border-l-4 border-green-500 text-green-700' :
-          toastMessage.severity === 'error' ? 'bg-red-100 border-l-4 border-red-500 text-red-700' :
-          toastMessage.severity === 'warning' ? 'bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700' :
-          'bg-blue-100 border-l-4 border-blue-500 text-blue-700'
-        }`}>
-          <div className="flex items-center">
-            <div className="font-bold">{toastMessage.summary}</div>
-            <div className="ml-2">{toastMessage.detail}</div>
-          </div>
-        </div>
-      )}
-      
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center">
@@ -299,641 +382,229 @@ export default function ContactosList() {
             <span>Nuevo Contacto</span>
           </button>
         </div>
-        <div className="relative">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar contacto..."
-            className="w-full px-4 py-2 pr-10 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <FiSearch className="w-5 h-5 text-gray-400" />
-          </div>
-        </div>
       </div>
       
-      {/* Table */}
-      <div className="overflow-x-auto w-full">
-        <table className="min-w-full w-full divide-y divide-gray-200 table-fixed">
-          <thead className="bg-gray-50">
-            <tr>
-              <th 
-                scope="col" 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-1/6"
-                onClick={() => handleSort('nombre_completo')}
-              >
-                <div className="flex items-center space-x-1">
-                  <span>Nombre</span>
-                  {sortField === 'nombre_completo' && (
-                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
-                  )}
-                </div>
-                {!isMobile && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      value={columnFilters.nombre_completo}
-                      onChange={(e) => setColumnFilters({...columnFilters, nombre_completo: e.target.value})}
-                      placeholder="Filtrar..."
-                      className="w-full px-2 py-1 text-xs border rounded"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                )}
-              </th>
-              <th 
-                scope="col" 
-                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : 'w-1/6'}`}
-                onClick={() => handleSort('cargo')}
-              >
-                <div className="flex items-center space-x-1">
-                  <span>Cargo</span>
-                  {sortField === 'cargo' && (
-                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
-                  )}
-                </div>
-                {!isMobile && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      value={columnFilters.cargo}
-                      onChange={(e) => setColumnFilters({...columnFilters, cargo: e.target.value})}
-                      placeholder="Filtrar..."
-                      className="w-full px-2 py-1 text-xs border rounded"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                )}
-              </th>
-              <th 
-                scope="col" 
-                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : 'w-1/6'}`}
-                onClick={() => handleSort('telefono')}
-              >
-                <div className="flex items-center space-x-1">
-                  <span>Teléfono</span>
-                  {sortField === 'telefono' && (
-                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
-                  )}
-                </div>
-                {!isMobile && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      value={columnFilters.telefono}
-                      onChange={(e) => setColumnFilters({...columnFilters, telefono: e.target.value})}
-                      placeholder="Filtrar..."
-                      className="w-full px-2 py-1 text-xs border rounded"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                )}
-              </th>
-              <th 
-                scope="col" 
-                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : 'w-1/6'}`}
-                onClick={() => handleSort('email')}
-              >
-                <div className="flex items-center space-x-1">
-                  <span>Email</span>
-                  {sortField === 'email' && (
-                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
-                  )}
-                </div>
-                {!isMobile && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      value={columnFilters.email}
-                      onChange={(e) => setColumnFilters({...columnFilters, email: e.target.value})}
-                      placeholder="Filtrar..."
-                      className="w-full px-2 py-1 text-xs border rounded"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                )}
-              </th>
-              <th 
-                scope="col" 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer w-1/6"
-                onClick={() => handleSort('municipalidad')}
-              >
-                <div className="flex items-center space-x-1">
-                  <span>Municipalidad</span>
-                  {sortField === 'municipalidad' && (
-                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
-                  )}
-                </div>
-                {!isMobile && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      value={columnFilters.municipalidad}
-                      onChange={(e) => setColumnFilters({...columnFilters, municipalidad: e.target.value})}
-                      placeholder="Filtrar..."
-                      className="w-full px-2 py-1 text-xs border rounded"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                )}
-              </th>
-              <th scope="col" className={`px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider ${isMobile ? 'w-1/4' : 'w-1/6'}`}>
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {loading ? (
-              <tr>
-                <td colSpan="6" className="px-6 py-4 text-center">
-                  <div className="flex justify-center items-center">
-                    <svg className="animate-spin h-5 w-5 text-blue-500 mr-3" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>Cargando...</span>
-                  </div>
-                </td>
-              </tr>
-            ) : paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                  No se encontraron contactos
-                </td>
-              </tr>
-            ) : (
-              paginatedData.map((contacto) => (
-                <tr key={contacto.id_contacto} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 break-words">{contacto.nombre_completo}</td>
-                  <td className={`px-6 py-4 break-words ${isMobile ? 'hidden md:table-cell' : ''}`}>{contacto.cargo}</td>
-                  <td className={`px-6 py-4 break-words ${isMobile ? 'hidden md:table-cell' : ''}`}>{contacto.telefono}</td>
-                  <td className={`px-6 py-4 break-words ${isMobile ? 'hidden md:table-cell' : ''}`}>{contacto.email}</td>
-                  <td className="px-6 py-4 break-words">{getMunicipalidadName(contacto.id_municipalidad)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedContacto(contacto);
-                          setViewDialogVisible(true);
-                        }}
-                        className="p-2 text-purple-600 hover:bg-purple-100 rounded-full"
-                        title="Ver detalles"
-                      >
-                        <FiEye className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedContacto(contacto);
-                          setEditData(contacto);
-                          setEditDialogVisible(true);
-                        }}
-                        className="p-2 text-blue-600 hover:bg-blue-100 rounded-full"
-                        title="Editar"
-                      >
-                        <FiEdit className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedContacto(contacto);
-                          setDeleteDialogVisible(true);
-                        }}
-                        className="p-2 text-red-600 hover:bg-red-100 rounded-full"
-                        title="Eliminar"
-                      >
-                        <FiTrash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {/* Table Component */}
+      <Table
+        data={paginatedData}
+        columns={columns}
+        sortField={sortField}
+        sortOrder={sortOrder}
+        onSort={handleSort}
+        onSearch={handleSearch}
+        searchQuery={searchQuery}
+        columnFilters={columnFilters}
+        onColumnFilterChange={handleColumnFilterChange}
+        loading={loading}
+        emptyMessage="No se encontraron contactos"
+        isMobile={isMobile}
+        mobileColumns={mobileColumns}
+        actions={renderActions}
+        className="mb-4"
+      />
       
-      {/* Pagination */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6 mt-4">
-        <div className="flex justify-between sm:hidden w-full">
-          <button
-            onClick={() => goToPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md ${
-              currentPage === 1
-                ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                : 'text-gray-700 bg-white hover:bg-gray-50'
-            }`}
-          >
-            Anterior
-          </button>
-          <button
-            onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages || totalPages === 0}
-            className={`relative inline-flex items-center px-4 py-2 ml-3 text-sm font-medium rounded-md ${
-              currentPage === totalPages || totalPages === 0
-                ? 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                : 'text-gray-700 bg-white hover:bg-gray-50'
-            }`}
-          >
-            Siguiente
-          </button>
-        </div>
-        <div className="hidden sm:flex sm:items-center sm:justify-between w-full">
-          <div>
-            <p className="text-sm text-gray-700">
-              Mostrando <span className="font-medium">{filteredContactos.length > 0 ? startIndex + 1 : 0}</span> a <span className="font-medium">{Math.min(endIndex, filteredContactos.length)}</span> de <span className="font-medium">{filteredContactos.length}</span> resultados
-            </p>
+      {/* Pagination Component */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={handleItemsPerPageChange}
+        totalItems={filteredContactos.length}
+      />
+      
+      {/* View Modal */}
+      <Modal
+        isOpen={viewDialogVisible}
+        onClose={() => setViewDialogVisible(false)}
+        title="Detalles del Contacto"
+        size="lg"
+      >
+        {selectedContacto && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Nombre Completo</p>
+              <p className="mt-1 text-sm text-gray-900">{selectedContacto.nombre_completo}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Cargo</p>
+              <p className="mt-1 text-sm text-gray-900">{selectedContacto.cargo}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Teléfono</p>
+              <p className="mt-1 text-sm text-gray-900">{selectedContacto.telefono}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Email</p>
+              <p className="mt-1 text-sm text-gray-900">{selectedContacto.email}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Municipalidad</p>
+              <p className="mt-1 text-sm text-gray-900">{getMunicipalidadName(selectedContacto.id_municipalidad)}</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <select
-              value={itemsPerPage}
-              onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
+        )}
+      </Modal>
+      
+      {/* Create/Edit Modal */}
+      <Modal
+        isOpen={createDialogVisible || editDialogVisible}
+        onClose={() => {
+          setEditDialogVisible(false);
+          setCreateDialogVisible(false);
+        }}
+        title={editDialogVisible ? 'Editar Contacto' : 'Nuevo Contacto'}
+        size="lg"
+        footer={
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md font-medium"
+              onClick={() => {
+                setEditDialogVisible(false);
+                setCreateDialogVisible(false);
               }}
-              className="border border-gray-300 rounded-md text-sm py-1 pl-2 pr-8 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value={5}>5 por página</option>
-              <option value={10}>10 por página</option>
-              <option value={25}>25 por página</option>
-              <option value={50}>50 por página</option>
-            </select>
-            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <button
-                onClick={() => goToPage(1)}
-                disabled={currentPage === 1}
-                className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
-                  currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                <span className="sr-only">Primera página</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <button
-                onClick={() => goToPage(currentPage - 1)}
-                disabled={currentPage === 1}
-                className={`relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium ${
-                  currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                <span className="sr-only">Anterior</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNumber;
-                if (totalPages <= 5) {
-                  pageNumber = i + 1;
-                } else if (currentPage <= 3) {
-                  pageNumber = i + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  pageNumber = totalPages - 4 + i;
-                } else {
-                  pageNumber = currentPage - 2 + i;
-                }
-                return (
-                  <button
-                    key={pageNumber}
-                    onClick={() => goToPage(pageNumber)}
-                    className={`relative inline-flex items-center px-4 py-2 border ${
-                      currentPage === pageNumber
-                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                    } text-sm font-medium`}
-                  >
-                    {pageNumber}
-                  </button>
-                );
-              })}
-              <button
-                onClick={() => goToPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className={`relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium ${
-                  currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                <span className="sr-only">Siguiente</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <button
-                onClick={() => goToPage(totalPages)}
-                disabled={currentPage === totalPages}
-                className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
-                  currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                <span className="sr-only">Última página</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-                <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </nav>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium"
+              onClick={handleSave}
+            >
+              {editDialogVisible ? 'Guardar' : 'Crear'}
+            </button>
           </div>
-        </div>
-      </div>
-      
-      {/* View Dialog */}
-      {viewDialogVisible && selectedContacto && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full md:max-w-4xl lg:max-w-5xl ml-auto mr-auto relative">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="flex justify-between items-center pb-3 border-b mb-4">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">
-                    Detalles del Contacto
-                  </h3>
-                  <button
-                    onClick={() => setViewDialogVisible(false)}
-                    className="text-gray-400 hover:text-gray-500 focus:outline-none"
-                  >
-                    <span className="sr-only">Cerrar</span>
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Nombre Completo</p>
-                    <p className="mt-1 text-sm text-gray-900">{selectedContacto.nombre_completo}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Cargo</p>
-                    <p className="mt-1 text-sm text-gray-900">{selectedContacto.cargo}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Teléfono</p>
-                    <p className="mt-1 text-sm text-gray-900">{selectedContacto.telefono}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Email</p>
-                    <p className="mt-1 text-sm text-gray-900">{selectedContacto.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Municipalidad</p>
-                    <p className="mt-1 text-sm text-gray-900">{getMunicipalidadName(selectedContacto.id_municipalidad)}</p>
-                  </div>
-                </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="municipalidad" className="block text-sm font-medium text-gray-700 mb-1">
+              Municipalidad <span className="text-red-500">*</span>
+            </label>
+            <div className="relative" ref={municipalidadDropdownRef}>
+              <div 
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md cursor-pointer bg-white"
+                onClick={() => setShowMunicipalidadDropdown(!showMunicipalidadDropdown)}
+              >
+                {editData.id_municipalidad 
+                  ? municipalidades.find(m => m.id_municipalidad == editData.id_municipalidad)?.nombre || 'Seleccione una municipalidad'
+                  : 'Seleccione una municipalidad'}
+                <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                  <FiChevronDown className={`h-5 w-5 text-gray-400 ${showMunicipalidadDropdown ? 'hidden' : 'block'}`} />
+                  <FiChevronUp className={`h-5 w-5 text-gray-400 ${showMunicipalidadDropdown ? 'block' : 'hidden'}`} />
+                </span>
               </div>
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                  type="button"
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-                  onClick={() => setViewDialogVisible(false)}
-                >
-                  Cerrar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Create/Edit Dialog */}
-      {(createDialogVisible || editDialogVisible) && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full md:max-w-4xl lg:max-w-5xl ml-auto mr-auto relative">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="flex justify-between items-center pb-3 border-b mb-4">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">
-                    {editDialogVisible ? 'Editar Contacto' : 'Nuevo Contacto'}
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setEditDialogVisible(false);
-                      setCreateDialogVisible(false);
-                    }}
-                    className="text-gray-400 hover:text-gray-500 focus:outline-none"
-                  >
-                    <span className="sr-only">Cerrar</span>
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="municipalidad" className="block text-sm font-medium text-gray-700 mb-1">
-                      Municipalidad <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative" ref={municipalidadDropdownRef}>
-                      <div 
-                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md cursor-pointer bg-white"
-                        onClick={() => setShowMunicipalidadDropdown(!showMunicipalidadDropdown)}
-                      >
-                        {editData.id_municipalidad 
-                          ? municipalidades.find(m => m.id_municipalidad == editData.id_municipalidad)?.nombre || 'Seleccione una municipalidad'
-                          : 'Seleccione una municipalidad'}
-                        <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                          <FiChevronDown className={`h-5 w-5 text-gray-400 ${showMunicipalidadDropdown ? 'hidden' : 'block'}`} />
-                          <FiChevronUp className={`h-5 w-5 text-gray-400 ${showMunicipalidadDropdown ? 'block' : 'hidden'}`} />
-                        </span>
-                      </div>
-                      
-                      {showMunicipalidadDropdown && (
-                        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
-                          <div className="sticky top-0 z-10 bg-white p-2">
-                            <div className="relative">
-                              <input
-                                type="text"
-                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="Buscar municipalidad..."
-                                value={municipalidadSearchQuery}
-                                onChange={(e) => setMunicipalidadSearchQuery(e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <FiSearch className="h-5 w-5 text-gray-400" />
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {municipalidadesFiltered.length === 0 ? (
-                            <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
-                          ) : (
-                            municipalidadesFiltered.map((municipalidad) => (
-                              <div
-                                key={municipalidad.id_municipalidad}
-                                className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
-                                  editData.id_municipalidad == municipalidad.id_municipalidad ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                                }`}
-                                onClick={() => {
-                                  setEditData({...editData, id_municipalidad: municipalidad.id_municipalidad});
-                                  setShowMunicipalidadDropdown(false);
-                                }}
-                              >
-                                <div className="flex flex-col">
-                                  <span className="font-medium truncate">{municipalidad.nombre}</span>
-                                  <span className="text-xs text-gray-500 truncate">
-                                    {municipalidad.ubigeo && <span className="font-semibold mr-1">[{municipalidad.ubigeo}]</span>}
-                                    {municipalidad.departamento}, {municipalidad.provincia}, {municipalidad.distrito}
-                                  </span>
-                                </div>
-                                
-                                {editData.id_municipalidad == municipalidad.id_municipalidad && (
-                                  <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
-                                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                  </span>
-                                )}
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="nombre_completo" className="block text-sm font-medium text-gray-700">
-                      Nombre Completo
-                    </label>
-                    <input
-                      type="text"
-                      id="nombre_completo"
-                      value={editData.nombre_completo}
-                      onChange={(e) => setEditData({ ...editData, nombre_completo: e.target.value })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="cargo" className="block text-sm font-medium text-gray-700">
-                      Cargo
-                    </label>
-                    <input
-                      type="text"
-                      id="cargo"
-                      value={editData.cargo}
-                      onChange={(e) => setEditData({ ...editData, cargo: e.target.value })}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="telefono" className="block text-sm font-medium text-gray-700">
-                        Teléfono
-                      </label>
+              
+              {showMunicipalidadDropdown && (
+                <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                  <div className="sticky top-0 z-10 bg-white p-2">
+                    <div className="relative">
                       <input
                         type="text"
-                        id="telefono"
-                        value={editData.telefono}
-                        onChange={(e) => setEditData({ ...editData, telefono: e.target.value })}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        className="block w-full rounded-md border-0 py-1.5 pl-3 pr-10 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                        placeholder="Buscar municipalidad..."
+                        value={municipalidadSearchQuery}
+                        onChange={(e) => setMunicipalidadSearchQuery(e.target.value)}
                       />
-                    </div>
-                    <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        id="email"
-                        value={editData.email}
-                        onChange={(e) => setEditData({ ...editData, email: e.target.value })}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <FiSearch className="h-4 w-4 text-gray-400" />
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                  type="button"
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-                  onClick={handleSave}
-                >
-                  {editDialogVisible ? 'Guardar' : 'Crear'}
-                </button>
-                <button
-                  type="button"
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                  onClick={() => {
-                    setEditDialogVisible(false);
-                    setCreateDialogVisible(false);
-                  }}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Delete Dialog */}
-      {deleteDialogVisible && selectedContacto && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full" style={{ marginLeft: 'auto', marginRight: 'auto', left: '0', right: '0' }}>
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                    <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                  </div>
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900">
-                      Confirmar eliminación
-                    </h3>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-500">
-                        ¿Está seguro que desea eliminar el contacto <span className="font-bold">{selectedContacto.nombre_completo}</span>?
-                        Esta acción no se puede deshacer.
-                      </p>
-                    </div>
-                  </div>
+                  {municipalidadesFiltered.length === 0 ? (
+                    <div className="px-3 py-2 text-gray-500">No se encontraron resultados</div>
+                  ) : (
+                    municipalidadesFiltered.map((municipalidad) => (
+                      <div
+                        key={municipalidad.id_municipalidad}
+                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer flex flex-col"
+                        onClick={() => {
+                          setEditData({...editData, id_municipalidad: municipalidad.id_municipalidad});
+                          setShowMunicipalidadDropdown(false);
+                        }}
+                      >
+                        <span className="font-medium">{municipalidad.nombre}</span>
+                        <span className="text-xs text-gray-500">
+                          {municipalidad.ubigeo && `[${municipalidad.ubigeo}] `}
+                          {municipalidad.departamento}, {municipalidad.provincia}, {municipalidad.distrito}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
-              </div>
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                  type="button"
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
-                  onClick={() => {
-                    confirmDelete(selectedContacto);
-                    setDeleteDialogVisible(false);
-                  }}
-                >
-                  Eliminar
-                </button>
-                <button
-                  type="button"
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                  onClick={() => setDeleteDialogVisible(false)}
-                >
-                  Cancelar
-                </button>
-              </div>
+              )}
+            </div>
+          </div>
+          <div>
+            <label htmlFor="nombre_completo" className="block text-sm font-medium text-gray-700">
+              Nombre Completo <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="nombre_completo"
+              value={editData.nombre_completo}
+              onChange={(e) => setEditData({ ...editData, nombre_completo: e.target.value })}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="cargo" className="block text-sm font-medium text-gray-700">
+              Cargo
+            </label>
+            <input
+              type="text"
+              id="cargo"
+              value={editData.cargo}
+              onChange={(e) => setEditData({ ...editData, cargo: e.target.value })}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="telefono" className="block text-sm font-medium text-gray-700">
+                Teléfono
+              </label>
+              <input
+                type="text"
+                id="telefono"
+                value={editData.telefono}
+                onChange={(e) => setEditData({ ...editData, telefono: e.target.value })}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email
+              </label>
+              <input
+                type="email"
+                id="email"
+                value={editData.email}
+                onChange={(e) => setEditData({ ...editData, email: e.target.value })}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
             </div>
           </div>
         </div>
-      )}
+      </Modal>
+      
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={deleteDialogVisible}
+        onClose={() => setDeleteDialogVisible(false)}
+        onConfirm={() => {
+          confirmDelete(selectedContacto);
+          setDeleteDialogVisible(false);
+        }}
+        title="Confirmar eliminación"
+        message={`¿Está seguro que desea eliminar el contacto ${selectedContacto?.nombre_completo}? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        variant="danger"
+      />
     </div>
   );
 }
