@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiEdit, FiTrash2, FiChevronUp, FiChevronDown, FiPlus } from 'react-icons/fi';
 import { ADDRESS } from '../../utils.jsx';
-import { api } from '../../services/authService';
+import { api, apiService } from '../../services/authService';
 
 export default function TipoReunionList() {
   const [tiposReunion, setTiposReunion] = useState([]);
@@ -53,8 +53,8 @@ export default function TipoReunionList() {
   const loadTiposReunion = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`api/tipos-reunion`);
-      setTiposReunion(response.data || []);
+      const data = await apiService.getAll('tipos-reunion');
+      setTiposReunion(data || []);
     } catch (error) {
       console.error('Error al cargar tipos de reunión:', error);
       setToastMessage({
@@ -82,14 +82,14 @@ export default function TipoReunionList() {
       }
       
       if (dataToSend.id_tipo_reunion) {
-        await api.put(`api/tipos-reunion/${dataToSend.id_tipo_reunion}`, dataToSend);
+        await apiService.update('tipos-reunion', dataToSend.id_tipo_reunion, dataToSend);
         setToastMessage({
           severity: 'success',
           summary: 'Éxito',
           detail: 'Tipo de reunión actualizado correctamente'
         });
       } else {
-        await api.post(`api/tipos-reunion`, dataToSend);
+        await apiService.create('tipos-reunion', dataToSend);
         setToastMessage({
           severity: 'success',
           summary: 'Éxito',
@@ -99,7 +99,12 @@ export default function TipoReunionList() {
       
       setEditDialogVisible(false);
       setCreateDialogVisible(false);
-      loadTiposReunion(); // Recargar la lista de tipos de reunión
+      setEditData({
+        id_tipo_reunion: '',
+        descripcion: '',
+      });
+      
+      loadTiposReunion();
     } catch (error) {
       console.error('Error al guardar tipo de reunión:', error);
       setToastMessage({
@@ -112,14 +117,14 @@ export default function TipoReunionList() {
 
   const handleDelete = async () => {
     try {
-      await api.delete(`api/tipos-reunion/${selectedTipoReunion.id_tipo_reunion}`);
+      await apiService.delete('tipos-reunion', selectedTipoReunion.id_tipo_reunion);
       setToastMessage({
         severity: 'success',
         summary: 'Éxito',
         detail: 'Tipo de reunión eliminado correctamente'
       });
       setDeleteDialogVisible(false);
-      loadTiposReunion(); // Recargar la lista de tipos de reunión
+      loadTiposReunion();
     } catch (error) {
       console.error('Error al eliminar tipo de reunión:', error);
       setToastMessage({

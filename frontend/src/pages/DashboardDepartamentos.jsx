@@ -13,7 +13,7 @@ import {
 import PeruMap from '../components/common/PeruMap';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { ADDRESS } from '../utils.jsx';
-import { api } from '../services/authService';
+import { api, apiService } from '../services/authService';
 
 // Registrar todos los componentes de ChartJS
 ChartJS.register(...registerables);
@@ -52,31 +52,31 @@ const DashboardDepartamentos = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Cargar municipalidades
-      const municipalidadesRes = await api.get(`api/municipalidades`);
-      setMunicipalidades(municipalidadesRes.data || []);
+      // Cargar todos los datos usando Promise.all para optimizar
+      const [
+        municipalidadesData, 
+        estadosSeguimientoData, 
+        contactosData, 
+        eventosData,
+        estadosData
+      ] = await Promise.all([
+        apiService.getAll('municipalidades'),
+        apiService.getAll('estados-seguimiento'),
+        apiService.getAll('contactos'),
+        apiService.getAll('eventos'),
+        apiService.getAll('estados')
+      ]);
       
-      // Cargar estados de seguimiento
-      const estadosSeguimientoRes = await api.get(`api/estados-seguimiento`);
-      setEstadosSeguimiento(estadosSeguimientoRes.data || []);
-      
-      // Cargar contactos
-      const contactosRes = await api.get(`api/contactos`);
-      setContactos(contactosRes.data || []);
-      
-      // Cargar eventos
-      const eventosRes = await api.get(`api/eventos`);
-      setEventos(eventosRes.data || []);
-      
-      // Cargar estados
-      const estadosRes = await api.get(`api/estados`);
-      setEstados(estadosRes.data || []);
+      setMunicipalidades(municipalidadesData || []);
+      setEstadosSeguimiento(estadosSeguimientoData || []);
+      setContactos(contactosData || []);
+      setEventos(eventosData || []);
+      setEstados(estadosData || []);
       
       // Actualizar fecha de última actualización
-      setLastUpdateDate(new Date().toISOString());
-      
-      // Guardar fecha en localStorage
-      localStorage.setItem('dashboardLastUpdate', new Date().toISOString());
+      const now = new Date();
+      setLastUpdateDate(now);
+      localStorage.setItem('dashboardDepartamentosLastUpdate', now.toISOString());
     } catch (error) {
       console.error('Error al cargar datos:', error);
     } finally {
@@ -86,7 +86,7 @@ const DashboardDepartamentos = () => {
   
   // Cargar datos al montar el componente
   useEffect(() => {
-    const storedDate = localStorage.getItem('dashboardLastUpdate');
+    const storedDate = localStorage.getItem('dashboardDepartamentosLastUpdate');
     if (storedDate) {
       setLastUpdateDate(storedDate);
     }

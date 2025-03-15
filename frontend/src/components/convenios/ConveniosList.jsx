@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiSearch, FiPlus, FiTrash2, FiEdit, FiEye, FiChevronDown, FiChevronUp, FiChevronLeft, FiChevronRight, FiX, FiCalendar } from 'react-icons/fi';
 import { ADDRESS } from '../../utils.jsx';
-import { api } from '../../services/authService';
+import { api, apiService } from '../../services/authService';
 
 export default function ConveniosList() {
   const [convenios, setConvenios] = useState([]);
@@ -152,8 +152,8 @@ export default function ConveniosList() {
   const loadConvenios = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`api/convenios`);
-      setConvenios(response.data || []);
+      const data = await apiService.getAll('convenios');
+      setConvenios(data || []);
     } catch (error) {
       console.error('Error al cargar convenios:', error);
       showToast('error', 'Error', 'No se pudieron cargar los convenios');
@@ -164,10 +164,9 @@ export default function ConveniosList() {
 
   const loadMunicipalidades = async () => {
     try {
-      const response = await api.get(`api/municipalidades`);
-      const municipalidadesData = response.data || [];
-      setMunicipalidades(municipalidadesData);
-      setMunicipalidadesFiltered(municipalidadesData);
+      const municipalidadesData = await apiService.getAll('municipalidades');
+      setMunicipalidades(municipalidadesData || []);
+      setMunicipalidadesFiltered(municipalidadesData || []);
     } catch (error) {
       console.error('Error al cargar municipalidades:', error);
       showToast('error', 'Error', 'No se pudieron cargar las municipalidades');
@@ -180,56 +179,41 @@ export default function ConveniosList() {
 
   const handleSave = async () => {
     try {
-      // Crear una copia del objeto para no modificar el estado directamente
-      const dataToSend = { ...editData };
-      
-      // Asegurarse de que las fechas estén en el formato correcto para la API
-      if (dataToSend.fecha_firma && dataToSend.fecha_firma instanceof Date) {
-        dataToSend.fecha_firma = dataToSend.fecha_firma.toISOString().split('T')[0];
+      // Validación básica
+      if (!editData.id_municipalidad || !editData.tipo_convenio) {
+        showToast('warn', 'Advertencia', 'Por favor complete los campos requeridos');
+        return;
       }
-
-      // Asegurarse de que el monto sea un número
-      if (dataToSend.monto) {
-        dataToSend.monto = parseFloat(dataToSend.monto);
-      }
-
-      console.log('Datos a enviar:', dataToSend);
       
-      if (dataToSend.id_convenio) {
-        await api.put(`api/convenios/${dataToSend.id_convenio}`, dataToSend);
+      if (editData.id_convenio) {
+        // Actualizar
+        await apiService.update('convenios', editData.id_convenio, editData);
         showToast('success', 'Éxito', 'Convenio actualizado correctamente');
       } else {
-        await api.post(`api/convenios`, dataToSend);
+        // Crear
+        await apiService.create('convenios', editData);
         showToast('success', 'Éxito', 'Convenio creado correctamente');
       }
       
       setEditDialogVisible(false);
       setCreateDialogVisible(false);
-      setEditData({
-        id_convenio: '',
-        id_municipalidad: '',
-        tipo_convenio: '',
-        monto: '',
-        fecha_firma: null,
-        estado: '',
-        descripcion: ''
-      });
+      resetEditData();
       loadConvenios();
     } catch (error) {
-      console.error('Error al guardar:', error);
-      showToast('error', 'Error', 'Error al guardar el convenio');
+      console.error('Error al guardar convenio:', error);
+      showToast('error', 'Error', 'No se pudo guardar el convenio');
     }
   };
 
   const handleDelete = async () => {
     try {
-      await api.delete(`api/convenios/${selectedConvenio.id_convenio}`);
+      await apiService.delete('convenios', selectedConvenio.id_convenio);
       showToast('success', 'Éxito', 'Convenio eliminado correctamente');
       setDeleteDialogVisible(false);
       loadConvenios();
     } catch (error) {
-      console.error('Error al eliminar:', error);
-      showToast('error', 'Error', 'Error al eliminar el convenio');
+      console.error('Error al eliminar convenio:', error);
+      showToast('error', 'Error', 'No se pudo eliminar el convenio');
     }
   };
 
@@ -512,6 +496,23 @@ export default function ConveniosList() {
     );
   };
 
+  const handleOpenCreateDialog = () => {
+    resetEditData();
+    setCreateDialogVisible(true);
+  };
+
+  const resetEditData = () => {
+    setEditData({
+      id_convenio: '',
+      id_municipalidad: '',
+      tipo_convenio: '',
+      monto: '',
+      fecha_firma: null,
+      estado: '',
+      descripcion: ''
+    });
+  };
+
   return (
     <div className="p-6 bg-white rounded-lg shadow w-full max-w-full">
       {/* Toast Message */}
@@ -539,18 +540,7 @@ export default function ConveniosList() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
           <h2 className="text-2xl font-bold text-gray-800">Convenios</h2>
           <button
-            onClick={() => {
-              setEditData({
-                id_convenio: '',
-                id_municipalidad: '',
-                tipo_convenio: '',
-                monto: '',
-                fecha_firma: null,
-                estado: '',
-                descripcion: ''
-              });
-              setCreateDialogVisible(true);
-            }}
+            onClick={handleOpenCreateDialog}
             className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2 w-full sm:w-auto"
           >
             <FiPlus className="w-5 h-5" />

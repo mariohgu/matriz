@@ -5,7 +5,7 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(authService.isAuthenticated());
-  const [user, setUser] = useState(authService.getCurrentUser() || null);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Verificar el estado de autenticación al cargar el componente
@@ -14,9 +14,36 @@ export function AuthProvider({ children }) {
       try {
         if (authService.isAuthenticated()) {
           // Intentar obtener el perfil del usuario si hay un token
-          const userData = await authService.getUserProfile();
-          setUser(userData.user || authService.getCurrentUser());
-          setAuth(true);
+          try {
+            const userData = await authService.getUserProfile();
+            if (userData && userData.user) {
+              setUser(userData.user);
+              setAuth(true);
+            } else {
+              // Si no se pudo obtener el perfil, intentar con el usuario almacenado
+              const storedUser = authService.getCurrentUser();
+              if (storedUser) {
+                setUser(storedUser);
+                setAuth(true);
+              } else {
+                // Si tampoco hay usuario almacenado, considerar que no hay sesión
+                setAuth(false);
+                setUser(null);
+                authService.logout(); // Limpiar cualquier token inválido
+              }
+            }
+          } catch (profileError) {
+            console.error('Error al obtener perfil de usuario:', profileError);
+            const storedUser = authService.getCurrentUser();
+            if (storedUser) {
+              setUser(storedUser);
+              setAuth(true);
+            } else {
+              setAuth(false);
+              setUser(null);
+              authService.logout(); // Limpiar cualquier token inválido
+            }
+          }
         } else {
           setAuth(false);
           setUser(null);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FiSearch, FiPlus, FiTrash2, FiEdit, FiEye, FiChevronDown, FiChevronUp, FiChevronLeft, FiChevronRight, FiX, FiCalendar } from 'react-icons/fi';
 import { ADDRESS } from '../../utils.jsx';
-import { api } from '../../services/authService';
+import { api, apiService } from '../../services/authService';
 
 export default function OficiosList() {
   const [oficios, setOficios] = useState([]);
@@ -101,8 +101,8 @@ export default function OficiosList() {
   const loadOficios = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`api/oficios`);
-      setOficios(response.data || []);
+      const data = await apiService.getAll('oficios');
+      setOficios(data || []);
     } catch (error) {
       console.error('Error al cargar oficios:', error);
       showToast('error', 'Error', 'No se pudieron cargar los oficios');
@@ -113,8 +113,8 @@ export default function OficiosList() {
 
   const loadMunicipalidades = async () => {
     try {
-      const response = await api.get(`api/municipalidades`);
-      setMunicipalidades(response.data || []);
+      const data = await apiService.getAll('municipalidades');
+      setMunicipalidades(data || []);
     } catch (error) {
       console.error('Error al cargar municipalidades:', error);
       showToast('error', 'Error', 'No se pudieron cargar las municipalidades');
@@ -127,51 +127,41 @@ export default function OficiosList() {
 
   const handleSave = async () => {
     try {
-      // Crear una copia del objeto para no modificar el estado directamente
-      const dataToSend = { ...editData };
-      
-      // Asegurarse de que las fechas estén en el formato correcto para la API
-      if (dataToSend.fecha_envio && dataToSend.fecha_envio instanceof Date) {
-        dataToSend.fecha_envio = dataToSend.fecha_envio.toISOString().split('T')[0];
+      // Validación básica
+      if (!editData.id_municipalidad || !editData.asunto || !editData.numero_oficio) {
+        showToast('warn', 'Advertencia', 'Por favor complete los campos requeridos');
+        return;
       }
-
-      console.log('Datos a enviar:', dataToSend);
       
-      if (dataToSend.id_oficio) {
-        await api.put(`api/oficios/${dataToSend.id_oficio}`, dataToSend);
+      if (editData.id_oficio) {
+        // Actualizar
+        await apiService.update('oficios', editData.id_oficio, editData);
         showToast('success', 'Éxito', 'Oficio actualizado correctamente');
       } else {
-        await api.post(`api/oficios`, dataToSend);
+        // Crear
+        await apiService.create('oficios', editData);
         showToast('success', 'Éxito', 'Oficio creado correctamente');
       }
       
       setEditDialogVisible(false);
       setCreateDialogVisible(false);
-      setEditData({
-        id_oficio: '',
-        id_municipalidad: '',
-        numero_oficio: '',
-        fecha_envio: null,
-        asunto: '',
-        contenido: '',
-        estado: ''
-      });
+      resetEditData();
       loadOficios();
     } catch (error) {
-      console.error('Error al guardar:', error);
-      showToast('error', 'Error', 'Error al guardar el oficio');
+      console.error('Error al guardar oficio:', error);
+      showToast('error', 'Error', 'No se pudo guardar el oficio');
     }
   };
 
   const handleDelete = async () => {
     try {
-      await api.delete(`api/oficios/${selectedOficio.id_oficio}`);
+      await apiService.delete('oficios', selectedOficio.id_oficio);
       showToast('success', 'Éxito', 'Oficio eliminado correctamente');
       setDeleteDialogVisible(false);
       loadOficios();
     } catch (error) {
-      console.error('Error al eliminar:', error);
-      showToast('error', 'Error', 'Error al eliminar el oficio');
+      console.error('Error al eliminar oficio:', error);
+      showToast('error', 'Error', 'No se pudo eliminar el oficio');
     }
   };
 
@@ -422,6 +412,18 @@ export default function OficiosList() {
     );
   };
 
+  const resetEditData = () => {
+    setEditData({
+      id_oficio: '',
+      id_municipalidad: '',
+      numero_oficio: '',
+      fecha_envio: null,
+      asunto: '',
+      contenido: '',
+      estado: ''
+    });
+  };
+
   return (
     <div className="p-6 bg-white rounded-lg shadow w-full max-w-full">
       {/* Toast Message */}
@@ -450,15 +452,7 @@ export default function OficiosList() {
           <h2 className="text-2xl font-bold text-gray-800">Oficios</h2>
           <button
             onClick={() => {
-              setEditData({
-                id_oficio: '',
-                id_municipalidad: '',
-                numero_oficio: '',
-                fecha_envio: null,
-                asunto: '',
-                contenido: '',
-                estado: 'Borrador'
-              });
+              resetEditData();
               setCreateDialogVisible(true);
             }}
             className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2 w-full sm:w-auto"

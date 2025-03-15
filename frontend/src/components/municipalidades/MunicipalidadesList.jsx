@@ -92,17 +92,33 @@ export default function MunicipalidadesList() {
     }
   };
 
+  const resetEditData = () => {
+    setEditData({
+      id_municipalidad: '',
+      nombre: '',
+      departamento: '',
+      region: '',
+      region_natural: '',
+      provincia: '',
+      distrito: '',
+      ubigeo: '',
+      nivel: '',
+      X: '',
+      Y: ''
+    });
+  };
+
   const handleSave = async () => {
     try {
       if (editData.id_municipalidad) {
-        await api.put(`api/municipalidades/${editData.id_municipalidad}`, editData);
+        await apiService.update('municipalidades', editData.id_municipalidad, editData);
         setToastMessage({
           severity: 'success',
           summary: 'Éxito',
           detail: 'Municipalidad actualizada correctamente'
         });
       } else {
-        await api.post(`api/municipalidades`, editData);
+        await apiService.create('municipalidades', editData);
         setToastMessage({
           severity: 'success',
           summary: 'Éxito',
@@ -111,19 +127,7 @@ export default function MunicipalidadesList() {
       }
       setEditDialogVisible(false);
       setCreateDialogVisible(false);
-      setEditData({
-        id_municipalidad: '',
-        nombre: '',
-        departamento: '',
-        region: '',
-        region_natural: '',
-        provincia: '',
-        distrito: '',
-        ubigeo: '',
-        nivel: '',
-        X: '',
-        Y: ''
-      });
+      resetEditData();
       loadMunicipalidades();
     } catch (error) {
       console.error('Error al guardar:', error);
@@ -137,7 +141,7 @@ export default function MunicipalidadesList() {
 
   const confirmDelete = async (rowData) => {
     try {
-      await api.delete(`api/municipalidades/${rowData.id_municipalidad}`);
+      await apiService.delete('municipalidades', rowData.id_municipalidad);
       setToastMessage({
         severity: 'success',
         summary: 'Éxito',
@@ -251,16 +255,7 @@ export default function MunicipalidadesList() {
           <h2 className="text-2xl font-bold text-gray-800">Municipalidades</h2>
           <button
             onClick={() => {
-              setEditData({
-                id_municipalidad: '',
-                nombre: '',
-                departamento: '',
-                region: '',
-                region_natural: '',
-                provincia: '',
-                distrito: '',
-                ubigeo: '',
-              });
+              resetEditData();
               setCreateDialogVisible(true);
             }}
             className="ml-4 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2"

@@ -115,8 +115,16 @@ const authService = {
 
   // Obtener información del usuario actual
   getCurrentUser: () => {
-    const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    try {
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return null;
+      return JSON.parse(userStr);
+    } catch (error) {
+      console.error('Error al obtener el usuario actual:', error);
+      // Si hay un error al parsear, limpiar los datos corruptos
+      localStorage.removeItem('user');
+      return null;
+    }
   },
 
   // Verificar si el usuario está autenticado

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiEdit, FiTrash2, FiChevronUp, FiChevronDown, FiPlus } from 'react-icons/fi';
 import { ADDRESS } from '../../utils.jsx';
-import { api } from '../../services/authService';
+import { api, apiService } from '../../services/authService';
 
 export default function EstadoList() {
   const [estados, setEstados] = useState([]);
@@ -53,8 +53,8 @@ export default function EstadoList() {
   const loadEstados = async () => {
     setLoading(true);
     try {
-      const response = await api.get(`api/estados`);
-      setEstados(response.data || []);
+      const data = await apiService.getAll('estados');
+      setEstados(data || []);
     } catch (error) {
       console.error('Error al cargar estados:', error);
       setToastMessage({
@@ -69,42 +69,51 @@ export default function EstadoList() {
 
   const handleSave = async () => {
     try {
-      if (editData.id_estado) {
-        await api.put(`api/estados/${editData.id_estado}`, editData);
+      const dataToSend = { ...editData };
+      
+      // Validar que el campo descripción no esté vacío
+      if (!dataToSend.descripcion.trim()) {
+        setToastMessage({
+          severity: 'warn',
+          summary: 'Advertencia',
+          detail: 'La descripción no puede estar vacía'
+        });
+        return;
+      }
+      
+      if (dataToSend.id_estado) {
+        await apiService.update('estados', dataToSend.id_estado, dataToSend);
         setToastMessage({
           severity: 'success',
           summary: 'Éxito',
           detail: 'Estado actualizado correctamente'
         });
       } else {
-        await api.post(`api/estados`, editData);
+        await apiService.create('estados', dataToSend);
         setToastMessage({
           severity: 'success',
           summary: 'Éxito',
           detail: 'Estado creado correctamente'
         });
       }
+      
       setEditDialogVisible(false);
       setCreateDialogVisible(false);
-      setEditData({
-        id_estado: '',
-        descripcion: '',
-      });
+      resetEditData();
       loadEstados();
     } catch (error) {
-      console.error('Error al guardar:', error);
-      const errorMsg = error.response?.data?.message || 'Error al guardar el estado';
+      console.error('Error al guardar estado:', error);
       setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: errorMsg
+        detail: 'No se pudo guardar el estado'
       });
     }
   };
 
   const confirmDelete = async (rowData) => {
     try {
-      await api.delete(`api/estados/${rowData.id_estado}`);
+      await apiService.delete('estados', rowData.id_estado);
       setToastMessage({
         severity: 'success',
         summary: 'Éxito',
@@ -171,6 +180,18 @@ export default function EstadoList() {
     setCurrentPage(page);
   };
 
+  const handleOpenCreateDialog = () => {
+    resetEditData();
+    setCreateDialogVisible(true);
+  };
+
+  const resetEditData = () => {
+    setEditData({
+      id_estado: '',
+      descripcion: '',
+    });
+  };
+
   return (
     <div className="p-6 bg-white rounded-lg shadow w-full max-w-full">
       {/* Toast Message */}
@@ -193,14 +214,8 @@ export default function EstadoList() {
         <div className="flex items-center">
           <h2 className="text-2xl font-bold text-gray-800">Estados</h2>
           <button
-            onClick={() => {
-              setEditData({
-                id_estado: '',
-                descripcion: '',
-              });
-              setCreateDialogVisible(true);
-            }}
-            className="ml-4 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2"
+            onClick={handleOpenCreateDialog}
+            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2 w-full sm:w-auto"
           >
             <FiPlus className="w-5 h-5" />
             <span>Nuevo Estado</span>

@@ -116,13 +116,57 @@ const apiService = {
       throw error;
     }
   },
-
-  // Puedes agregar más métodos para otras entidades como:
-  // - Contactos
-  // - Estados de seguimiento
-  // - Oficios
-  // - Convenios
-  // etc.
+  
+  // Métodos genéricos para cualquier entidad
+  getAll: async (entity) => {
+    try {
+      const response = await api.get(`/${entity}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error al obtener lista de ${entity}:`, error);
+      throw error;
+    }
+  },
+  
+  getById: async (entity, id) => {
+    try {
+      const response = await api.get(`/${entity}/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error al obtener ${entity} con ID ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  create: async (entity, data) => {
+    try {
+      const response = await api.post(`/${entity}`, data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error al crear ${entity}:`, error);
+      throw error;
+    }
+  },
+  
+  update: async (entity, id, data) => {
+    try {
+      const response = await api.put(`/${entity}/${id}`, data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error al actualizar ${entity} con ID ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  delete: async (entity, id) => {
+    try {
+      const response = await api.delete(`/${entity}/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error al eliminar ${entity} con ID ${id}:`, error);
+      throw error;
+    }
+  }
 };
 
 export default apiService;
