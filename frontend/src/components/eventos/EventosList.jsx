@@ -592,6 +592,7 @@ export default function EventosList() {
         isOpen={createDialogVisible}
         onClose={() => setCreateDialogVisible(false)}
         title="Crear Evento"
+        size="xl"
         footer={
           <div className="flex justify-end gap-2">
             <button
@@ -610,47 +611,123 @@ export default function EventosList() {
         }
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Selector de Municipalidad mejorado */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
               Municipalidad <span className="text-red-500">*</span>
             </label>
-            <select
-              className="w-full border border-gray-300 rounded-md p-2"
-              value={editData.id_municipalidad || ''}
-              onChange={(e) => {
-                const id = e.target.value;
-                setEditData(prev => ({ ...prev, id_municipalidad: id, id_contacto: '' }));
-                if (id) {
-                  loadContactosPorMunicipalidad(id);
-                }
-              }}
-            >
-              <option value="">Seleccione una municipalidad</option>
-              {municipalidades.map(muni => (
-                <option key={muni.id_municipalidad} value={muni.id_municipalidad}>
-                  {muni.nombre}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <div 
+                className="w-full border border-gray-300 rounded-md p-2 flex justify-between items-center cursor-pointer"
+                onClick={() => setShowMunicipalidadDropdown(!showMunicipalidadDropdown)}
+              >
+                <span>
+                  {editData.id_municipalidad
+                    ? municipalidades.find(m => m.id_municipalidad.toString() === editData.id_municipalidad.toString())?.nombre || 'Seleccione una municipalidad'
+                    : 'Seleccione una municipalidad'}
+                </span>
+                <FiChevronDown className={`transition-transform ${showMunicipalidadDropdown ? 'rotate-180' : ''}`} />
+              </div>
+              
+              {showMunicipalidadDropdown && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+                    <div className="relative">
+                      <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        className="w-full pl-10 pr-4 py-2 border rounded-md"
+                        placeholder="Buscar evento por municipalidad..."
+                        value={municipalidadSearchQuery}
+                        onChange={e => setMunicipalidadSearchQuery(e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                      />
+                    </div>
+                  </div>
+                  <div className="py-1">
+                    {municipalidades
+                      .filter(m => m.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()))
+                      .map(m => (
+                        <div 
+                          key={m.id_municipalidad} 
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                          onClick={() => {
+                            setEditData(prev => ({ ...prev, id_municipalidad: m.id_municipalidad, id_contacto: '' }));
+                            loadContactosPorMunicipalidad(m.id_municipalidad);
+                            setShowMunicipalidadDropdown(false);
+                          }}
+                        >
+                          <div className="font-medium">{m.nombre}</div>
+                          <div className="text-xs text-gray-500">
+                            [{m.id_municipalidad}]
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           
+          {/* Selector de Contacto mejorado */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
               Contacto <span className="text-red-500">*</span>
             </label>
-            <select
-              className="w-full border border-gray-300 rounded-md p-2"
-              value={editData.id_contacto || ''}
-              onChange={(e) => setEditData(prev => ({ ...prev, id_contacto: e.target.value }))}
-              disabled={!editData.id_municipalidad}
-            >
-              <option value="">Seleccione un contacto</option>
-              {contactos.map(contacto => (
-                <option key={contacto.id_contacto} value={contacto.id_contacto}>
-                  {contacto.nombre_completo}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <div 
+                className={`w-full border border-gray-300 rounded-md p-2 flex justify-between items-center ${editData.id_municipalidad ? 'cursor-pointer' : 'cursor-not-allowed bg-gray-100'}`}
+                onClick={() => {
+                  if (editData.id_municipalidad) {
+                    setShowContactoDropdown(!showContactoDropdown);
+                  }
+                }}
+              >
+                <span>
+                  {editData.id_contacto
+                    ? contactos.find(c => c.id_contacto.toString() === editData.id_contacto.toString())?.nombre_completo || 'Seleccione un contacto'
+                    : 'Seleccione un contacto'}
+                </span>
+                <FiChevronDown className={`transition-transform ${showContactoDropdown ? 'rotate-180' : ''}`} />
+              </div>
+              
+              {showContactoDropdown && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+                    <div className="relative">
+                      <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        className="w-full pl-10 pr-4 py-2 border rounded-md"
+                        placeholder="Buscar contacto..."
+                        value={contactoSearchQuery}
+                        onChange={e => setContactoSearchQuery(e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                      />
+                    </div>
+                  </div>
+                  <div className="py-1">
+                    {contactos
+                      .filter(c => c.nombre_completo.toLowerCase().includes(contactoSearchQuery.toLowerCase()))
+                      .map(c => (
+                        <div 
+                          key={c.id_contacto} 
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                          onClick={() => {
+                            setEditData(prev => ({ ...prev, id_contacto: c.id_contacto }));
+                            setShowContactoDropdown(false);
+                          }}
+                        >
+                          <div className="font-medium">{c.nombre_completo}</div>
+                          <div className="text-xs text-gray-500">
+                            [{c.id_contacto}]
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           
           <div>
@@ -723,6 +800,7 @@ export default function EventosList() {
         isOpen={editDialogVisible}
         onClose={() => setEditDialogVisible(false)}
         title="Editar Evento"
+        size="xl"
         footer={
           <div className="flex justify-end gap-2">
             <button
@@ -741,47 +819,123 @@ export default function EventosList() {
         }
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Selector de Municipalidad mejorado */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
               Municipalidad <span className="text-red-500">*</span>
             </label>
-            <select
-              className="w-full border border-gray-300 rounded-md p-2"
-              value={editData.id_municipalidad || ''}
-              onChange={(e) => {
-                const id = e.target.value;
-                setEditData(prev => ({ ...prev, id_municipalidad: id, id_contacto: '' }));
-                if (id) {
-                  loadContactosPorMunicipalidad(id);
-                }
-              }}
-            >
-              <option value="">Seleccione una municipalidad</option>
-              {municipalidades.map(muni => (
-                <option key={muni.id_municipalidad} value={muni.id_municipalidad}>
-                  {muni.nombre}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <div 
+                className="w-full border border-gray-300 rounded-md p-2 flex justify-between items-center cursor-pointer"
+                onClick={() => setShowMunicipalidadDropdown(!showMunicipalidadDropdown)}
+              >
+                <span>
+                  {editData.id_municipalidad
+                    ? municipalidades.find(m => m.id_municipalidad.toString() === editData.id_municipalidad.toString())?.nombre || 'Seleccione una municipalidad'
+                    : 'Seleccione una municipalidad'}
+                </span>
+                <FiChevronDown className={`transition-transform ${showMunicipalidadDropdown ? 'rotate-180' : ''}`} />
+              </div>
+              
+              {showMunicipalidadDropdown && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+                    <div className="relative">
+                      <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        className="w-full pl-10 pr-4 py-2 border rounded-md"
+                        placeholder="Buscar evento por municipalidad..."
+                        value={municipalidadSearchQuery}
+                        onChange={e => setMunicipalidadSearchQuery(e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                      />
+                    </div>
+                  </div>
+                  <div className="py-1">
+                    {municipalidades
+                      .filter(m => m.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()))
+                      .map(m => (
+                        <div 
+                          key={m.id_municipalidad} 
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                          onClick={() => {
+                            setEditData(prev => ({ ...prev, id_municipalidad: m.id_municipalidad, id_contacto: '' }));
+                            loadContactosPorMunicipalidad(m.id_municipalidad);
+                            setShowMunicipalidadDropdown(false);
+                          }}
+                        >
+                          <div className="font-medium">{m.nombre}</div>
+                          <div className="text-xs text-gray-500">
+                            [{m.id_municipalidad}]
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           
+          {/* Selector de Contacto mejorado */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
               Contacto <span className="text-red-500">*</span>
             </label>
-            <select
-              className="w-full border border-gray-300 rounded-md p-2"
-              value={editData.id_contacto || ''}
-              onChange={(e) => setEditData(prev => ({ ...prev, id_contacto: e.target.value }))}
-              disabled={!editData.id_municipalidad}
-            >
-              <option value="">Seleccione un contacto</option>
-              {contactos.map(contacto => (
-                <option key={contacto.id_contacto} value={contacto.id_contacto}>
-                  {contacto.nombre_completo}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <div 
+                className={`w-full border border-gray-300 rounded-md p-2 flex justify-between items-center ${editData.id_municipalidad ? 'cursor-pointer' : 'cursor-not-allowed bg-gray-100'}`}
+                onClick={() => {
+                  if (editData.id_municipalidad) {
+                    setShowContactoDropdown(!showContactoDropdown);
+                  }
+                }}
+              >
+                <span>
+                  {editData.id_contacto
+                    ? contactos.find(c => c.id_contacto.toString() === editData.id_contacto.toString())?.nombre_completo || 'Seleccione un contacto'
+                    : 'Seleccione un contacto'}
+                </span>
+                <FiChevronDown className={`transition-transform ${showContactoDropdown ? 'rotate-180' : ''}`} />
+              </div>
+              
+              {showContactoDropdown && (
+                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+                    <div className="relative">
+                      <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        className="w-full pl-10 pr-4 py-2 border rounded-md"
+                        placeholder="Buscar contacto..."
+                        value={contactoSearchQuery}
+                        onChange={e => setContactoSearchQuery(e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                      />
+                    </div>
+                  </div>
+                  <div className="py-1">
+                    {contactos
+                      .filter(c => c.nombre_completo.toLowerCase().includes(contactoSearchQuery.toLowerCase()))
+                      .map(c => (
+                        <div 
+                          key={c.id_contacto} 
+                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                          onClick={() => {
+                            setEditData(prev => ({ ...prev, id_contacto: c.id_contacto }));
+                            setShowContactoDropdown(false);
+                          }}
+                        >
+                          <div className="font-medium">{c.nombre_completo}</div>
+                          <div className="text-xs text-gray-500">
+                            [{c.id_contacto}]
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           
           <div>
