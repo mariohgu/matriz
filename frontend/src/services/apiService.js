@@ -140,10 +140,15 @@ const apiService = {
   
   create: async (entity, data) => {
     try {
+      console.log(`Enviando datos a /${entity}:`, data);
       const response = await api.post(`/${entity}`, data);
+      console.log(`Respuesta del servidor para ${entity}:`, response.data);
       return response.data;
     } catch (error) {
       console.error(`Error al crear ${entity}:`, error);
+      if (error.response) {
+        console.error('Detalles del error:', error.response.data);
+      }
       throw error;
     }
   },

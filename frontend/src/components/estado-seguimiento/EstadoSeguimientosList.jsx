@@ -218,15 +218,12 @@ export default function EstadoSeguimientosList() {
 
   const loadContactosPorEvento = async (eventoId) => {
     try {
-      const eventoResponse = await apiService.get('eventos', eventoId);
-      const evento = eventoResponse.data;
+      const eventoResponse = await apiService.getById('eventos', eventoId);
+      const evento = eventoResponse;
       
       if (evento && evento.id_municipalidad) {
         const response = await apiService.getAll(`municipalidades/${evento.id_municipalidad}/contactos`);
-        const contactosFiltrados = response.data.filter(
-          contacto => contacto.id_municipalidad === parseInt(evento.id_municipalidad)
-        );
-        setContactos(contactosFiltrados);
+        setContactos(response);
       } else {
         setContactos([]);
       }

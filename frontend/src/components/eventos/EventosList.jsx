@@ -136,7 +136,7 @@ export default function EventosList() {
     
     try {
       // Usar el endpoint estándar de contactos y filtrar por id_municipalidad
-      const response = await api.get(`api/contactos`);
+      const response = await api.get(`contactos`);
       // Filtrar los contactos que pertenecen a la municipalidad seleccionada
       const contactosFiltrados = response.data.filter(
         contacto => contacto.id_municipalidad === parseInt(id_municipalidad)

@@ -24,7 +24,7 @@ export default function MunicipalidadesList() {
     nombre: '',
     departamento: '',
     region: '',
-    region_natural: '',
+    region_natural: 'No especificada', // Valor predeterminado
     provincia: '',
     distrito: '',
     ubigeo: '',
@@ -98,7 +98,7 @@ export default function MunicipalidadesList() {
       nombre: '',
       departamento: '',
       region: '',
-      region_natural: '',
+      region_natural: 'No especificada', // Valor predeterminado
       provincia: '',
       distrito: '',
       ubigeo: '',
@@ -110,6 +110,19 @@ export default function MunicipalidadesList() {
 
   const handleSave = async () => {
     try {
+      // Validación de campos obligatorios
+      const requiredFields = ['nombre', 'ubigeo', 'departamento', 'provincia', 'distrito', 'region', 'region_natural'];
+      const missingFields = requiredFields.filter(field => !editData[field]);
+      
+      if (missingFields.length > 0) {
+        setToastMessage({
+          severity: 'error',
+          summary: 'Error de validación',
+          detail: `Los siguientes campos son obligatorios: ${missingFields.join(', ')}`
+        });
+        return;
+      }
+      
       if (editData.id_municipalidad) {
         await apiService.update('municipalidades', editData.id_municipalidad, editData);
         setToastMessage({
@@ -131,10 +144,22 @@ export default function MunicipalidadesList() {
       loadMunicipalidades();
     } catch (error) {
       console.error('Error al guardar:', error);
+      let errorMessage = 'Error al guardar la municipalidad';
+      
+      // Intentar obtener un mensaje más específico del error
+      if (error.response && error.response.data) {
+        if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.errors) {
+          const errorMessages = Object.values(error.response.data.errors).flat();
+          errorMessage = errorMessages.join(', ');
+        }
+      }
+      
       setToastMessage({
         severity: 'error',
         summary: 'Error',
-        detail: 'Error al guardar la municipalidad'
+        detail: errorMessage
       });
     }
   };
@@ -816,7 +841,7 @@ export default function MunicipalidadesList() {
                     </div>
                     <div>
                       <label htmlFor="region_natural" className="block text-sm font-medium text-gray-700">
-                        Región Natural
+                        Región Natural <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -824,6 +849,7 @@ export default function MunicipalidadesList() {
                         value={editData.region_natural}
                         onChange={(e) => setEditData({ ...editData, region_natural: e.target.value })}
                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        required
                       />
                     </div>
                   </div>

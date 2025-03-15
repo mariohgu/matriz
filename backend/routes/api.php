@@ -29,7 +29,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/hello', [HelloController::class, 'index']);
     
     // Rutas para el CRUD de Municipalidades
-    Route::apiResource('municipalidades', MunicipalidadController::class);
+    Route::get('municipalidades', [MunicipalidadController::class, 'index']);
+    Route::get('municipalidades/{id}', [MunicipalidadController::class, 'show']);
+    Route::post('municipalidades', [MunicipalidadController::class, 'store']);
+    Route::put('municipalidades/{id}', [MunicipalidadController::class, 'update']);
+    Route::delete('municipalidades/{id}', [MunicipalidadController::class, 'destroy']);
     
     // Rutas para el CRUD de Contactos
     Route::apiResource('contactos', ContactoController::class);
@@ -63,11 +67,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('municipalidades/{id}/convenios', [ConvenioController::class, 'porMunicipalidad']);
     Route::post('convenios/por-fecha', [ConvenioController::class, 'porFecha']);
     Route::post('convenios/por-monto', [ConvenioController::class, 'porMonto']);
-    
-    // Rutas con permisos específicos (ejemplo)
-    Route::middleware('permission:crear_municipalidad')->post('municipalidades', [MunicipalidadController::class, 'store']);
-    Route::middleware('permission:editar_municipalidad')->put('municipalidades/{id}', [MunicipalidadController::class, 'update']);
-    Route::middleware('permission:eliminar_municipalidad')->delete('municipalidades/{id}', [MunicipalidadController::class, 'destroy']);
     
     // Rutas solo para administradores (ejemplo)
     Route::middleware('role:admin')->group(function () {
