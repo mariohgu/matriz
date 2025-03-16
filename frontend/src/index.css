@@ -1,94 +1,109 @@
+/* Tailwind base */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Ajustes de Tailwind y estilos base */
 @layer base {
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-weight: 400;
+
+    color-scheme: light dark;
+    color: rgba(255, 255, 255, 0.87);
+    background-color: #242424;
+
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  a {
+    font-weight: 500;
+    color: #646cff;
+    text-decoration: inherit;
   }
   a:hover {
-    color: #747bff;
+    color: #535bf2;
   }
+
+  /* 
+    Importante: quitar display:flex; place-items:center; del body 
+    y asegurar que html, body, #root tengan height: 100%.
+  */
+  html, body {
+    width: 100%;
+    height: 100%; /* Asegura altura completa */
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden; /* evita scroll horizontal */
+    min-width: 320px;
+  }
+  
+  /* #root también con height: 100% para pasarle la altura al sidebar */
+  #root {
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden;
+  }
+
+  /* 
+    Si deseas que tu contenido principal
+    se alinee o centre, hazlo en otro contenedor,
+    no directamente en body.
+  */
+
+  h1 {
+    font-size: 3.2em;
+    line-height: 1.1;
+  }
+
   button {
-    background-color: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    padding: 0.6em 1.2em;
+    font-size: 1em;
+    font-weight: 500;
+    font-family: inherit;
+    background-color: #1a1a1a;
+    cursor: pointer;
+    transition: border-color 0.25s;
   }
-}
+  button:hover {
+    border-color: #646cff;
+  }
+  button:focus,
+  button:focus-visible {
+    outline: 4px auto -webkit-focus-ring-color;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      color: #213547;
+      background-color: #ffffff;
+    }
+    a:hover {
+      color: #747bff;
+    }
+    button {
+      background-color: #f9f9f9;
+    }
+  }
 }
 
-/* Estilos globales para evitar barras de desplazamiento horizontal */
-/* Este enfoque asegura que el contenido se ajuste correctamente sin causar scroll horizontal */
+/* Contenedor global para evitar scroll horizontal */
 html, body {
-  width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
-  margin: 0;
-  padding: 0;
 }
 
 #root {
-  width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
 }
 
+/* Ejemplo de un .container genérico, 
+   si lo usas para tu layout y deseas padding */
 .container {
   width: 100%;
   max-width: 100%;
@@ -96,13 +111,7 @@ html, body {
   padding-right: 1rem;
 }
 
-/* Eliminar margen y padding derecho que pueden estar causando el espacio en blanco */
-.bg-gray-100, 
-.flex-1, 
-.w-full {
-  box-sizing: border-box;
-}
-
+/* Estilos para tarjetas / fields */
 .card {
   @apply bg-white rounded-lg shadow-md p-6;
 }
@@ -115,4 +124,9 @@ html, body {
   @apply block text-gray-700 text-sm font-bold mb-2;
 }
 
-/* Estilos personalizados para componentes UI */
+/* Ajuste para que ciertos elementos no añadan margen/padding extra */
+.bg-gray-100, 
+.flex-1, 
+.w-full {
+  box-sizing: border-box;
+}
