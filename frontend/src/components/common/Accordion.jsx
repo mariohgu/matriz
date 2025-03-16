@@ -4,7 +4,7 @@ export default function Accordion({ summary, children }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div>
+    <div className="mb-2">
       <div
         onClick={() => setIsOpen(!isOpen)}
         className="cursor-pointer"
@@ -13,7 +13,7 @@ export default function Accordion({ summary, children }) {
       </div>
       <div
         className={`overflow-hidden transition-all duration-300 ${
-          isOpen ? 'max-h-96' : 'max-h-0'
+          isOpen ? 'max-h-[500px]' : 'max-h-0'
         }`}
       >
         {children}

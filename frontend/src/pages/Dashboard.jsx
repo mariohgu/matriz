@@ -1,42 +1,81 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api, authService, apiService } from '../services/authService';
 import { ADDRESS } from '../utils.jsx';
-import { FiCalendar, FiUsers, FiActivity, FiBarChart2, FiClock, FiFilter, FiSearch, FiChevronDown, FiChevronUp } from 'react-icons/fi';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from 'chart.js';
+import {
+  FiCalendar,
+  FiUsers,
+  FiActivity,
+  FiBarChart2,
+  FiClock,
+  FiFilter,
+  FiSearch,
+  FiChevronDown,
+  FiChevronUp
+} from 'react-icons/fi';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  PointElement,
+  LineElement
+} from 'chart.js';
 import { Bar, Pie, Line } from 'react-chartjs-2';
 
-// Register ChartJS components
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
+// Registrar componentes para ChartJS
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  PointElement,
+  LineElement
+);
 
 function Dashboard() {
-  // Estado para almacenar datos
+  // ----------------------
+  // ESTADOS
+  // ----------------------
   const [municipalidades, setMunicipalidades] = useState([]);
   const [estadosSeguimiento, setEstadosSeguimiento] = useState([]);
   const [contactos, setContactos] = useState([]);
   const [eventos, setEventos] = useState([]);
-  const [estados, setEstados] = useState([]); // Añadir estado para almacenar los estados
+  const [estados, setEstados] = useState([]); // Estados disponibles (para descripcion)
   const [loading, setLoading] = useState(true);
+
+  // Fecha de última actualización
   const [lastUpdateDate, setLastUpdateDate] = useState(new Date());
-  
+
   // Filtros
-  const [startDate, setStartDate] = useState(new Date(new Date().setMonth(new Date().getMonth() - 3)));
+  const [startDate, setStartDate] = useState(
+    new Date(new Date().setMonth(new Date().getMonth() - 3))
+  );
   const [endDate, setEndDate] = useState(new Date());
   const [selectedMunicipalidad, setSelectedMunicipalidad] = useState(null);
   const [municipalidadSearchQuery, setMunicipalidadSearchQuery] = useState('');
   const [showMunicipalidadDropdown, setShowMunicipalidadDropdown] = useState(false);
   const municipalidadDropdownRef = useRef(null);
-  
+
   // Datos procesados para gráficos
   const [interactionsByType, setInteractionsByType] = useState({});
   const [contactsByMunicipality, setContactsByMunicipality] = useState({});
   const [interactionsByMonth, setInteractionsByMonth] = useState({});
   const [interactionFrequency, setInteractionFrequency] = useState({});
-  
-  // Estado para el diálogo de visualización
+
+  // Modal o diálogo para visualizar detalles
   const [viewDialogVisible, setViewDialogVisible] = useState(false);
   const [selectedInteraction, setSelectedInteraction] = useState(null);
 
-  // Función auxiliar para formatear fechas
+  // ----------------------
+  // FUNCIONES AUXILIARES
+  // ----------------------
   const formatDate = (value) => {
     if (!value) return '';
     const date = new Date(value);
@@ -47,76 +86,75 @@ function Dashboard() {
     });
   };
 
-  // Función para obtener la descripción del estado
   const getEstadoDescripcion = (estadoSeguimiento) => {
     if (!estadoSeguimiento.id_estado_ref) return 'N/A';
-    
-    const estadoRef = estados.find(e => e.id_estado == estadoSeguimiento.id_estado_ref);
-    if (estadoRef) {
-      return estadoRef.descripcion || 'N/A';
-    }
-    
-    return 'N/A';
+    const estadoRef = estados.find((e) => e.id_estado === estadoSeguimiento.id_estado_ref);
+    return estadoRef ? estadoRef.descripcion || 'N/A' : 'N/A';
   };
 
-  // Componente TailwindCalendar para fechas
+  // ----------------------
+  // TAILWINDCALENDAR
+  // ----------------------
   const TailwindCalendar = ({ selectedDate, onChange, id, className }) => {
     const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
     const [isOpen, setIsOpen] = useState(false);
     const calendarRef = useRef(null);
-    
+
     useEffect(() => {
       const handleClickOutside = (event) => {
         if (calendarRef.current && !calendarRef.current.contains(event.target)) {
           setIsOpen(false);
         }
       };
-      
       document.addEventListener('mousedown', handleClickOutside);
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }, []);
-    
+
     const handleDateSelect = (date) => {
       onChange(date);
       setIsOpen(false);
     };
-    
+
     const navigateMonth = (step) => {
       const newDate = new Date(currentDate);
       newDate.setMonth(newDate.getMonth() + step);
       setCurrentDate(newDate);
     };
-    
+
     const monthNames = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+      'Enero',
+      'Febrero',
+      'Marzo',
+      'Abril',
+      'Mayo',
+      'Junio',
+      'Julio',
+      'Agosto',
+      'Septiembre',
+      'Octubre',
+      'Noviembre',
+      'Diciembre'
     ];
-    
     const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    
+
     const renderCalendarDays = () => {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
-      
       const firstDayOfMonth = new Date(year, month, 1).getDay();
-      
       const daysInMonth = new Date(year, month + 1, 0).getDate();
-      
+
       const days = [];
-      
       for (let i = 0; i < firstDayOfMonth; i++) {
-        days.push(
-          <div key={`empty-${i}`} className="h-8 w-8"></div>
-        );
+        days.push(<div key={`empty-${i}`} className="h-8 w-8"></div>);
       }
-      
+
       for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day);
         const isToday = new Date().toDateString() === date.toDateString();
         const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
-        
+
         days.push(
           <button
             key={`day-${day}`}
@@ -126,18 +164,17 @@ function Dashboard() {
               isSelected
                 ? 'bg-blue-500 text-white'
                 : isToday
-                  ? 'bg-blue-100 text-blue-800'
-                  : 'hover:bg-gray-100'
+                ? 'bg-blue-100 text-blue-800'
+                : 'hover:bg-gray-100'
             }`}
           >
             {day}
           </button>
         );
       }
-      
       return days;
     };
-    
+
     return (
       <div className="relative" ref={calendarRef}>
         <div className={`relative ${className}`}>
@@ -154,7 +191,7 @@ function Dashboard() {
             <FiCalendar className="h-5 w-5 text-gray-400" />
           </div>
         </div>
-        
+
         {isOpen && (
           <div className="absolute z-50 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-64">
             <div className="flex justify-between items-center mb-4">
@@ -163,7 +200,12 @@ function Dashboard() {
                 onClick={() => navigateMonth(-1)}
                 className="p-1 rounded-full hover:bg-gray-100"
               >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
@@ -175,30 +217,28 @@ function Dashboard() {
                 onClick={() => navigateMonth(1)}
                 className="p-1 rounded-full hover:bg-gray-100"
               >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
             </div>
-            
             <div className="grid grid-cols-7 gap-1 mb-2">
-              {dayNames.map(day => (
+              {dayNames.map((day) => (
                 <div key={day} className="h-8 w-8 flex items-center justify-center text-xs text-gray-500">
                   {day}
                 </div>
               ))}
             </div>
-            
-            <div className="grid grid-cols-7 gap-1">
-              {renderCalendarDays()}
-            </div>
-            
+            <div className="grid grid-cols-7 gap-1">{renderCalendarDays()}</div>
             <div className="mt-4 flex justify-between">
               <button
                 type="button"
-                onClick={() => {
-                  handleDateSelect(new Date());
-                }}
+                onClick={() => handleDateSelect(new Date())}
                 className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
               >
                 Hoy
@@ -220,49 +260,63 @@ function Dashboard() {
     );
   };
 
-  useEffect(() => {
-    // Cargar todos los datos necesarios
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [
-          municipalidadesRes,
-          estadosSeguimientoRes,
-          contactosRes,
-          eventosRes,
-          estadosRes // Añadir llamada para obtener los estados
-        ] = await Promise.all([
+  // -------------------------------------------------
+  // CARGA DE DATOS PRINCIPAL (SÓLO ACTUALIZA ESTADO)
+  // -------------------------------------------------
+  const loadAllData = async () => {
+    setLoading(true);
+    try {
+      const [municipalidadesRes, estadosSeguimientoRes, contactosRes, eventosRes, estadosRes] =
+        await Promise.all([
           apiService.getAll('municipalidades'),
           apiService.getAll('estados-seguimiento'),
           apiService.getAll('contactos'),
           apiService.getAll('eventos'),
-          apiService.getAll('estados') // Añadir llamada para obtener los estados
+          apiService.getAll('estados')
         ]);
-        
-        setMunicipalidades(municipalidadesRes || []);
-        setEstadosSeguimiento(estadosSeguimientoRes || []);
-        setContactos(contactosRes || []);
-        setEventos(eventosRes || []);
-        setEstados(estadosRes || []); // Añadir asignación para los estados
-        setLastUpdateDate(new Date());
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchData();
+
+      setMunicipalidades(municipalidadesRes || []);
+      setEstadosSeguimiento(estadosSeguimientoRes || []);
+      setContactos(contactosRes || []);
+      setEventos(eventosRes || []);
+      setEstados(estadosRes || []);
+
+      // Actualizamos la fecha de última carga en state y localStorage
+      const now = new Date();
+      setLastUpdateDate(now);
+      localStorage.setItem('dashboardLastUpdate', now.toISOString());
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ----------------------
+  // USEEFFECT DE MONTAJE
+  // ----------------------
+  useEffect(() => {
+    // Si se guardó la fecha de última actualización, la leemos
+    const storedDate = localStorage.getItem('dashboardLastUpdate');
+    if (storedDate) {
+      setLastUpdateDate(new Date(storedDate));
+    }
+    // Cargar datos sin recargar toda la página
+    loadAllData();
   }, []);
 
+  // ----------------------
+  // EFECTOS
+  // ----------------------
   useEffect(() => {
-    // Manejar clic fuera de los dropdowns
     const handleClickOutside = (event) => {
-      if (municipalidadDropdownRef.current && !municipalidadDropdownRef.current.contains(event.target)) {
+      if (
+        municipalidadDropdownRef.current &&
+        !municipalidadDropdownRef.current.contains(event.target)
+      ) {
         setShowMunicipalidadDropdown(false);
       }
     };
-    
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -270,166 +324,146 @@ function Dashboard() {
   }, []);
 
   useEffect(() => {
-    // Procesar datos cuando cambian los filtros o los datos
+    // Procesar datos cuando cambian los filtros o la data cargada
     if (!loading) {
       processInteractionsByType();
       processContactsByMunicipality();
       processInteractionsByMonth();
       processInteractionFrequency();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [estadosSeguimiento, eventos, contactos, municipalidades, startDate, endDate, selectedMunicipalidad, loading]);
 
-  // Procesar interacciones por tipo
+  // ----------------------
+  // PROCESADORES DE DATOS
+  // ----------------------
   const processInteractionsByType = () => {
-    let filteredInteractions = estadosSeguimiento.filter(estado => {
+    let filteredInteractions = estadosSeguimiento.filter((estado) => {
       const estadoDate = new Date(estado.fecha);
       return estadoDate >= startDate && estadoDate <= endDate;
     });
-    
-    // Filtrar por municipalidad si hay una seleccionada
+
     if (selectedMunicipalidad) {
       const municipalidadId = selectedMunicipalidad.id_municipalidad;
-      filteredInteractions = filteredInteractions.filter(estado => {
-        const evento = eventos.find(e => e.id_evento === estado.id_evento);
+      filteredInteractions = filteredInteractions.filter((estado) => {
+        const evento = eventos.find((e) => e.id_evento === estado.id_evento);
         return evento && evento.id_municipalidad === municipalidadId;
       });
     }
-    
+
     const interactionCounts = filteredInteractions.reduce((acc, estado) => {
       const estadoValue = getEstadoDescripcion(estado);
       acc[estadoValue] = (acc[estadoValue] || 0) + 1;
       return acc;
     }, {});
-    
     setInteractionsByType(interactionCounts);
   };
 
-  // Procesar contactos por municipalidad
   const processContactsByMunicipality = () => {
-    // Filtrar municipalidades según el tipo seleccionado
     let filteredMunicipalities = municipalidades;
-        
-    // Filtrar por municipalidad específica si hay una seleccionada
     if (selectedMunicipalidad) {
-      filteredMunicipalities = filteredMunicipalities.filter(m => m.id_municipalidad === selectedMunicipalidad.id_municipalidad);
-    }
-    
-    // Contar contactos por municipalidad
-    const contactCounts = {};
-    
-    filteredMunicipalities.forEach(municipalidad => {
-      const municipalidadContactos = contactos.filter(
-        contacto => contacto.id_municipalidad === municipalidad.id_municipalidad
+      filteredMunicipalities = filteredMunicipalities.filter(
+        (m) => m.id_municipalidad === selectedMunicipalidad.id_municipalidad
       );
-      
+    }
+    const contactCounts = {};
+    filteredMunicipalities.forEach((municipalidad) => {
+      const municipalidadContactos = contactos.filter(
+        (contacto) => contacto.id_municipalidad === municipalidad.id_municipalidad
+      );
       if (municipalidadContactos.length > 0) {
         contactCounts[municipalidad.nombre] = municipalidadContactos.length;
       }
     });
-    
     setContactsByMunicipality(contactCounts);
   };
 
-  // Procesar interacciones por mes
   const processInteractionsByMonth = () => {
-    let filteredInteractions = estadosSeguimiento.filter(estado => {
+    let filteredInteractions = estadosSeguimiento.filter((estado) => {
       const estadoDate = new Date(estado.fecha);
       return estadoDate >= startDate && estadoDate <= endDate;
     });
-    
-    // Filtrar por municipalidad si hay una seleccionada
     if (selectedMunicipalidad) {
       const municipalidadId = selectedMunicipalidad.id_municipalidad;
-      filteredInteractions = filteredInteractions.filter(estado => {
-        const evento = eventos.find(e => e.id_evento === estado.id_evento);
+      filteredInteractions = filteredInteractions.filter((estado) => {
+        const evento = eventos.find((e) => e.id_evento === estado.id_evento);
         return evento && evento.id_municipalidad === municipalidadId;
       });
     }
-    
     const monthlyData = {};
-    
-    filteredInteractions.forEach(estado => {
+    filteredInteractions.forEach((estado) => {
       const date = new Date(estado.fecha);
       const monthYear = `${date.getMonth() + 1}/${date.getFullYear()}`;
-      
       monthlyData[monthYear] = (monthlyData[monthYear] || 0) + 1;
     });
-    
-    // Ordenar por fecha
+    // Ordenar cronológicamente
     const sortedMonths = Object.keys(monthlyData).sort((a, b) => {
       const [monthA, yearA] = a.split('/').map(Number);
       const [monthB, yearB] = b.split('/').map(Number);
-      
       if (yearA !== yearB) return yearA - yearB;
       return monthA - monthB;
     });
-    
     const sortedData = {};
-    sortedMonths.forEach(month => {
+    sortedMonths.forEach((month) => {
       sortedData[month] = monthlyData[month];
     });
-    
     setInteractionsByMonth(sortedData);
   };
 
-  // Procesar frecuencia de interacciones (cuántas municipalidades tienen 1, 2, 3+ interacciones)
   const processInteractionFrequency = () => {
-    let filteredInteractions = estadosSeguimiento.filter(estado => {
+    let filteredInteractions = estadosSeguimiento.filter((estado) => {
       const estadoDate = new Date(estado.fecha);
       return estadoDate >= startDate && estadoDate <= endDate;
     });
-    
-    // Filtrar por municipalidad si hay una seleccionada
     if (selectedMunicipalidad) {
       const municipalidadId = selectedMunicipalidad.id_municipalidad;
-      filteredInteractions = filteredInteractions.filter(estado => {
-        const evento = eventos.find(e => e.id_evento === estado.id_evento);
+      filteredInteractions = filteredInteractions.filter((estado) => {
+        const evento = eventos.find((e) => e.id_evento === estado.id_evento);
         return evento && evento.id_municipalidad === municipalidadId;
       });
     }
-    
-    // Obtener eventos relacionados con las interacciones
-    const eventosIds = filteredInteractions.map(estado => estado.id_evento).filter(id => id);
-    
-    // Contar interacciones por municipalidad
+    const eventosIds = filteredInteractions
+      .map((estado) => estado.id_evento)
+      .filter((id) => id);
     const interactionsByMunicipality = {};
-    
-    eventosIds.forEach(eventoId => {
-      const evento = eventos.find(e => e.id_evento === eventoId);
+    eventosIds.forEach((eventoId) => {
+      const evento = eventos.find((e) => e.id_evento === eventoId);
       if (evento && evento.id_municipalidad) {
-        const municipalidadId = evento.id_municipalidad;
-        interactionsByMunicipality[municipalidadId] = (interactionsByMunicipality[municipalidadId] || 0) + 1;
+        const muniId = evento.id_municipalidad;
+        interactionsByMunicipality[muniId] = (interactionsByMunicipality[muniId] || 0) + 1;
       }
     });
-    
-    // Contar municipalidades por número de interacciones
     const frequency = {
       '1 interacción': 0,
       '2 interacciones': 0,
       '3 interacciones': 0,
       '4+ interacciones': 0
     };
-    
-    Object.values(interactionsByMunicipality).forEach(count => {
+    Object.values(interactionsByMunicipality).forEach((count) => {
       if (count === 1) frequency['1 interacción']++;
       else if (count === 2) frequency['2 interacciones']++;
       else if (count === 3) frequency['3 interacciones']++;
       else frequency['4+ interacciones']++;
     });
-    
     setInteractionFrequency(frequency);
   };
 
-  // Filtro de municipalidades procesado
-  const municipalidadesFiltered = municipalidades.filter(municipalidad => {
-    const matchesQuery = municipalidadSearchQuery.trim() === '' || 
-      (municipalidad.nombre && municipalidad.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase())) ||
-      (municipalidad.ubigeo && municipalidad.ubigeo.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()));
-      
-    return matchesQuery;
+  // ----------------------
+  // FILTRO DE MUNICIPALIDADES
+  // ----------------------
+  const municipalidadesFiltered = municipalidades.filter((municipalidad) => {
+    const q = municipalidadSearchQuery.trim().toLowerCase();
+    if (!q) return true;
+    const { nombre, ubigeo } = municipalidad;
+    return (
+      (nombre && nombre.toLowerCase().includes(q)) ||
+      (ubigeo && ubigeo.toLowerCase().includes(q))
+    );
   });
 
-  // Configuración de gráficos
+  // ----------------------
+  // DATASETS PARA GRÁFICOS
+  // ----------------------
   const interactionsByTypeChartData = {
     labels: Object.keys(interactionsByType),
     datasets: [
@@ -441,31 +475,31 @@ function Dashboard() {
           'rgba(75, 192, 192, 0.6)',
           'rgba(255, 206, 86, 0.6)',
           'rgba(255, 99, 132, 0.6)',
-          'rgba(153, 102, 255, 0.6)',
+          'rgba(153, 102, 255, 0.6)'
         ],
         borderColor: [
           'rgba(54, 162, 235, 1)',
           'rgba(75, 192, 192, 1)',
           'rgba(255, 206, 86, 1)',
           'rgba(255, 99, 132, 1)',
-          'rgba(153, 102, 255, 1)',
+          'rgba(153, 102, 255, 1)'
         ],
-        borderWidth: 1,
-      },
-    ],
+        borderWidth: 1
+      }
+    ]
   };
 
   const contactsByMunicipalityChartData = {
-    labels: Object.keys(contactsByMunicipality).slice(0, 10), // Mostrar solo los 10 primeros para legibilidad
+    labels: Object.keys(contactsByMunicipality).slice(0, 10),
     datasets: [
       {
         label: 'Número de Contactos',
         data: Object.values(contactsByMunicipality).slice(0, 10),
         backgroundColor: 'rgba(75, 192, 192, 0.6)',
         borderColor: 'rgba(75, 192, 192, 1)',
-        borderWidth: 1,
-      },
-    ],
+        borderWidth: 1
+      }
+    ]
   };
 
   const interactionsByMonthChartData = {
@@ -478,8 +512,8 @@ function Dashboard() {
         backgroundColor: 'rgba(54, 162, 235, 0.6)',
         borderColor: 'rgba(54, 162, 235, 1)',
         tension: 0.1
-      },
-    ],
+      }
+    ]
   };
 
   const interactionFrequencyChartData = {
@@ -492,77 +526,57 @@ function Dashboard() {
           'rgba(255, 99, 132, 0.6)',
           'rgba(54, 162, 235, 0.6)',
           'rgba(255, 206, 86, 0.6)',
-          'rgba(75, 192, 192, 0.6)',
+          'rgba(75, 192, 192, 0.6)'
         ],
         borderColor: [
           'rgba(255, 99, 132, 1)',
           'rgba(54, 162, 235, 1)',
           'rgba(255, 206, 86, 1)',
-          'rgba(75, 192, 192, 1)',
+          'rgba(75, 192, 192, 1)'
         ],
-        borderWidth: 1,
-      },
-    ],
+        borderWidth: 1
+      }
+    ]
   };
 
-  // Opciones comunes para los gráficos
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top',
+        position: 'top'
       },
       title: {
         display: true,
-        text: 'Datos de Interacciones',
-      },
-    },
-  };
-
-  const loadAllData = async () => {
-    setLoading(true);
-    try {
-      const [
-        municipalidadesRes,
-        estadosSeguimientoRes,
-        contactosRes,
-        eventosRes,
-        estadosRes // Añadir llamada para obtener los estados
-      ] = await Promise.all([
-        apiService.getAll('municipalidades'),
-        apiService.getAll('estados-seguimiento'),
-        apiService.getAll('contactos'),
-        apiService.getAll('eventos'),
-        apiService.getAll('estados') // Añadir llamada para obtener los estados
-      ]);
-      
-      setMunicipalidades(municipalidadesRes || []);
-      setEstadosSeguimiento(estadosSeguimientoRes || []);
-      setContactos(contactosRes || []);
-      setEventos(eventosRes || []);
-      setEstados(estadosRes || []); // Añadir asignación para los estados
-      setLastUpdateDate(new Date());
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
+        text: 'Datos de Interacciones'
+      }
     }
   };
 
+  // ----------------------
+  // RENDER
+  // ----------------------
   return (
-    <div className="p-6 max-w-full" style={{ 
-      paddingRight: '1.5rem', 
-      paddingLeft: '1.5rem', 
-      boxSizing: 'border-box', 
-      width: '100%' 
-    }}>
+    <div
+      className="p-6 max-w-full"
+      style={{
+        paddingRight: '1.5rem',
+        paddingLeft: '1.5rem',
+        boxSizing: 'border-box',
+        width: '100%'
+      }}
+    >
+      {/* Encabezado */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-6">
         <h2 className="text-2xl font-bold mb-4 md:mb-0">Dashboard de Interacciones</h2>
-        
         <div className="text-sm text-gray-500 flex items-center">
-          <span>Última actualización: {lastUpdateDate.toLocaleString()}</span>
-          <button 
+          <span>
+            Última actualización:{' '}
+            {lastUpdateDate instanceof Date
+              ? lastUpdateDate.toLocaleString()
+              : new Date(lastUpdateDate).toLocaleString()}
+          </span>
+          <button
             onClick={loadAllData}
             className="ml-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
           >
@@ -570,44 +584,43 @@ function Dashboard() {
           </button>
         </div>
       </div>
-      
+
       {/* Filtros */}
       <div className="bg-white p-6 rounded-lg shadow mb-6">
         <h3 className="text-lg font-semibold mb-4 flex items-center">
           <FiFilter className="mr-2" /> Filtros
         </h3>
-        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Rango de fechas con el nuevo TailwindCalendar */}
+          {/* Calendarios de fecha inicio y fin */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
             <TailwindCalendar
               id="start-date"
               selectedDate={startDate}
-              onChange={date => setStartDate(date || new Date(new Date().setMonth(new Date().getMonth() - 3)))}
+              onChange={(date) =>
+                setStartDate(date || new Date(new Date().setMonth(new Date().getMonth() - 3)))
+              }
               className="mb-2"
             />
-            
             <label className="block text-sm font-medium text-gray-700 mb-1 mt-3">Fecha Fin</label>
             <TailwindCalendar
               id="end-date"
               selectedDate={endDate}
-              onChange={date => setEndDate(date || new Date())}
+              onChange={(date) => setEndDate(date || new Date())}
               className="mb-2"
             />
           </div>
-          
-          {/* Selector de Municipalidad específica */}
+          {/* Dropdown de municipalidad */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Municipalidad</label>
             <div className="relative" ref={municipalidadDropdownRef}>
-              <div 
+              <div
                 className="w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm flex justify-between items-center cursor-pointer"
                 onClick={() => setShowMunicipalidadDropdown(!showMunicipalidadDropdown)}
               >
                 <span className="truncate">
-                  {selectedMunicipalidad 
-                    ? selectedMunicipalidad.nombre 
+                  {selectedMunicipalidad
+                    ? selectedMunicipalidad.nombre
                     : 'Seleccione una municipalidad'}
                 </span>
                 <span>
@@ -618,7 +631,7 @@ function Dashboard() {
                   )}
                 </span>
               </div>
-              
+
               {showMunicipalidadDropdown && (
                 <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
                   <div className="sticky top-0 z-10 bg-white p-2">
@@ -636,8 +649,8 @@ function Dashboard() {
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Opción para limpiar la selección */}
+
+                  {/* Opción para limpiar selección */}
                   <div
                     className="cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 border-b border-gray-200"
                     onClick={() => {
@@ -646,10 +659,12 @@ function Dashboard() {
                     }}
                   >
                     <div className="flex flex-col">
-                      <span className="font-medium truncate text-gray-500">Todas las municipalidades</span>
+                      <span className="font-medium truncate text-gray-500">
+                        Todas las municipalidades
+                      </span>
                     </div>
                   </div>
-                  
+
                   {municipalidadesFiltered.length === 0 ? (
                     <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
                   ) : (
@@ -657,7 +672,11 @@ function Dashboard() {
                       <div
                         key={municipalidad.id_municipalidad}
                         className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
-                          selectedMunicipalidad && selectedMunicipalidad.id_municipalidad === municipalidad.id_municipalidad ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
+                          selectedMunicipalidad &&
+                          selectedMunicipalidad.id_municipalidad ===
+                            municipalidad.id_municipalidad
+                            ? 'bg-blue-50 text-blue-600'
+                            : 'text-gray-900'
                         }`}
                         onClick={() => {
                           setSelectedMunicipalidad(municipalidad);
@@ -665,20 +684,37 @@ function Dashboard() {
                         }}
                       >
                         <div className="flex flex-col">
-                          <span className="font-medium truncate">{municipalidad.nombre || 'Sin nombre'}</span>
+                          <span className="font-medium truncate">
+                            {municipalidad.nombre || 'Sin nombre'}
+                          </span>
                           <span className="text-xs text-gray-500 truncate">
-                            {municipalidad.ubigeo && <span className="font-semibold mr-1">[{municipalidad.ubigeo}]</span>}
-                            {municipalidad.provincia || ''} {municipalidad.departamento ? `- ${municipalidad.departamento}` : ''}
+                            {municipalidad.ubigeo && (
+                              <span className="font-semibold mr-1">[{municipalidad.ubigeo}]</span>
+                            )}
+                            {municipalidad.provincia || ''}{' '}
+                            {municipalidad.departamento
+                              ? `- ${municipalidad.departamento}`
+                              : ''}
                           </span>
                         </div>
-                        
-                        {selectedMunicipalidad && selectedMunicipalidad.id_municipalidad === municipalidad.id_municipalidad && (
-                          <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
-                            <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          </span>
-                        )}
+                        {selectedMunicipalidad &&
+                          selectedMunicipalidad.id_municipalidad ===
+                            municipalidad.id_municipalidad && (
+                            <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
+                              <svg
+                                className="h-5 w-5"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            </span>
+                          )}
                       </div>
                     ))
                   )}
@@ -688,7 +724,7 @@ function Dashboard() {
           </div>
         </div>
       </div>
-      
+
       {/* Tarjetas de resumen */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white p-6 rounded-lg shadow">
@@ -702,7 +738,6 @@ function Dashboard() {
             </div>
           </div>
         </div>
-        
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-green-100 text-green-600 mr-4">
@@ -714,7 +749,6 @@ function Dashboard() {
             </div>
           </div>
         </div>
-        
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4">
@@ -726,7 +760,6 @@ function Dashboard() {
             </div>
           </div>
         </div>
-        
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-purple-100 text-purple-600 mr-4">
@@ -739,34 +772,34 @@ function Dashboard() {
           </div>
         </div>
       </div>
-      
+
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Gráfico de Interacciones por Estado */}
+        {/* Interacciones por Estado */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold mb-4">Interacciones por Estado</h3>
           <div className="h-80">
             <Pie data={interactionsByTypeChartData} options={chartOptions} />
           </div>
         </div>
-        
-        {/* Gráfico de Frecuencia de Interacciones */}
+
+        {/* Frecuencia de Interacciones */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold mb-4">Frecuencia de Interacciones por Municipalidad</h3>
           <div className="h-80">
             <Pie data={interactionFrequencyChartData} options={chartOptions} />
           </div>
         </div>
-        
-        {/* Gráfico de Interacciones por Mes */}
+
+        {/* Interacciones por Mes */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold mb-4">Interacciones por Mes</h3>
           <div className="h-80">
             <Line data={interactionsByMonthChartData} options={chartOptions} />
           </div>
         </div>
-        
-        {/* Gráfico de Contactos por Municipalidad */}
+
+        {/* Top 10 Municipalidades por Contactos */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold mb-4">Top 10 Municipalidades por Número de Contactos</h3>
           <div className="h-80">
@@ -774,58 +807,57 @@ function Dashboard() {
           </div>
         </div>
       </div>
-      
-      {/* Tabla de Últimas Interacciones */}
+
+      {/* Últimas Interacciones */}
       <div className="bg-white p-6 rounded-lg shadow">
         <h3 className="text-lg font-semibold mb-4">Últimas Interacciones</h3>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Fecha
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Municipalidad
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Contacto
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Fecha Compromiso
                 </th>
-                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acciones
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {estadosSeguimiento
-                .filter(estado => {
-                  // Si hay una municipalidad seleccionada, filtrar por ella
+                .filter((estado) => {
+                  // Filtrar por municipalidad si hay una seleccionada
                   if (selectedMunicipalidad) {
-                    const evento = eventos.find(e => e.id_evento === estado.id_evento);
-                    return evento && evento.id_municipalidad === selectedMunicipalidad.id_municipalidad;
+                    const evento = eventos.find((e) => e.id_evento === estado.id_evento);
+                    return (
+                      evento && evento.id_municipalidad === selectedMunicipalidad.id_municipalidad
+                    );
                   }
-                  return true; // Si no hay municipalidad seleccionada, mostrar todos
+                  return true;
                 })
                 .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
                 .slice(0, 5)
                 .map((estado, index) => {
-                  // Encontrar evento relacionado
-                  const evento = eventos.find(e => e.id_evento === estado.id_evento);
-                  
-                  // Encontrar municipalidad relacionada
-                  const municipalidad = evento && municipalidades.find(
-                    m => m.id_municipalidad === evento.id_municipalidad
-                  );
-                  
-                  // Encontrar contacto relacionado
-                  const contacto = contactos.find(c => c.id_contacto === estado.id_contacto);
-                  
+                  const evento = eventos.find((e) => e.id_evento === estado.id_evento);
+                  const municipalidad =
+                    evento &&
+                    municipalidades.find(
+                      (m) => m.id_municipalidad === evento.id_municipalidad
+                    );
+                  const contacto = contactos.find((c) => c.id_contacto === estado.id_contacto);
+
                   return (
                     <tr key={index}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -838,36 +870,46 @@ function Dashboard() {
                         {contacto ? contacto.nombre_completo : 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                          ${getEstadoDescripcion(estado) === 'Completado' ? 'bg-green-100 text-green-800' : 
-                            getEstadoDescripcion(estado) === 'En Proceso' ? 'bg-yellow-100 text-yellow-800' : 
-                            getEstadoDescripcion(estado) === 'Pendiente' ? 'bg-blue-100 text-blue-800' : 
-                            getEstadoDescripcion(estado) === 'Cancelado' ? 'bg-red-100 text-red-800' : 
-                            'bg-gray-100 text-gray-800'}`}>
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            ${
+                              getEstadoDescripcion(estado) === 'Completado'
+                                ? 'bg-green-100 text-green-800'
+                                : getEstadoDescripcion(estado) === 'En Proceso'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : getEstadoDescripcion(estado) === 'Pendiente'
+                                ? 'bg-blue-100 text-blue-800'
+                                : getEstadoDescripcion(estado) === 'Cancelado'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                        >
                           {getEstadoDescripcion(estado)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {estado.fecha_compromiso ? new Date(estado.fecha_compromiso).toLocaleDateString() : 'N/A'}
+                        {estado.fecha_compromiso
+                          ? new Date(estado.fecha_compromiso).toLocaleDateString()
+                          : 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                         <button
                           onClick={() => {
-                            // Preparar los datos para la visualización
                             const getTipoReunion = async () => {
                               if (estado.id_tipo_reunion) {
                                 try {
-                                  const response = await api.get(`api/tipos-reunion/${estado.id_tipo_reunion}`);
+                                  const response = await api.get(
+                                    `api/tipos-reunion/${estado.id_tipo_reunion}`
+                                  );
                                   return response.data?.descripcion || 'N/A';
                                 } catch (error) {
-                                  console.error("Error al obtener tipo de reunión:", error);
+                                  console.error('Error al obtener tipo de reunión:', error);
                                   return 'N/A';
                                 }
                               }
                               return 'N/A';
                             };
-                            
-                            getTipoReunion().then(descripcion => {
+                            getTipoReunion().then((descripcion) => {
                               setSelectedInteraction({
                                 ...estado,
                                 tipoReunionDesc: descripcion
@@ -888,7 +930,7 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Diálogo para visualizar detalles de la interacción */}
+      {/* Modal para ver detalle de interacción */}
       {viewDialogVisible && selectedInteraction && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
@@ -907,54 +949,73 @@ function Dashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="field">
                   <label className="block text-gray-700 font-medium mb-1">Municipalidad</label>
-                  <p className="text-gray-800">{selectedInteraction.municipalidad ? selectedInteraction.municipalidad.nombre : 'N/A'}</p>
+                  <p className="text-gray-800">
+                    {selectedInteraction.municipalidad
+                      ? selectedInteraction.municipalidad.nombre
+                      : 'N/A'}
+                  </p>
                 </div>
-                
                 <div className="field">
                   <label className="block text-gray-700 font-medium mb-1">Contacto</label>
-                  <p className="text-gray-800">{selectedInteraction.contacto ? selectedInteraction.contacto.nombre_completo : 'N/A'}</p>
+                  <p className="text-gray-800">
+                    {selectedInteraction.contacto
+                      ? selectedInteraction.contacto.nombre_completo
+                      : 'N/A'}
+                  </p>
                 </div>
-                
                 <div className="field">
                   <label className="block text-gray-700 font-medium mb-1">Fecha</label>
-                  <p className="text-gray-800">{new Date(selectedInteraction.fecha).toLocaleDateString()}</p>
+                  <p className="text-gray-800">
+                    {new Date(selectedInteraction.fecha).toLocaleDateString()}
+                  </p>
                 </div>
-                
                 <div className="field">
                   <label className="block text-gray-700 font-medium mb-1">Fecha de Compromiso</label>
                   <p className="text-gray-800">
-                    {selectedInteraction.fecha_compromiso ? new Date(selectedInteraction.fecha_compromiso).toLocaleDateString() : 'N/A'}
+                    {selectedInteraction.fecha_compromiso
+                      ? new Date(selectedInteraction.fecha_compromiso).toLocaleDateString()
+                      : 'N/A'}
                   </p>
                 </div>
-                
                 <div className="field">
                   <label className="block text-gray-700 font-medium mb-1">Tipo de Reunión</label>
-                  <p className="text-gray-800">{typeof selectedInteraction.tipoReunionDesc === 'string' ? selectedInteraction.tipoReunionDesc : 'N/A'}</p>
+                  <p className="text-gray-800">
+                    {typeof selectedInteraction.tipoReunionDesc === 'string'
+                      ? selectedInteraction.tipoReunionDesc
+                      : 'N/A'}
+                  </p>
                 </div>
-                
                 <div className="field">
                   <label className="block text-gray-700 font-medium mb-1">Estado</label>
                   <p className="text-gray-800">
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                      selectedInteraction.estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
-                      selectedInteraction.estado === 'En Proceso' ? 'bg-blue-100 text-blue-800' :
-                      selectedInteraction.estado === 'Completado' ? 'bg-green-100 text-green-800' :
-                      selectedInteraction.estado === 'Cancelado' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
+                    <span
+                      className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                        selectedInteraction.estado === 'Pendiente'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : selectedInteraction.estado === 'En Proceso'
+                          ? 'bg-blue-100 text-blue-800'
+                          : selectedInteraction.estado === 'Completado'
+                          ? 'bg-green-100 text-green-800'
+                          : selectedInteraction.estado === 'Cancelado'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
                       {getEstadoDescripcion(selectedInteraction)}
                     </span>
                   </p>
                 </div>
-                
                 <div className="field col-span-1 md:col-span-2">
                   <label className="block text-gray-700 font-medium mb-1">Descripción</label>
-                  <p className="text-gray-800 whitespace-pre-line">{selectedInteraction.descripcion || 'N/A'}</p>
+                  <p className="text-gray-800 whitespace-pre-line">
+                    {selectedInteraction.descripcion || 'N/A'}
+                  </p>
                 </div>
-                
                 <div className="field col-span-1 md:col-span-2">
                   <label className="block text-gray-700 font-medium mb-1">Compromiso</label>
-                  <p className="text-gray-800 whitespace-pre-line">{selectedInteraction.compromiso || 'N/A'}</p>
+                  <p className="text-gray-800 whitespace-pre-line">
+                    {selectedInteraction.compromiso || 'N/A'}
+                  </p>
                 </div>
               </div>
             </div>

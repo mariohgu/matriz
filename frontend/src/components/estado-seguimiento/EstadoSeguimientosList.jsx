@@ -226,7 +226,7 @@ export default function EstadoSeguimientoList() {
   const handleDelete = async () => {
     if (!selectedSeguimiento) return;
     try {
-      await apiService.remove('estados-seguimiento', selectedSeguimiento.id_estado);
+      await apiService.delete('estados-seguimiento', selectedSeguimiento.id_estado);
       toast.showSuccess('Éxito', 'Estado de seguimiento eliminado');
       setDeleteDialogVisible(false);
       loadEstadosSeguimiento();
@@ -922,16 +922,16 @@ export default function EstadoSeguimientoList() {
       </Modal>
 
       {/* Diálogo CONFIRMAR ELIMINACIÓN */}
-      <ConfirmDialog
-        visible={deleteDialogVisible}
-        onHide={() => setDeleteDialogVisible(false)}
-        message="¿Estás seguro de que deseas eliminar este Estado de Seguimiento?"
-        header="Confirmación"
+          <ConfirmDialog
+        isOpen={deleteDialogVisible}
+        onClose={() => setDeleteDialogVisible(false)}
+        message="¿Estás seguro de que deseas eliminar este evento?"
+        title="Confirmación"
         icon={<FiTrash2 />}
         acceptLabel="Eliminar"
         rejectLabel="Cancelar"
         acceptClassName="bg-red-600 text-white"
-        onAccept={handleDelete}
+        onConfirm={handleDelete}
         onReject={() => setDeleteDialogVisible(false)}
       />
     </div>

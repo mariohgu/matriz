@@ -1,22 +1,11 @@
-/* APP.CSS */
+/* App.css */
 
 /* 
-  Antes, este archivo sobreescribía #root con:
-    #root {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 2rem;
-      text-align: center;
-    }
-  Eso impedía que el sidebar ocupara toda la altura. 
-  Ahora lo eliminamos para que #root siga las reglas de index.css 
-  (height: 100%, ancho completo, etc.)
+   Aquí ya NO modificamos #root directamente. 
+   Usa .main-content si quieres un contenedor centrado 
+   y con un ancho máximo en tus páginas.
 */
 
-/* 
-  Si quieres mantener un contenedor centrado con ancho máximo, 
-  define una clase como esta y úsala en tu App o en tus páginas:
-*/
 .main-content {
   max-width: 1280px;
   margin: 0 auto;
@@ -24,7 +13,7 @@
   text-align: center;
 }
 
-/* Puedes mantener o ajustar estilos para tu logo */
+/* Ejemplo para tu logo */
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -40,14 +29,10 @@
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
-/* Animación de ejemplo para tu logo */
+/* Animación opcional para la imagen .logo */
 @keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -56,12 +41,12 @@
   }
 }
 
-/* Un ejemplo de clase .card con padding */
+/* Ejemplo: si tienes .card aquí, podrías unificarlo con index.css */
 .card {
   padding: 2em;
 }
 
-/* Un ejemplo de clase para textos descriptivos */
+/* Clase de texto descriptivo */
 .read-the-docs {
   color: #888;
 }
