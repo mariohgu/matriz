@@ -493,7 +493,8 @@ export default function MunicipalidadesList() {
               { value: "No especificada", label: "No especificada" },
               { value: "Costa", label: "Costa" },
               { value: "Sierra", label: "Sierra" },
-              { value: "Selva", label: "Selva" }
+              { value: "Selva baja", label: "Selva baja" },
+              { value: "Selva alta", label: "Selva alta" }
             ]
           )}
           
@@ -544,7 +545,8 @@ export default function MunicipalidadesList() {
               { value: "No especificada", label: "No especificada" },
               { value: "Costa", label: "Costa" },
               { value: "Sierra", label: "Sierra" },
-              { value: "Selva", label: "Selva" }
+              { value: "Selva baja", label: "Selva baja" },
+              { value: "Selva alta", label: "Selva alta" }
             ]
           )}
           

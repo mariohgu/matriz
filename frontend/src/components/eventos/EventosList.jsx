@@ -560,7 +560,7 @@ export default function EventosList() {
           }}
           emptyMessage="No hay eventos disponibles"
           searchQuery={searchQuery}
-          onSearch={setSearchQuery}
+          
           columnFilters={columnFilters}
           onFilterChange={(field, value) => {
             setColumnFilters({
