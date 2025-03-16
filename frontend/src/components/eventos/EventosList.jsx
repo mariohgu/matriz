@@ -1,26 +1,48 @@
 import React, { useState, useRef, useEffect } from 'react';
+import {
+  FiEdit,
+  FiTrash2,
+  FiPlus,
+  FiEye,
+  FiCalendar,
+  FiChevronDown,
+  FiChevronUp,
+  FiSearch
+} from 'react-icons/fi';
 import { api, apiService } from '../../services/authService';
-import { FiEdit, FiTrash2, FiPlus, FiEye } from 'react-icons/fi';
-import { FaEdit, FaTrashAlt, FaPlus, FaCalendarAlt  } from 'react-icons/fa';
-import { FiChevronDown, FiChevronUp, FiSearch } from 'react-icons/fi';
-import { ADDRESS } from '../../utils.jsx';
-import { Table, Pagination, Modal, ConfirmDialog, useToast } from '../ui';
+import { Table, Pagination, Modal, ConfirmDialog, useToast, TailwindCalendar } from '../ui';
+
 
 export default function EventosList() {
+  // Opciones de modalidad a usar en el <select>
+  const modalidadOptions = [
+    { value: 'Presencial', label: 'Presencial' },
+    { value: 'Virtual', label: 'Virtual' },
+    { value: 'Híbrido', label: 'Híbrido' }
+  ];
+
+  // ======== Estados principales ========
   const [eventos, setEventos] = useState([]);
   const [municipalidades, setMunicipalidades] = useState([]);
   const [contactos, setContactos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedEvento, setSelectedEvento] = useState(null);
-  const [editDialogVisible, setEditDialogVisible] = useState(false);
-  const [createDialogVisible, setCreateDialogVisible] = useState(false);
-  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
-  const [viewDialogVisible, setViewDialogVisible] = useState(false);
+
+  // Búsqueda, filtros, orden
   const [searchQuery, setSearchQuery] = useState('');
   const [sortField, setSortField] = useState('fecha');
   const [sortOrder, setSortOrder] = useState('desc');
   const [columnFilters, setColumnFilters] = useState({});
-  const [editData, setEditData] = useState({
+
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // ======== Modal unificado para crear/editar ========
+  const [upsertDialogVisible, setUpsertDialogVisible] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  // Datos del formulario de crear / editar
+  const [formData, setFormData] = useState({
     id_evento: '',
     id_municipalidad: '',
     id_contacto: '',
@@ -30,52 +52,51 @@ export default function EventosList() {
     modalidad: '',
     descripcion: ''
   });
-  
-  // Variables para los dropdowns con búsqueda
+
+  // ======== Ver detalle y eliminar ========
+  const [selectedEvento, setSelectedEvento] = useState(null);
+  const [viewDialogVisible, setViewDialogVisible] = useState(false);
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+
+  // ======== Dropdowns con búsqueda (para municipalidad y contacto) ========
   const [showMunicipalidadDropdown, setShowMunicipalidadDropdown] = useState(false);
   const [municipalidadSearchQuery, setMunicipalidadSearchQuery] = useState('');
   const municipalidadDropdownRef = useRef(null);
-  
+
   const [showContactoDropdown, setShowContactoDropdown] = useState(false);
   const [contactoSearchQuery, setContactoSearchQuery] = useState('');
   const contactoDropdownRef = useRef(null);
-  
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Responsivo
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Notificaciones
   const toast = useToast();
 
+  // ======== Efectos iniciales ========
   useEffect(() => {
     loadEventos();
     loadMunicipalidades();
-    
-    // Listener para detectar cambios en el tamaño de la ventana
+
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
     window.addEventListener('resize', handleResize);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
 
-  // Efecto para cerrar los dropdowns cuando se hace clic fuera de ellos
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (municipalidadDropdownRef.current && !municipalidadDropdownRef.current.contains(event.target)) {
+    // Cerrar dropdowns al hacer clic fuera
+    function handleClickOutside(e) {
+      if (municipalidadDropdownRef.current && !municipalidadDropdownRef.current.contains(e.target)) {
         setShowMunicipalidadDropdown(false);
       }
-      
-      if (contactoDropdownRef.current && !contactoDropdownRef.current.contains(event.target)) {
+      if (contactoDropdownRef.current && !contactoDropdownRef.current.contains(e.target)) {
         setShowContactoDropdown(false);
       }
     }
-    
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
 
@@ -83,42 +104,32 @@ export default function EventosList() {
     try {
       setLoading(true);
       const data = await apiService.getAll('eventos');
-      
-      // Cargar municipalidades y contactos para cada evento si no vienen en la respuesta
-      const eventosProcessed = await Promise.all(data.map(async (evento) => {
-        // Si el evento ya tiene el objeto municipalidad completo, usarlo
-        if (evento.municipalidad && typeof evento.municipalidad === 'object') {
-          return evento;
-        }
-        
-        // Si solo tiene id_municipalidad, buscar la información completa
-        if (evento.id_municipalidad) {
-          try {
-            const municipalidadData = await apiService.getById('municipalidades', evento.id_municipalidad);
-            evento.municipalidad = municipalidadData;
-          } catch (err) {
-            console.error(`Error al cargar municipalidad ${evento.id_municipalidad}:`, err);
+
+      // Cargar municipalidad/contacto anidados si no vienen ya en la respuesta
+      const eventosProcessed = await Promise.all(
+        data.map(async (evento) => {
+          // Cargar municipalidad
+          if (!evento.municipalidad && evento.id_municipalidad) {
+            try {
+              const muni = await apiService.getById('municipalidades', evento.id_municipalidad);
+              evento.municipalidad = muni;
+            } catch (err) {
+              console.error(`Error cargando municipalidad ${evento.id_municipalidad}:`, err);
+            }
           }
-        }
-        
-        // Si el evento ya tiene el objeto contacto completo, usarlo
-        if (evento.contacto && typeof evento.contacto === 'object') {
-          return evento;
-        }
-        
-        // Si solo tiene id_contacto, buscar la información completa
-        if (evento.id_contacto) {
-          try {
-            const contactoData = await apiService.getById('contactos', evento.id_contacto);
-            evento.contacto = contactoData;
-          } catch (err) {
-            console.error(`Error al cargar contacto ${evento.id_contacto}:`, err);
+          // Cargar contacto
+          if (!evento.contacto && evento.id_contacto) {
+            try {
+              const cont = await apiService.getById('contactos', evento.id_contacto);
+              evento.contacto = cont;
+            } catch (err) {
+              console.error(`Error cargando contacto ${evento.id_contacto}:`, err);
+            }
           }
-        }
-        
-        return evento;
-      }));
-      
+          return evento;
+        })
+      );
+
       setEventos(eventosProcessed);
     } catch (error) {
       console.error('Error al cargar eventos:', error);
@@ -138,18 +149,16 @@ export default function EventosList() {
     }
   };
 
+  // Cargar contactos para la municipalidad seleccionada
   const loadContactosPorMunicipalidad = async (id_municipalidad) => {
     if (!id_municipalidad) {
       setContactos([]);
       return;
     }
-    
     try {
-      // Usar el endpoint estándar de contactos y filtrar por id_municipalidad
       const response = await api.get(`contactos`);
-      // Filtrar los contactos que pertenecen a la municipalidad seleccionada
       const contactosFiltrados = response.data.filter(
-        contacto => contacto.id_municipalidad === parseInt(id_municipalidad)
+        (c) => c.id_municipalidad === parseInt(id_municipalidad)
       );
       setContactos(contactosFiltrados);
     } catch (error) {
@@ -158,36 +167,90 @@ export default function EventosList() {
     }
   };
 
-  const handleMunicipalidadChange = (id_municipalidad) => {
-    setEditData(prev => ({ ...prev, id_municipalidad, id_contacto: '' }));
-    loadContactosPorMunicipalidad(id_municipalidad);
-    setContactoSearchQuery(''); // Limpiar búsqueda de contactos al cambiar municipalidad
+  // ======== Crear / Editar (un solo modal) ========
+  const handleCreate = () => {
+    setIsEditMode(false);
+    setFormData({
+      id_evento: '',
+      id_municipalidad: '',
+      id_contacto: '',
+      tipo_acercamiento: '',
+      lugar: '',
+      fecha: new Date(), // fecha por defecto
+      modalidad: '',
+      descripcion: ''
+    });
+    setContactos([]); // reiniciar contactos
+    setUpsertDialogVisible(true);
   };
-  
-  // Funciones de manejo de eventos
+
   const handleEdit = (rowData) => {
+    setIsEditMode(true);
     setSelectedEvento(rowData);
-    setEditData({
-      ...rowData,
+
+    setFormData({
       id_evento: rowData.id_evento,
       id_municipalidad: rowData.id_municipalidad,
       id_contacto: rowData.id_contacto,
-      fecha: rowData.fecha ? new Date(rowData.fecha) : null
+      tipo_acercamiento: rowData.tipo_acercamiento || '',
+      lugar: rowData.lugar || '',
+      fecha: rowData.fecha ? new Date(rowData.fecha) : new Date(),
+      modalidad: rowData.modalidad || '',
+      descripcion: rowData.descripcion || ''
     });
+
+    // Cargar contactos para la municipalidad que tenga
     loadContactosPorMunicipalidad(rowData.id_municipalidad);
-    setEditDialogVisible(true);
+
+    setUpsertDialogVisible(true);
   };
-  
+
+  const handleSave = async () => {
+    if (
+      !formData.id_municipalidad ||
+      !formData.id_contacto ||
+      !formData.tipo_acercamiento ||
+      !formData.lugar ||
+      !formData.fecha ||
+      !formData.modalidad
+    ) {
+      toast.showWarning('Advertencia', 'Por favor complete todos los campos obligatorios');
+      return;
+    }
+
+    const eventoPayload = {
+      ...formData,
+      fecha: formData.fecha?.toISOString().split('T')[0]
+    };
+
+    try {
+      if (isEditMode && formData.id_evento) {
+        // Editar
+        await apiService.update('eventos', formData.id_evento, eventoPayload);
+        toast.showSuccess('Éxito', 'Evento actualizado correctamente');
+      } else {
+        // Crear
+        await apiService.create('eventos', eventoPayload);
+        toast.showSuccess('Éxito', 'Evento creado correctamente');
+      }
+      setUpsertDialogVisible(false);
+      loadEventos();
+    } catch (error) {
+      console.error('Error al guardar evento:', error);
+      toast.showError('Error', 'No se pudo guardar el evento');
+    }
+  };
+
+  // ======== Eliminar ========
   const confirmDelete = (rowData) => {
     setSelectedEvento(rowData);
     setDeleteDialogVisible(true);
   };
-  
+
   const handleDelete = async () => {
     if (!selectedEvento) return;
-    
     try {
-      await apiService.remove('eventos', selectedEvento.id_evento);
+      await apiService.delete('eventos', selectedEvento.id_evento);
       toast.showSuccess('Éxito', 'Evento eliminado correctamente');
       setDeleteDialogVisible(false);
       loadEventos();
@@ -196,197 +259,162 @@ export default function EventosList() {
       toast.showError('Error', 'No se pudo eliminar el evento');
     }
   };
-  
-  const handleCreate = () => {
-    setEditData({
-      id_evento: '',
-      id_municipalidad: '',
-      id_contacto: '',
-      tipo_acercamiento: '',
-      lugar: '',
-      fecha: new Date(),
-      modalidad: '',
-      descripcion: ''
-    });
-    setCreateDialogVisible(true);
-  };
-  
-  const handleSave = async () => {
-    if (!editData.id_municipalidad || !editData.id_contacto || !editData.tipo_acercamiento || !editData.lugar || !editData.fecha || !editData.modalidad) {
-      toast.showWarning('Advertencia', 'Por favor complete todos los campos obligatorios');
-      return;
-    }
 
-    const eventoData = {
-      ...editData,
-      fecha: editData.fecha ? editData.fecha.toISOString().split('T')[0] : null
-    };
-
-    try {
-      if (eventoData.id_evento) {
-        await apiService.update('eventos', eventoData.id_evento, eventoData);
-        toast.showSuccess('Éxito', 'Evento actualizado correctamente');
-      } else {
-        await apiService.create('eventos', eventoData);
-        toast.showSuccess('Éxito', 'Evento creado correctamente');
-      }
-      
-      setCreateDialogVisible(false);
-      setEditDialogVisible(false);
-      loadEventos();
-    } catch (error) {
-      console.error('Error al guardar evento:', error);
-      toast.showError('Error', 'No se pudo guardar el evento');
-    }
-  };
-  
-  const handleSearch = (value) => {
-    setSearchQuery(value);
-    setCurrentPage(1); // Volver a la primera página al realizar una búsqueda
-  };
-  
-  const handleSort = (field, order) => {
-    setSortField(field);
-    setSortOrder(order);
-  };
-  
-  const handleColumnFilterChange = (field, value) => {
-    setColumnFilters(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    setCurrentPage(1); // Volver a la primera página al filtrar
+  // ======== Ver Detalle ========
+  const handleView = (rowData) => {
+    setSelectedEvento(rowData);
+    setViewDialogVisible(true);
   };
 
+  // ======== Búsqueda y filtrado ========
   const formatDate = (date) => {
     if (!date) return '';
-    
-    // Si date es un string, intentar convertirlo a Date
-    let dateObj = date;
-    if (typeof date === 'string') {
-      dateObj = new Date(date);
-    }
-    
-    // Verificar si la fecha es válida
-    if (!(dateObj instanceof Date && !isNaN(dateObj))) {
-      return '';
-    }
-    
-    const day = dateObj.getDate().toString().padStart(2, '0');
-    const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-    const year = dateObj.getFullYear();
-    
-    return `${day}/${month}/${year}`;
+    let dateObj = typeof date === 'string' ? new Date(date) : date;
+    if (!(dateObj instanceof Date && !isNaN(dateObj))) return '';
+    const dd = String(dateObj.getDate()).padStart(2, '0');
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const yyyy = dateObj.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
   };
 
-  // Filtrado de datos
   const applyFilters = () => {
     if (!eventos || eventos.length === 0) return [];
-    
+
     let filteredData = [...eventos];
-    
-    // Aplicar búsqueda global
+
+    // Búsqueda global
     if (searchQuery) {
-      const lowercaseQuery = searchQuery.toLowerCase();
-      filteredData = filteredData.filter(evento => {
+      const q = searchQuery.toLowerCase();
+      filteredData = filteredData.filter((ev) => {
         return (
-          (evento.municipalidad && evento.municipalidad.nombre ? evento.municipalidad.nombre.toLowerCase().includes(lowercaseQuery) : false) ||
-          (evento.contacto && evento.contacto.nombre_completo ? evento.contacto.nombre_completo.toLowerCase().includes(lowercaseQuery) : false) ||
-          (evento.tipo_acercamiento ? evento.tipo_acercamiento.toLowerCase().includes(lowercaseQuery) : false) ||
-          (evento.lugar ? evento.lugar.toLowerCase().includes(lowercaseQuery) : false) ||
-          (evento.modalidad ? evento.modalidad.toLowerCase().includes(lowercaseQuery) : false) ||
-          (evento.descripcion ? evento.descripcion.toLowerCase().includes(lowercaseQuery) : false)
+          (ev.municipalidad?.nombre?.toLowerCase() || '').includes(q) ||
+          (ev.municipalidad?.departamento?.toLowerCase() || '').includes(q) ||
+          (ev.contacto?.nombre_completo?.toLowerCase() || '').includes(q) ||
+          (ev.tipo_acercamiento || '').toLowerCase().includes(q) ||
+          (ev.lugar || '').toLowerCase().includes(q) ||
+          (ev.modalidad || '').toLowerCase().includes(q) ||
+          (ev.descripcion || '').toLowerCase().includes(q)
         );
       });
     }
-    
-    // Aplicar filtros por columna
+
+    // Filtros por columna
     if (columnFilters) {
       Object.entries(columnFilters).forEach(([key, value]) => {
         if (value) {
-          const lowercaseValue = value.toLowerCase();
-          if (key === 'municipalidad.nombre') {
-            filteredData = filteredData.filter(evento => 
-              evento.municipalidad && evento.municipalidad.nombre ? 
-              evento.municipalidad.nombre.toLowerCase().includes(lowercaseValue) : false
-            );
-          } else if (key === 'contacto.nombre_completo') {
-            filteredData = filteredData.filter(evento => 
-              evento.contacto && evento.contacto.nombre_completo ? 
-              evento.contacto.nombre_completo.toLowerCase().includes(lowercaseValue) : false
-            );
-          } else if (key === 'fecha') {
-            filteredData = filteredData.filter(evento => 
-              evento.fecha && formatDate(evento.fecha).includes(lowercaseValue)
-            );
-          } else {
-            filteredData = filteredData.filter(evento => 
-              evento[key] ? String(evento[key]).toLowerCase().includes(lowercaseValue) : false
-            );
-          }
+          const lowVal = value.toLowerCase();
+          filteredData = filteredData.filter((ev) => {
+            if (key === 'municipalidad.nombre') {
+              return ev.municipalidad?.nombre?.toLowerCase().includes(lowVal);
+            } else if (key === 'municipalidad.departamento') {
+              return ev.municipalidad?.departamento?.toLowerCase().includes(lowVal);
+            } else if (key === 'contacto.nombre_completo') {
+              return ev.contacto?.nombre_completo?.toLowerCase().includes(lowVal);
+            } else if (key === 'fecha') {
+              return formatDate(ev.fecha).includes(lowVal);
+            } else {
+              // Para campos directos en ev (tipo_acercamiento, lugar, modalidad, descripcion)
+              return (ev[key] || '').toString().toLowerCase().includes(lowVal);
+            }
+          });
         }
       });
     }
-    
-    // Ordenar los resultados
+
+    // Ordenar
     if (sortField) {
       filteredData.sort((a, b) => {
-        let valueA, valueB;
-        
+        let valA, valB;
         if (sortField === 'municipalidad.nombre') {
-          valueA = a.municipalidad && a.municipalidad.nombre ? a.municipalidad.nombre : '';
-          valueB = b.municipalidad && b.municipalidad.nombre ? b.municipalidad.nombre : '';
+          valA = a.municipalidad?.nombre?.toLowerCase() || '';
+          valB = b.municipalidad?.nombre?.toLowerCase() || '';
         } else if (sortField === 'contacto.nombre_completo') {
-          valueA = a.contacto && a.contacto.nombre_completo ? a.contacto.nombre_completo : '';
-          valueB = b.contacto && b.contacto.nombre_completo ? b.contacto.nombre_completo : '';
+          valA = a.contacto?.nombre_completo?.toLowerCase() || '';
+          valB = b.contacto?.nombre_completo?.toLowerCase() || '';
+        } else if (sortField === 'fecha') {
+          valA = a.fecha ? new Date(a.fecha) : new Date(0);
+          valB = b.fecha ? new Date(b.fecha) : new Date(0);
         } else {
-          valueA = a[sortField] || '';
-          valueB = b[sortField] || '';
+          valA = (a[sortField] || '').toString().toLowerCase();
+          valB = (b[sortField] || '').toString().toLowerCase();
         }
-        
-        // Si es una fecha, convertir a objeto Date
-        if (sortField === 'fecha') {
-          valueA = valueA ? new Date(valueA) : new Date(0);
-          valueB = valueB ? new Date(valueB) : new Date(0);
+
+        if (valA instanceof Date && valB instanceof Date) {
+          const diff = valA - valB;
+          return sortOrder === 'asc' ? diff : -diff;
+        } else {
+          const result = valA.localeCompare(valB);
+          return sortOrder === 'asc' ? result : -result;
         }
-        
-        // Comparar string o date
-        const result = typeof valueA === 'string' 
-          ? valueA.localeCompare(valueB)
-          : valueA - valueB;
-          
-        return sortOrder === 'asc' ? result : -result;
       });
     }
-    
+
     return filteredData;
   };
-  
-  // Aplicar paginación a los datos filtrados
+
   const getPaginatedData = () => {
     const filteredData = applyFilters();
-    
-    // Calcular límites de página
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    
     return {
       data: filteredData.slice(startIndex, endIndex),
       totalRecords: filteredData.length
     };
   };
-  
-  // Obtener número total de páginas
-  const totalPages = Math.ceil(applyFilters().length / itemsPerPage);
 
-  // Acciones para cada fila
+  const { data: paginatedData, totalRecords } = getPaginatedData();
+  const totalPages = Math.ceil(totalRecords / itemsPerPage);
+
+  // ======== Definir columnas ========
+  const columns = [
+    {
+      field: 'municipalidad.nombre',
+      header: 'MUNICIPALIDAD',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => rowData.municipalidad?.nombre || 'N/A'
+    },
+    {
+      field: 'municipalidad.departamento',
+      header: 'DEPARTAMENTO',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => rowData.municipalidad?.departamento || 'N/A'
+    },
+    {
+      field: 'contacto.nombre_completo',
+      header: 'CONTACTO',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => rowData.contacto?.nombre_completo || 'N/A'
+    },
+    {
+      field: 'tipo_acercamiento',
+      header: 'TIPO DE ACERCAMIENTO',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => rowData.tipo_acercamiento || 'N/A'
+    },
+    {
+      field: 'lugar',
+      header: 'LUGAR',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => rowData.lugar || 'N/A'
+    },
+    {
+      field: 'fecha',
+      header: 'FECHA',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => formatDate(rowData.fecha) || 'N/A'
+    }
+  ];
+
   const renderActions = (rowData) => (
     <div className="flex justify-end gap-2">
       <button
-        onClick={() => {
-          setSelectedEvento(rowData);
-          setViewDialogVisible(true);
-        }}
+        onClick={() => handleView(rowData)}
         className="p-2 text-gray-600 hover:bg-gray-100 rounded-full"
         title="Ver detalle"
       >
@@ -409,131 +437,27 @@ export default function EventosList() {
     </div>
   );
 
-  // Definir columnas para la tabla
-  const columns = [
-    {
-      field: 'municipalidad.nombre',
-      header: 'MUNICIPALIDAD',
-      sortable: true,
-      filterable: true,
-      body: (rowData) => (
-        <div className="max-w-xs overflow-hidden">
-          <span className="whitespace-pre-wrap break-words">
-            {rowData.municipalidad && rowData.municipalidad.nombre ? rowData.municipalidad.nombre : 'N/A'}
-          </span>
-        </div>
-      )
-    },
-    {
-      field: 'contacto.nombre_completo',
-      header: 'CONTACTO',
-      sortable: true,
-      filterable: true,
-      body: (rowData) => (
-        <div className="max-w-xs overflow-hidden">
-          <span className="whitespace-pre-wrap break-words">
-            {rowData.contacto && rowData.contacto.nombre_completo ? rowData.contacto.nombre_completo : 'N/A'}
-          </span>
-        </div>
-      )
-    },
-    {
-      field: 'tipo_acercamiento',
-      header: 'TIPO DE ACERCAMIENTO',
-      sortable: true,
-      filterable: true,
-      body: (rowData) => (
-        <div className="max-w-xs overflow-hidden">
-          <span className="whitespace-pre-wrap break-words">
-            {rowData.tipo_acercamiento || 'N/A'}
-          </span>
-        </div>
-      )
-    },
-    {
-      field: 'lugar',
-      header: 'LUGAR',
-      sortable: true,
-      filterable: true,
-      body: (rowData) => (
-        <div className="max-w-xs overflow-hidden">
-          <span className="whitespace-pre-wrap break-words">
-            {rowData.lugar || 'N/A'}
-          </span>
-        </div>
-      )
-    },
-    {
-      field: 'fecha',
-      header: 'FECHA',
-      sortable: true,
-      filterable: true,
-      body: (rowData) => formatDate(rowData.fecha) || 'N/A'
-    },
-    {
-      field: 'modalidad',
-      header: 'MODALIDAD',
-      sortable: true,
-      filterable: true,
-      body: (rowData) => (
-        <div className="max-w-xs overflow-hidden">
-          <span className="whitespace-pre-wrap break-words">
-            {rowData.modalidad || 'N/A'}
-          </span>
-        </div>
-      )
-    },
-    {
-      field: 'descripcion',
-      header: 'DESCRIPCIÓN',
-      sortable: true,
-      filterable: true,
-      body: (rowData) => (
-        <div className="max-w-xs overflow-hidden">
-          <span className="whitespace-pre-wrap break-words">
-            {rowData.descripcion || 'N/A'}
-          </span>
-        </div>
-      )
-    }
-  ];
-  
-  // Añadir columna de acciones al final
   const tableColumns = [...columns, { field: 'acciones', header: 'ACCIONES', body: renderActions }];
 
-  // Columnas a mostrar en versión móvil (solo municipalidad y fecha)
+  // Columnas en móvil
   const mobileColumns = ['municipalidad.nombre', 'fecha', 'acciones'];
-  
-  // Obtener datos paginados
-  const { data: paginatedData, totalRecords } = getPaginatedData();
 
-  // Render principal del componente
+  // ======== Render principal ========
   return (
     <div className="p-6 bg-white rounded-lg shadow w-full max-w-full">
+      {/* Encabezado */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Eventos</h1>
         <button
           className="px-4 py-2 bg-blue-600 text-white rounded-md flex items-center font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
-          onClick={() => {
-            setEditData({
-              id_evento: '',
-              id_municipalidad: '',
-              id_contacto: '',
-              tipo_acercamiento: '',
-              lugar: '',
-              fecha: new Date().toISOString().split('T')[0],
-              modalidad: '',
-              descripcion: ''
-            });
-            setCreateDialogVisible(true);
-          }}
+          onClick={handleCreate}
         >
           <FiPlus className="mr-2" />
           Nuevo Evento
         </button>
       </div>
 
-      {/* Búsqueda global - Siempre visible */}
+      {/* Búsqueda global */}
       <div className="mb-4">
         <div className="relative">
           <input
@@ -544,14 +468,12 @@ export default function EventosList() {
             placeholder="Buscar eventos..."
           />
           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
+            <FiSearch className="h-5 w-5 text-gray-400" />
           </div>
         </div>
       </div>
-      
-      {/* Tabla de eventos */}
+
+      {/* Tabla */}
       <div className="overflow-hidden">
         <Table
           data={paginatedData}
@@ -565,19 +487,19 @@ export default function EventosList() {
           }}
           emptyMessage="No hay eventos disponibles"
           searchQuery={searchQuery}
-          
           columnFilters={columnFilters}
           onFilterChange={(field, value) => {
             setColumnFilters({
               ...columnFilters,
               [field]: value
             });
+            setCurrentPage(1);
           }}
-          isMobile={window.innerWidth < 768}
+          isMobile={isMobile}
           mobileColumns={mobileColumns}
         />
       </div>
-      
+
       {/* Paginación */}
       {totalRecords > 0 && (
         <div className="mt-4">
@@ -591,49 +513,52 @@ export default function EventosList() {
           />
         </div>
       )}
-      
-      {/* Modal de creación */}
+
+      {/** ======================================
+       *  MODAL CREAR / EDITAR UNIFICADO
+       * ======================================= */}
       <Modal
-        isOpen={createDialogVisible}
-        onClose={() => setCreateDialogVisible(false)}
-        title="Crear Evento"
+        isOpen={upsertDialogVisible}
+        onClose={() => setUpsertDialogVisible(false)}
+        title={isEditMode ? 'Editar Evento' : 'Nuevo Evento'}
         size="xl"
         footer={
           <div className="flex justify-end gap-2">
             <button
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
-              onClick={() => setCreateDialogVisible(false)}
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              onClick={() => setUpsertDialogVisible(false)}
             >
               Cancelar
             </button>
             <button
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               onClick={handleSave}
             >
-              Guardar
+              {isEditMode ? 'Actualizar' : 'Guardar'}
             </button>
           </div>
         }
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Selector de Municipalidad mejorado */}
+          {/* MUNICIPALIDAD */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
               Municipalidad <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <div 
+            <div className="relative" ref={municipalidadDropdownRef}>
+              <div
                 className="w-full border border-gray-300 rounded-md p-2 flex justify-between items-center cursor-pointer"
                 onClick={() => setShowMunicipalidadDropdown(!showMunicipalidadDropdown)}
               >
                 <span>
-                  {editData.id_municipalidad
-                    ? municipalidades.find(m => m.id_municipalidad.toString() === editData.id_municipalidad.toString())?.nombre || 'Seleccione una municipalidad'
+                  {formData.id_municipalidad
+                    ? municipalidades.find(
+                        (m) => m.id_municipalidad.toString() === formData.id_municipalidad.toString()
+                      )?.nombre || 'Seleccione una municipalidad'
                     : 'Seleccione una municipalidad'}
                 </span>
-                <FiChevronDown className={`transition-transform ${showMunicipalidadDropdown ? 'rotate-180' : ''}`} />
+                {showMunicipalidadDropdown ? <FiChevronUp /> : <FiChevronDown />}
               </div>
-              
               {showMunicipalidadDropdown && (
                 <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                   <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
@@ -642,22 +567,32 @@ export default function EventosList() {
                       <input
                         type="text"
                         className="w-full pl-10 pr-4 py-2 border rounded-md"
-                        placeholder="Buscar evento por municipalidad..."
+                        placeholder="Buscar municipalidad..."
                         value={municipalidadSearchQuery}
-                        onChange={e => setMunicipalidadSearchQuery(e.target.value)}
-                        onClick={e => e.stopPropagation()}
+                        onChange={(e) => setMunicipalidadSearchQuery(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
                       />
                     </div>
                   </div>
                   <div className="py-1">
                     {municipalidades
-                      .filter(m => m.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()) || m.ubigeo.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()))
-                      .map(m => (
-                        <div 
-                          key={m.id_municipalidad} 
+                      .filter((m) => {
+                        const q = municipalidadSearchQuery.toLowerCase();
+                        return (
+                          m.nombre.toLowerCase().includes(q) ||
+                          (m.ubigeo || '').toLowerCase().includes(q)
+                        );
+                      })
+                      .map((m) => (
+                        <div
+                          key={m.id_municipalidad}
                           className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                           onClick={() => {
-                            setEditData(prev => ({ ...prev, id_municipalidad: m.id_municipalidad, id_contacto: '' }));
+                            setFormData((prev) => ({
+                              ...prev,
+                              id_municipalidad: m.id_municipalidad,
+                              id_contacto: '' // reset
+                            }));
                             loadContactosPorMunicipalidad(m.id_municipalidad);
                             setShowMunicipalidadDropdown(false);
                           }}
@@ -673,29 +608,32 @@ export default function EventosList() {
               )}
             </div>
           </div>
-          
-          {/* Selector de Contacto mejorado */}
+
+          {/* CONTACTO */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
               Contacto <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <div 
-                className={`w-full border border-gray-300 rounded-md p-2 flex justify-between items-center ${editData.id_municipalidad ? 'cursor-pointer' : 'cursor-not-allowed bg-gray-100'}`}
+            <div className="relative" ref={contactoDropdownRef}>
+              <div
+                className={`w-full border border-gray-300 rounded-md p-2 flex justify-between items-center ${
+                  formData.id_municipalidad ? 'cursor-pointer' : 'cursor-not-allowed bg-gray-100'
+                }`}
                 onClick={() => {
-                  if (editData.id_municipalidad) {
+                  if (formData.id_municipalidad) {
                     setShowContactoDropdown(!showContactoDropdown);
                   }
                 }}
               >
                 <span>
-                  {editData.id_contacto
-                    ? contactos.find(c => c.id_contacto.toString() === editData.id_contacto.toString())?.nombre_completo || 'Seleccione un contacto'
+                  {formData.id_contacto
+                    ? contactos.find(
+                        (c) => c.id_contacto.toString() === formData.id_contacto.toString()
+                      )?.nombre_completo || 'Seleccione un contacto'
                     : 'Seleccione un contacto'}
                 </span>
-                <FiChevronDown className={`transition-transform ${showContactoDropdown ? 'rotate-180' : ''}`} />
+                {showContactoDropdown ? <FiChevronUp /> : <FiChevronDown />}
               </div>
-              
               {showContactoDropdown && (
                 <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                   <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
@@ -706,27 +644,30 @@ export default function EventosList() {
                         className="w-full pl-10 pr-4 py-2 border rounded-md"
                         placeholder="Buscar contacto..."
                         value={contactoSearchQuery}
-                        onChange={e => setContactoSearchQuery(e.target.value)}
-                        onClick={e => e.stopPropagation()}
+                        onChange={(e) => setContactoSearchQuery(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
                       />
                     </div>
                   </div>
                   <div className="py-1">
                     {contactos
-                      .filter(c => c.nombre_completo.toLowerCase().includes(contactoSearchQuery.toLowerCase()))
-                      .map(c => (
-                        <div 
-                          key={c.id_contacto} 
+                      .filter((c) =>
+                        c.nombre_completo?.toLowerCase().includes(contactoSearchQuery.toLowerCase())
+                      )
+                      .map((c) => (
+                        <div
+                          key={c.id_contacto}
                           className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                           onClick={() => {
-                            setEditData(prev => ({ ...prev, id_contacto: c.id_contacto }));
+                            setFormData((prev) => ({
+                              ...prev,
+                              id_contacto: c.id_contacto
+                            }));
                             setShowContactoDropdown(false);
                           }}
                         >
                           <div className="font-medium">{c.nombre_completo}</div>
-                          <div className="text-xs text-gray-500">
-                            [{c.cargo}]
-                          </div>
+                          <div className="text-xs text-gray-500">[{c.cargo}]</div>
                         </div>
                       ))}
                   </div>
@@ -734,7 +675,8 @@ export default function EventosList() {
               )}
             </div>
           </div>
-          
+
+          {/* TIPO DE ACERCAMIENTO */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
               Tipo de Acercamiento <span className="text-red-500">*</span>
@@ -742,11 +684,14 @@ export default function EventosList() {
             <input
               type="text"
               className="w-full border border-gray-300 rounded-md p-2"
-              value={editData.tipo_acercamiento || ''}
-              onChange={(e) => setEditData(prev => ({ ...prev, tipo_acercamiento: e.target.value }))}
+              value={formData.tipo_acercamiento || ''}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, tipo_acercamiento: e.target.value }))
+              }
             />
           </div>
-          
+
+          {/* LUGAR */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
               Lugar <span className="text-red-500">*</span>
@@ -754,270 +699,67 @@ export default function EventosList() {
             <input
               type="text"
               className="w-full border border-gray-300 rounded-md p-2"
-              value={editData.lugar || ''}
-              onChange={(e) => setEditData(prev => ({ ...prev, lugar: e.target.value }))}
+              value={formData.lugar || ''}
+              onChange={(e) => setFormData((prev) => ({ ...prev, lugar: e.target.value }))}
             />
           </div>
-          
+
+          {/* FECHA */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
               Fecha <span className="text-red-500">*</span>
             </label>
-            <input
-              type="date"
-              className="w-full border border-gray-300 rounded-md p-2"
-              value={editData.fecha || ''}
-              onChange={(e) => setEditData(prev => ({ ...prev, fecha: e.target.value }))}
+            <TailwindCalendar
+              selectedDate={formData.fecha}
+              onChange={(newDate) => setFormData((prev) => ({ ...prev, fecha: newDate }))}
+              id="fecha"
+              className="w-full"
             />
           </div>
-          
+
+          {/* MODALIDAD (SELECT) */}
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">
               Modalidad <span className="text-red-500">*</span>
             </label>
             <select
               className="w-full border border-gray-300 rounded-md p-2"
-              value={editData.modalidad || ''}
-              onChange={(e) => setEditData(prev => ({ ...prev, modalidad: e.target.value }))}
+              value={formData.modalidad || ''}
+              onChange={(e) => setFormData((prev) => ({ ...prev, modalidad: e.target.value }))}
             >
               <option value="">Seleccione una modalidad</option>
-              <option value="Presencial">Presencial</option>
-              <option value="Virtual">Virtual</option>
-              <option value="Híbrido">Híbrido</option>
+              {modalidadOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
             </select>
           </div>
-          
-          <div className="col-span-1 md:col-span-2">
+
+          {/* DESCRIPCIÓN */}
+          <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-500 mb-1">
               Descripción
             </label>
             <textarea
-              className="w-full border border-gray-300 rounded-md p-2 h-32"
-              value={editData.descripcion || ''}
-              onChange={(e) => setEditData(prev => ({ ...prev, descripcion: e.target.value }))}
+              className="w-full border border-gray-300 rounded-md p-2"
+              value={formData.descripcion || ''}
+              onChange={(e) => setFormData((prev) => ({ ...prev, descripcion: e.target.value }))}
             />
           </div>
         </div>
       </Modal>
-      
-      {/* Modal de edición */}
-      <Modal
-        isOpen={editDialogVisible}
-        onClose={() => setEditDialogVisible(false)}
-        title="Editar Evento"
-        size="xl"
-        footer={
-          <div className="flex justify-end gap-2">
-            <button
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
-              onClick={() => setEditDialogVisible(false)}
-            >
-              Cancelar
-            </button>
-            <button
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              onClick={handleSave}
-            >
-              Guardar
-            </button>
-          </div>
-        }
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Selector de Municipalidad mejorado */}
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
-              Municipalidad <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <div 
-                className="w-full border border-gray-300 rounded-md p-2 flex justify-between items-center cursor-pointer"
-                onClick={() => setShowMunicipalidadDropdown(!showMunicipalidadDropdown)}
-              >
-                <span>
-                  {editData.id_municipalidad
-                    ? municipalidades.find(m => m.id_municipalidad.toString() === editData.id_municipalidad.toString())?.nombre || 'Seleccione una municipalidad'
-                    : 'Seleccione una municipalidad'}
-                </span>
-                <FiChevronDown className={`transition-transform ${showMunicipalidadDropdown ? 'rotate-180' : ''}`} />
-              </div>
-              
-              {showMunicipalidadDropdown && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                  <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
-                    <div className="relative">
-                      <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="text"
-                        className="w-full pl-10 pr-4 py-2 border rounded-md"
-                        placeholder="Buscar evento por municipalidad..."
-                        value={municipalidadSearchQuery}
-                        onChange={e => setMunicipalidadSearchQuery(e.target.value)}
-                        onClick={e => e.stopPropagation()}
-                      />
-                    </div>
-                  </div>
-                  <div className="py-1">
-                    {municipalidades
-                      .filter(m => m.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()))
-                      .map(m => (
-                        <div 
-                          key={m.id_municipalidad} 
-                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                          onClick={() => {
-                            setEditData(prev => ({ ...prev, id_municipalidad: m.id_municipalidad, id_contacto: '' }));
-                            loadContactosPorMunicipalidad(m.id_municipalidad);
-                            setShowMunicipalidadDropdown(false);
-                          }}
-                        >
-                          <div className="font-medium">{m.nombre}</div>
-                          <div className="text-xs text-gray-500">
-                            [{m.id_municipalidad}]
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Selector de Contacto mejorado */}
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
-              Contacto <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <div 
-                className={`w-full border border-gray-300 rounded-md p-2 flex justify-between items-center ${editData.id_municipalidad ? 'cursor-pointer' : 'cursor-not-allowed bg-gray-100'}`}
-                onClick={() => {
-                  if (editData.id_municipalidad) {
-                    setShowContactoDropdown(!showContactoDropdown);
-                  }
-                }}
-              >
-                <span>
-                  {editData.id_contacto
-                    ? contactos.find(c => c.id_contacto.toString() === editData.id_contacto.toString())?.nombre_completo || 'Seleccione un contacto'
-                    : 'Seleccione un contacto'}
-                </span>
-                <FiChevronDown className={`transition-transform ${showContactoDropdown ? 'rotate-180' : ''}`} />
-              </div>
-              
-              {showContactoDropdown && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                  <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
-                    <div className="relative">
-                      <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="text"
-                        className="w-full pl-10 pr-4 py-2 border rounded-md"
-                        placeholder="Buscar contacto..."
-                        value={contactoSearchQuery}
-                        onChange={e => setContactoSearchQuery(e.target.value)}
-                        onClick={e => e.stopPropagation()}
-                      />
-                    </div>
-                  </div>
-                  <div className="py-1">
-                    {contactos
-                      .filter(c => c.nombre_completo.toLowerCase().includes(contactoSearchQuery.toLowerCase()))
-                      .map(c => (
-                        <div 
-                          key={c.id_contacto} 
-                          className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                          onClick={() => {
-                            setEditData(prev => ({ ...prev, id_contacto: c.id_contacto }));
-                            setShowContactoDropdown(false);
-                          }}
-                        >
-                          <div className="font-medium">{c.nombre_completo}</div>
-                          <div className="text-xs text-gray-500">
-                            [{c.id_contacto}]
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
-              Tipo de Acercamiento <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              className="w-full border border-gray-300 rounded-md p-2"
-              value={editData.tipo_acercamiento || ''}
-              onChange={(e) => setEditData(prev => ({ ...prev, tipo_acercamiento: e.target.value }))}
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
-              Lugar <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              className="w-full border border-gray-300 rounded-md p-2"
-              value={editData.lugar || ''}
-              onChange={(e) => setEditData(prev => ({ ...prev, lugar: e.target.value }))}
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
-              Fecha <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="date"
-              className="w-full border border-gray-300 rounded-md p-2"
-              value={editData.fecha || ''}
-              onChange={(e) => setEditData(prev => ({ ...prev, fecha: e.target.value }))}
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
-              Modalidad <span className="text-red-500">*</span>
-            </label>
-            <select
-              className="w-full border border-gray-300 rounded-md p-2"
-              value={editData.modalidad || ''}
-              onChange={(e) => setEditData(prev => ({ ...prev, modalidad: e.target.value }))}
-            >
-              <option value="">Seleccione una modalidad</option>
-              <option value="Presencial">Presencial</option>
-              <option value="Virtual">Virtual</option>
-              <option value="Híbrido">Híbrido</option>
-            </select>
-          </div>
-          
-          <div className="col-span-1 md:col-span-2">
-            <label className="block text-sm font-medium text-gray-500 mb-1">
-              Descripción
-            </label>
-            <textarea
-              className="w-full border border-gray-300 rounded-md p-2 h-32"
-              value={editData.descripcion || ''}
-              onChange={(e) => setEditData(prev => ({ ...prev, descripcion: e.target.value }))}
-            />
-          </div>
-        </div>
-      </Modal>
-      
-      {/* Modal de visualización */}
+
+      {/* Diálogo VER DETALLE */}
       <Modal
         isOpen={viewDialogVisible}
         onClose={() => setViewDialogVisible(false)}
-        title="Detalles del Evento"
-        size="xl"
+        title="Detalle de Evento"
+        size="md"
         footer={
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
             <button
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
               onClick={() => setViewDialogVisible(false)}
             >
               Cerrar
@@ -1026,53 +768,54 @@ export default function EventosList() {
         }
       >
         {selectedEvento && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">MUNICIPALIDAD</h3>
-                <p className="mt-1">{selectedEvento.municipalidad && selectedEvento.municipalidad.nombre ? selectedEvento.municipalidad.nombre : 'N/A'}</p>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">CONTACTO</h3>
-                <p className="mt-1">{selectedEvento.contacto && selectedEvento.contacto.nombre_completo ? selectedEvento.contacto.nombre_completo : 'N/A'}</p>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">TIPO DE ACERCAMIENTO</h3>
-                <p className="mt-1">{selectedEvento.tipo_acercamiento || 'N/A'}</p>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">LUGAR</h3>
-                <p className="mt-1">{selectedEvento.lugar || 'N/A'}</p>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">FECHA</h3>
-                <p className="mt-1">{formatDate(selectedEvento.fecha) || 'N/A'}</p>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">MODALIDAD</h3>
-                <p className="mt-1">{selectedEvento.modalidad || 'N/A'}</p>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-500">DESCRIPCIÓN</h3>
-              <p className="mt-1 whitespace-pre-wrap">{selectedEvento.descripcion || 'N/A'}</p>
-            </div>
+          <div className="space-y-2">
+            <p>
+              <strong>Municipalidad:</strong>{' '}
+              {selectedEvento.municipalidad?.nombre || 'N/A'}
+            </p><p>
+              <strong>Departamento:</strong>{' '}
+              {selectedEvento.municipalidad?.departamento || 'N/A'}
+            </p>
+            <p>
+              <strong>Contacto:</strong>{' '}
+              {selectedEvento.contacto?.nombre_completo || 'N/A'}
+            </p>
+            <p>
+              <strong>Tipo de Acercamiento:</strong>{' '}
+              {selectedEvento.tipo_acercamiento || 'N/A'}
+            </p>
+            <p>
+              <strong>Lugar:</strong>{' '}
+              {selectedEvento.lugar || 'N/A'}
+            </p>
+            <p>
+              <strong>Fecha:</strong>{' '}
+              {formatDate(selectedEvento.fecha) || 'N/A'}
+            </p>
+            <p>
+              <strong>Modalidad:</strong>{' '}
+              {selectedEvento.modalidad || 'N/A'}
+            </p>
+            <p>
+              <strong>Descripción:</strong>{' '}
+              {selectedEvento.descripcion || 'N/A'}
+            </p>
           </div>
         )}
       </Modal>
-      
-      {/* Diálogo de confirmación de eliminación */}
+
+      {/* Diálogo CONFIRMAR ELIMINACIÓN */}
       <ConfirmDialog
         isOpen={deleteDialogVisible}
         onClose={() => setDeleteDialogVisible(false)}
-        onConfirm={() => {
-          if (selectedEvento) {
-            confirmDelete(selectedEvento);
-            setDeleteDialogVisible(false);
-          }
-        }}
-        title="Eliminar Evento"
-        message="¿Está seguro que desea eliminar este evento? Esta acción no se puede deshacer."
+        message="¿Estás seguro de que deseas eliminar este evento?"
+        title="Confirmación"
+        icon={<FiTrash2 />}
+        acceptLabel="Eliminar"
+        rejectLabel="Cancelar"
+        acceptClassName="bg-red-600 text-white"
+        onConfirm={handleDelete}
+        onReject={() => setDeleteDialogVisible(false)}
       />
     </div>
   );

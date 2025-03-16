@@ -6,3 +6,5 @@ export { default as Toast } from './Toast';
 export { ToastContainer } from './Toast';
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { ToastProvider, useToast } from './ToastContext';
+export { default as TailwindCalendar } from './TailwindCalendar';
+

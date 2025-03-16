@@ -1,77 +1,121 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FiEdit, FiTrash2, FiEye, FiChevronUp, FiChevronDown, FiPlus, FiCalendar, FiSearch } from 'react-icons/fi';
-import { ADDRESS } from '../../utils.jsx';
+import {
+  FiEdit,
+  FiTrash2,
+  FiPlus,
+  FiEye,
+  FiSearch,
+  FiChevronDown,
+  FiChevronUp,
+  FiCalendar
+} from 'react-icons/fi';
 import { api, apiService } from '../../services/authService';
+import { Table, Pagination, Modal, ConfirmDialog, useToast, TailwindCalendar } from '../ui';
 
-export default function EstadoSeguimientosList() {
+export default function EstadoSeguimientoList() {
+  // ========= Estados principales =========
   const [estadosSeguimiento, setEstadosSeguimiento] = useState([]);
   const [eventos, setEventos] = useState([]);
   const [contactos, setContactos] = useState([]);
   const [tiposReunion, setTiposReunion] = useState([]);
-  const [estados, setEstados] = useState([]); // Nuevo estado para almacenar los estados
-  const [editDialogVisible, setEditDialogVisible] = useState(false);
-  const [createDialogVisible, setCreateDialogVisible] = useState(false);
-  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
-  const [viewDialogVisible, setViewDialogVisible] = useState(false);
-  const [selectedEstadoSeguimiento, setSelectedEstadoSeguimiento] = useState(null);
-  const [editData, setEditData] = useState({
+  const [estados, setEstados] = useState([]); // Para id_estado_ref (p.ej. Pendiente, En Proceso, etc.)
+  const [loading, setLoading] = useState(true);
+
+  // Búsqueda global, filtros por columna, orden
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortField, setSortField] = useState('fecha');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [columnFilters, setColumnFilters] = useState({});
+
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Modal unificado (crear/editar)
+  const [upsertDialogVisible, setUpsertDialogVisible] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  // Datos del formulario
+  const [formData, setFormData] = useState({
     id_estado: '',
     id_evento: '',
     id_contacto: '',
     id_tipo_reunion: '',
     fecha: null,
-    id_estado_ref: '', // Nuevo campo para almacenar el id_estado_ref
+    id_estado_ref: '',
     descripcion: '',
     compromiso: '',
     fecha_compromiso: null
   });
-  const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [sortField, setSortField] = useState('fecha');
-  const [sortOrder, setSortOrder] = useState('desc');
-  const [toastMessage, setToastMessage] = useState(null);
-  const [columnFilters, setColumnFilters] = useState({
-    'evento.municipalidad.nombre': '',
-    'contacto.nombre': '',
-    'tipoReunion.descripcion': '',
-    fecha: '',
-    estado: '',
-    fecha_compromiso: ''
-  });
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  
-  // Estados para búsqueda en selectbox de eventos
-  const [eventosFiltered, setEventosFiltered] = useState([]);
-  const [eventoSearchQuery, setEventoSearchQuery] = useState('');
+
+  // Para ver detalles y eliminar
+  const [selectedSeguimiento, setSelectedSeguimiento] = useState(null);
+  const [viewDialogVisible, setViewDialogVisible] = useState(false);
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+
+  // Dropdowns con búsqueda
   const [showEventoDropdown, setShowEventoDropdown] = useState(false);
+  const [eventoSearchQuery, setEventoSearchQuery] = useState('');
   const eventoDropdownRef = useRef(null);
-  
-  // Estados para búsqueda en selectbox de contactos
-  const [contactosFiltered, setContactosFiltered] = useState([]);
-  const [contactoSearchQuery, setContactoSearchQuery] = useState('');
+
   const [showContactoDropdown, setShowContactoDropdown] = useState(false);
+  const [contactoSearchQuery, setContactoSearchQuery] = useState('');
   const contactoDropdownRef = useRef(null);
-  
-  // Estados para búsqueda en selectbox de tipos de reunión
-  const [tiposReunionFiltered, setTiposReunionFiltered] = useState([]);
-  const [tipoReunionSearchQuery, setTipoReunionSearchQuery] = useState('');
+
   const [showTipoReunionDropdown, setShowTipoReunionDropdown] = useState(false);
+  const [tipoReunionSearchQuery, setTipoReunionSearchQuery] = useState('');
   const tipoReunionDropdownRef = useRef(null);
 
+  const [showEstadoDropdown, setShowEstadoDropdown] = useState(false);
+  const [estadoSearchQuery, setEstadoSearchQuery] = useState('');
+  const estadoDropdownRef = useRef(null);
+
+  // Responsivo
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Notificaciones
+  const toast = useToast();
+
+  // ========= useEffect de carga inicial =========
+  useEffect(() => {
+    loadEstadosSeguimiento();
+    loadRelatedData();
+
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+
+    // Cerrar dropdowns al hacer clic afuera
+    function handleClickOutside(e) {
+      if (eventoDropdownRef.current && !eventoDropdownRef.current.contains(e.target)) {
+        setShowEventoDropdown(false);
+      }
+      if (contactoDropdownRef.current && !contactoDropdownRef.current.contains(e.target)) {
+        setShowContactoDropdown(false);
+      }
+      if (tipoReunionDropdownRef.current && !tipoReunionDropdownRef.current.contains(e.target)) {
+        setShowTipoReunionDropdown(false);
+      }
+      if (estadoDropdownRef.current && !estadoDropdownRef.current.contains(e.target)) {
+        setShowEstadoDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // ========= Cargar data de backend =========
   const loadEstadosSeguimiento = async () => {
-    setLoading(true);
     try {
+      setLoading(true);
       const data = await apiService.getAll('estados-seguimiento');
       setEstadosSeguimiento(data || []);
     } catch (error) {
       console.error('Error al cargar estados de seguimiento:', error);
-      setToastMessage({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudieron cargar los estados de seguimiento'
-      });
+      toast.showError('Error', 'No se pudieron cargar los estados de seguimiento');
     } finally {
       setLoading(false);
     }
@@ -79,1482 +123,817 @@ export default function EstadoSeguimientosList() {
 
   const loadRelatedData = async () => {
     try {
-      const [eventos, municipalidades, contactos, tiposReunion, estados] = 
-        await Promise.all([
-          apiService.getAll('eventos'),
-          apiService.getAll('municipalidades'),
-          apiService.getAll('contactos'),
-          apiService.getAll('tipos-reunion'),
-          apiService.getAll('estados')
-        ]);
-      
-      setEventos(eventos || []);
-      setContactos(contactos || []);
-      setTiposReunion(tiposReunion || []);
-      setEstados(estados || []);
-      
-      window.municipalidadesData = municipalidades || [];
+      const [evt, mun, ctos, tr, est] = await Promise.all([
+        apiService.getAll('eventos'),
+        apiService.getAll('municipalidades'),
+        apiService.getAll('contactos'),
+        apiService.getAll('tipos-reunion'),
+        apiService.getAll('estados') // la tabla "estados" para id_estado_ref
+      ]);
+      setEventos(evt || []);
+      setContactos(ctos || []);
+      setTiposReunion(tr || []);
+      setEstados(est || []);
+      // Podrías guardar municipalidades si las necesitaras
+      // en este caso, tal vez no las necesites directamente
+      // si no hay ID de municipalidad en este modelo.
     } catch (error) {
       console.error('Error al cargar datos relacionados:', error);
-      setToastMessage({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudieron cargar los datos relacionados'
-      });
+      toast.showError('Error', 'No se pudieron cargar los datos relacionados');
     }
   };
 
-  useEffect(() => {
-    loadEstadosSeguimiento();
-    loadRelatedData();
-    
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    
-    // Manejadores de clics fuera de los dropdowns
-    const handleClickOutside = (event) => {
-      if (eventoDropdownRef.current && !eventoDropdownRef.current.contains(event.target)) {
-        setShowEventoDropdown(false);
-      }
-      if (contactoDropdownRef.current && !contactoDropdownRef.current.contains(event.target)) {
-        setShowContactoDropdown(false);
-      }
-      if (tipoReunionDropdownRef.current && !tipoReunionDropdownRef.current.contains(event.target)) {
-        setShowTipoReunionDropdown(false);
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (eventoSearchQuery.trim() === '') {
-      setEventosFiltered(eventos);
-    } else {
-      const searchTerm = eventoSearchQuery.toLowerCase();
-      const filtered = eventos.filter(evento => 
-        (evento.municipalidad?.nombre && evento.municipalidad.nombre.toLowerCase().includes(searchTerm)) ||
-        (evento.municipalidad?.ubigeo && evento.municipalidad.ubigeo.toLowerCase().includes(searchTerm)) ||
-        (evento.municipalidad?.departamento && evento.municipalidad.departamento.toLowerCase().includes(searchTerm)) ||
-        (evento.municipalidad?.provincia && evento.municipalidad.provincia.toLowerCase().includes(searchTerm)) ||
-        (evento.municipalidad?.distrito && evento.municipalidad.distrito.toLowerCase().includes(searchTerm)) ||
-        (evento.fecha && formatDate(evento.fecha).toLowerCase().includes(searchTerm))
-      );
-      setEventosFiltered(filtered);
-    }
-  }, [eventoSearchQuery, eventos]);
-
-  useEffect(() => {
-    if (contactoSearchQuery.trim() === '') {
-      setContactosFiltered(contactos);
-    } else {
-      const searchTerm = contactoSearchQuery.toLowerCase();
-      const filtered = contactos.filter(contacto => 
-        (contacto.nombre_completo && contacto.nombre_completo.toLowerCase().includes(searchTerm)) ||
-        (contacto.cargo && contacto.cargo.toLowerCase().includes(searchTerm)) ||
-        (contacto.telefono && contacto.telefono.toLowerCase().includes(searchTerm)) ||
-        (contacto.correo && contacto.correo.toLowerCase().includes(searchTerm))
-      );
-      setContactosFiltered(filtered);
-    }
-  }, [contactoSearchQuery, contactos]);
-
-  useEffect(() => {
-    if (tipoReunionSearchQuery.trim() === '') {
-      setTiposReunionFiltered(tiposReunion);
-    } else {
-      const searchTerm = tipoReunionSearchQuery.toLowerCase();
-      const filtered = tiposReunion.filter(tipo => 
-        (tipo.descripcion && tipo.descripcion.toLowerCase().includes(searchTerm))
-      );
-      setTiposReunionFiltered(filtered);
-    }
-  }, [tipoReunionSearchQuery, tiposReunion]);
-
-  useEffect(() => {
-    if (toastMessage) {
-      const timer = setTimeout(() => {
-        setToastMessage(null);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [toastMessage]);
-
-  const loadEventos = async () => {
-    try {
-      const response = await apiService.getAll('eventos');
-      setEventos(response || []);
-    } catch (error) {
-      console.error('Error al cargar eventos:', error);
-      setToastMessage({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudieron cargar los eventos'
-      });
-    }
+  // =====================
+  //  Crear / Editar
+  // =====================
+  const handleCreate = () => {
+    setIsEditMode(false);
+    setFormData({
+      id_estado: '',
+      id_evento: '',
+      id_contacto: '',
+      id_tipo_reunion: '',
+      fecha: new Date(),
+      id_estado_ref: '',
+      descripcion: '',
+      compromiso: '',
+      fecha_compromiso: null
+    });
+    setUpsertDialogVisible(true);
   };
 
-  const loadTiposReunion = async () => {
-    try {
-      const response = await apiService.getAll('tipos-reunion');
-      setTiposReunion(response || []);
-    } catch (error) {
-      console.error('Error al cargar tipos de reunión:', error);
-      setToastMessage({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudieron cargar los tipos de reunión'
-      });
-    }
-  };
+  const handleEdit = (rowData) => {
+    setIsEditMode(true);
+    setSelectedSeguimiento(rowData);
 
-  const loadContactosPorEvento = async (eventoId) => {
-    try {
-      const eventoResponse = await apiService.getById('eventos', eventoId);
-      const evento = eventoResponse;
-      
-      if (evento && evento.id_municipalidad) {
-        const response = await apiService.getAll(`municipalidades/${evento.id_municipalidad}/contactos`);
-        setContactos(response);
-      } else {
-        setContactos([]);
-      }
-    } catch (error) {
-      console.error('Error al cargar contactos:', error);
-      setToastMessage({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'No se pudieron cargar los contactos'
-      });
-    }
+    setFormData({
+      id_estado: rowData.id_estado,
+      id_evento: rowData.id_evento,
+      id_contacto: rowData.id_contacto,
+      id_tipo_reunion: rowData.id_tipo_reunion,
+      fecha: rowData.fecha ? new Date(rowData.fecha) : new Date(),
+      id_estado_ref: rowData.id_estado_ref || '',
+      descripcion: rowData.descripcion || '',
+      compromiso: rowData.compromiso || '',
+      fecha_compromiso: rowData.fecha_compromiso
+        ? new Date(rowData.fecha_compromiso)
+        : null
+    });
+    setUpsertDialogVisible(true);
   };
 
   const handleSave = async () => {
+    // Validaciones mínimas
+    if (!formData.id_evento || !formData.id_contacto || !formData.id_tipo_reunion || !formData.fecha) {
+      toast.showWarning('Advertencia', 'Por favor llena los campos obligatorios');
+      return;
+    }
+
+    const payload = {
+      ...formData,
+      fecha: formData.fecha ? formData.fecha.toISOString().split('T')[0] : null,
+      fecha_compromiso: formData.fecha_compromiso
+        ? formData.fecha_compromiso.toISOString().split('T')[0]
+        : null
+    };
+
     try {
-      const dataToSend = { ...editData };
-      
-      if (dataToSend.fecha && dataToSend.fecha instanceof Date) {
-        dataToSend.fecha = dataToSend.fecha.toISOString().split('T')[0];
-      }
-      
-      if (dataToSend.fecha_compromiso && dataToSend.fecha_compromiso instanceof Date) {
-        dataToSend.fecha_compromiso = dataToSend.fecha_compromiso.toISOString().split('T')[0];
-      }
-      
-      if (dataToSend.id_estado) {
-        await apiService.update('estados-seguimiento', dataToSend.id_estado, dataToSend);
-        setToastMessage({
-          severity: 'success',
-          summary: 'Éxito',
-          detail: 'Estado de seguimiento actualizado correctamente'
-        });
+      if (isEditMode && formData.id_estado) {
+        // Actualizar
+        await apiService.update('estados-seguimiento', formData.id_estado, payload);
+        toast.showSuccess('Éxito', 'Estado de seguimiento actualizado');
       } else {
-        await apiService.create('estados-seguimiento', dataToSend);
-        setToastMessage({
-          severity: 'success',
-          summary: 'Éxito',
-          detail: 'Estado de seguimiento creado correctamente'
-        });
+        // Crear nuevo
+        await apiService.create('estados-seguimiento', payload);
+        toast.showSuccess('Éxito', 'Estado de seguimiento creado');
       }
-      
-      setEditDialogVisible(false);
-      setCreateDialogVisible(false);
-      setEditData({
-        id_estado: '',
-        id_evento: '',
-        id_contacto: '',
-        id_tipo_reunion: '',
-        fecha: null,
-        id_estado_ref: '',
-        descripcion: '',
-        compromiso: '',
-        fecha_compromiso: null
-      });
+      setUpsertDialogVisible(false);
       loadEstadosSeguimiento();
     } catch (error) {
       console.error('Error al guardar:', error);
-      setToastMessage({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Error al guardar el estado de seguimiento'
-      });
+      toast.showError('Error', 'No se pudo guardar el estado de seguimiento');
     }
   };
 
-  const confirmDelete = async (rowData) => {
+  // =====================
+  //  Eliminar
+  // =====================
+  const confirmDelete = (rowData) => {
+    setSelectedSeguimiento(rowData);
+    setDeleteDialogVisible(true);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedSeguimiento) return;
     try {
-      await apiService.delete('estados-seguimiento', rowData.id_estado);
-      setToastMessage({
-        severity: 'success',
-        summary: 'Éxito',
-        detail: 'Estado de seguimiento eliminado correctamente'
-      });
+      await apiService.remove('estados-seguimiento', selectedSeguimiento.id_estado);
+      toast.showSuccess('Éxito', 'Estado de seguimiento eliminado');
+      setDeleteDialogVisible(false);
       loadEstadosSeguimiento();
     } catch (error) {
       console.error('Error al eliminar:', error);
-      setToastMessage({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Error al eliminar el estado de seguimiento'
+      toast.showError('Error', 'No se pudo eliminar el estado de seguimiento');
+    }
+  };
+
+  // =====================
+  //  Ver detalle
+  // =====================
+  const handleView = (rowData) => {
+    setSelectedSeguimiento(rowData);
+    setViewDialogVisible(true);
+  };
+
+  // =====================
+  //  Formatear fecha
+  // =====================
+  const formatDate = (value) => {
+    if (!value) return '';
+    const d = new Date(value);
+    if (isNaN(d)) return '';
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  };
+
+  // =====================
+  //  Búsqueda y Filtros
+  // =====================
+  const applyFilters = () => {
+    if (!estadosSeguimiento || estadosSeguimiento.length === 0) return [];
+    let filtered = [...estadosSeguimiento];
+
+    // Búsqueda global
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter((item) => {
+        // Campos para text-search
+        const eventoName = eventos.find((e) => e.id_evento === item.id_evento)?.municipalidad?.nombre?.toLowerCase() || '';
+        const contactoName = contactos.find((c) => c.id_contacto === item.id_contacto)?.nombre_completo?.toLowerCase() || '';
+        const tipoRDesc = tiposReunion.find((t) => t.id_tipo_reunion === item.id_tipo_reunion)?.descripcion?.toLowerCase() || '';
+        const estadoDesc = estados.find((es) => es.id_estado == item.id_estado_ref)?.descripcion?.toLowerCase() || '';
+
+        return (
+          eventoName.includes(q) ||
+          contactoName.includes(q) ||
+          tipoRDesc.includes(q) ||
+          (item.descripcion || '').toLowerCase().includes(q) ||
+          (item.compromiso || '').toLowerCase().includes(q) ||
+          estadoDesc.includes(q) ||
+          formatDate(item.fecha).includes(q) ||
+          formatDate(item.fecha_compromiso).includes(q)
+        );
       });
     }
-  };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
+    // Filtros por columna
+    Object.entries(columnFilters).forEach(([field, value]) => {
+      if (value) {
+        const lowerVal = value.toLowerCase();
+        filtered = filtered.filter((item) => {
+          if (field === 'evento.municipalidad.nombre') {
+            const eventoName = eventos.find((e) => e.id_evento === item.id_evento)?.municipalidad?.nombre?.toLowerCase() || '';
+            return eventoName.includes(lowerVal);
+          } else if (field === 'contacto.nombre') {
+            const cName = contactos.find((c) => c.id_contacto === item.id_contacto)?.nombre_completo?.toLowerCase() || '';
+            return cName.includes(lowerVal);
+          } else if (field === 'tipoReunion.descripcion') {
+            const trDesc = tiposReunion.find((tr) => tr.id_tipo_reunion === item.id_tipo_reunion)?.descripcion?.toLowerCase() || '';
+            return trDesc.includes(lowerVal);
+          } else if (field === 'estado') {
+            const esDesc = estados.find((es) => es.id_estado == item.id_estado_ref)?.descripcion?.toLowerCase() || '';
+            return esDesc.includes(lowerVal);
+          } else if (field === 'fecha') {
+            return formatDate(item.fecha).includes(value);
+          } else if (field === 'fecha_compromiso') {
+            return formatDate(item.fecha_compromiso).includes(value);
+          } else {
+            // Por si tuviéramos otros campos directos
+            return (item[field] || '').toString().toLowerCase().includes(lowerVal);
+          }
+        });
+      }
     });
-  };
 
-  const handleSort = (field) => {
-    const isAsc = sortField === field && sortOrder === 'asc';
-    setSortOrder(isAsc ? 'desc' : 'asc');
-    setSortField(field);
-  };
-
-  const filteredEstadosSeguimiento = estadosSeguimiento.filter(estado => {
-    const searchFields = [
-      estado.evento?.municipalidad?.nombre,
-      estado.contacto?.nombre,
-      estado.tipoReunion?.descripcion,
-      estado.estado,
-      estado.descripcion,
-      estado.compromiso,
-      formatDate(estado.fecha),
-      formatDate(estado.fecha_compromiso)
-    ];
-    
-    const matchesSearch = searchQuery === '' || 
-      searchFields.some(field => 
-        field && field.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    
-    const matchesMunicipalidad = columnFilters['evento.municipalidad.nombre'] === '' || 
-      (estado.evento?.municipalidad?.nombre && 
-       estado.evento.municipalidad.nombre.toLowerCase().includes(columnFilters['evento.municipalidad.nombre'].toLowerCase()));
-    
-    const matchesContacto = columnFilters['contacto.nombre'] === '' || 
-      (estado.contacto?.nombre && 
-       estado.contacto.nombre.toLowerCase().includes(columnFilters['contacto.nombre'].toLowerCase()));
-    
-    const matchesTipoReunion = columnFilters['tipoReunion.descripcion'] === '' || 
-      (estado.tipoReunion?.descripcion && 
-       estado.tipoReunion.descripcion.toLowerCase().includes(columnFilters['tipoReunion.descripcion'].toLowerCase()));
-    
-    const matchesFecha = columnFilters.fecha === '' || 
-      (estado.fecha && 
-       formatDate(estado.fecha).toLowerCase().includes(columnFilters.fecha.toLowerCase()));
-    
-    const matchesEstado = columnFilters.estado === '' || 
-      getEstadoDescripcion(estado).toLowerCase().includes(columnFilters.estado.toLowerCase());    
-    const matchesFechaCompromiso = columnFilters.fecha_compromiso === '' || 
-      (estado.fecha_compromiso && 
-       formatDate(estado.fecha_compromiso).toLowerCase().includes(columnFilters.fecha_compromiso.toLowerCase()));
-    
-    return matchesSearch && matchesMunicipalidad && matchesContacto && matchesTipoReunion && 
-           matchesFecha && matchesEstado && matchesFechaCompromiso;
-  });
-
-  const totalPages = Math.ceil(filteredEstadosSeguimiento.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-
-  const sortedData = [...filteredEstadosSeguimiento].sort((a, b) => {
-    let aValue, bValue;
-    
-    if (sortField.includes('.')) {
-      const parts = sortField.split('.');
-      aValue = parts.reduce((obj, key) => obj && obj[key], a) || '';
-      bValue = parts.reduce((obj, key) => obj && obj[key], b) || '';
-    } else {
-      aValue = a[sortField] || '';
-      bValue = b[sortField] || '';
-    }
-    
-    if (sortField === 'fecha' || sortField === 'fecha_compromiso') {
-      return sortOrder === 'asc' 
-        ? new Date(aValue) - new Date(bValue)
-        : new Date(bValue) - new Date(aValue);
-    }
-    
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortOrder === 'asc'
-        ? aValue.localeCompare(bValue, undefined, { numeric: true })
-        : bValue.localeCompare(aValue, undefined, { numeric: true });
-    }
-    
-    return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
-  });
-
-  const paginatedData = sortedData.slice(startIndex, endIndex);
-
-  const goToPage = (page) => {
-    setCurrentPage(page);
-  };
-
-  const TailwindCalendar = ({ selectedDate, onChange, id, className }) => {
-    const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
-    const [isOpen, setIsOpen] = useState(false);
-    const calendarRef = useRef(null);
-    
-    useEffect(() => {
-      const handleClickOutside = (event) => {
-        if (calendarRef.current && !calendarRef.current.contains(event.target)) {
-          setIsOpen(false);
+    // Ordenar
+    if (sortField) {
+      filtered.sort((a, b) => {
+        let valA, valB;
+        if (sortField === 'evento.municipalidad.nombre') {
+          valA = eventos.find((e) => e.id_evento === a.id_evento)?.municipalidad?.nombre?.toLowerCase() || '';
+          valB = eventos.find((e) => e.id_evento === b.id_evento)?.municipalidad?.nombre?.toLowerCase() || '';
+        } else if (sortField === 'contacto.nombre') {
+          valA = contactos.find((c) => c.id_contacto === a.id_contacto)?.nombre_completo?.toLowerCase() || '';
+          valB = contactos.find((c) => c.id_contacto === b.id_contacto)?.nombre_completo?.toLowerCase() || '';
+        } else if (sortField === 'tipoReunion.descripcion') {
+          valA = tiposReunion.find((tr) => tr.id_tipo_reunion === a.id_tipo_reunion)?.descripcion?.toLowerCase() || '';
+          valB = tiposReunion.find((tr) => tr.id_tipo_reunion === b.id_tipo_reunion)?.descripcion?.toLowerCase() || '';
+        } else if (sortField === 'fecha') {
+          valA = a.fecha ? new Date(a.fecha) : new Date(0);
+          valB = b.fecha ? new Date(b.fecha) : new Date(0);
+        } else if (sortField === 'fecha_compromiso') {
+          valA = a.fecha_compromiso ? new Date(a.fecha_compromiso) : new Date(0);
+          valB = b.fecha_compromiso ? new Date(b.fecha_compromiso) : new Date(0);
+        } else if (sortField === 'estado') {
+          valA = estados.find((es) => es.id_estado == a.id_estado_ref)?.descripcion?.toLowerCase() || '';
+          valB = estados.find((es) => es.id_estado == b.id_estado_ref)?.descripcion?.toLowerCase() || '';
+        } else {
+          valA = (a[sortField] || '').toString().toLowerCase();
+          valB = (b[sortField] || '').toString().toLowerCase();
         }
-      };
-      
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }, []);
-    
-    const handleDateSelect = (date) => {
-      onChange(date);
-      setIsOpen(false);
+
+        if (valA instanceof Date && valB instanceof Date) {
+          return sortOrder === 'asc' ? valA - valB : valB - valA;
+        } else {
+          const result = valA.localeCompare(valB);
+          return sortOrder === 'asc' ? result : -result;
+        }
+      });
+    }
+
+    return filtered;
+  };
+
+  const getPaginatedData = () => {
+    const filteredData = applyFilters();
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return {
+      data: filteredData.slice(startIndex, endIndex),
+      totalRecords: filteredData.length
     };
-    
-    const navigateMonth = (step) => {
-      const newDate = new Date(currentDate);
-      newDate.setMonth(newDate.getMonth() + step);
-      setCurrentDate(newDate);
-    };
-    
-    const monthNames = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
-    
-    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    
-    const renderCalendarDays = () => {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      
-      const firstDayOfMonth = new Date(year, month, 1).getDay();
-      
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      
-      const days = [];
-      
-      for (let i = 0; i < firstDayOfMonth; i++) {
-        days.push(
-          <div key={`empty-${i}`} className="h-8 w-8"></div>
-        );
+  };
+
+  const { data: paginatedData, totalRecords } = getPaginatedData();
+  const totalPages = Math.ceil(totalRecords / itemsPerPage);
+
+  // =====================
+  //  Definir columnas
+  // =====================
+  const columns = [
+    {
+      field: 'evento.municipalidad.nombre',
+      header: 'EVENTO DE MUNICIPALIDAD',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => {
+        const evt = eventos.find((e) => e.id_evento === rowData.id_evento);
+        const nombre_fecha = evt?.municipalidad?.nombre + ' - ' + formatDate(evt?.fecha) || 'N/A';
+        return nombre_fecha;
       }
-      
-      for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(year, month, day);
-        const isToday = new Date().toDateString() === date.toDateString();
-        const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
-        
-        days.push(
-          <button
-            key={`day-${day}`}
-            type="button"
-            onClick={() => handleDateSelect(date)}
-            className={`h-8 w-8 rounded-full flex items-center justify-center text-sm ${
-              isSelected
-                ? 'bg-blue-500 text-white'
-                : isToday
-                  ? 'bg-blue-100 text-blue-800'
-                  : 'hover:bg-gray-100'
-            }`}
-          >
-            {day}
-          </button>
-        );
+    },
+    {
+      field: 'contacto.nombre',
+      header: 'CONTACTO',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => {
+        const cto = contactos.find((c) => c.id_contacto === rowData.id_contacto);
+        return cto?.nombre_completo || 'N/A';
       }
-      
-      return days;
-    };
-    
-    return (
-      <div className="relative" ref={calendarRef}>
-        <div className={`relative ${className}`}>
-          <input
-            id={id}
-            type="text"
-            readOnly
-            value={selectedDate ? formatDate(selectedDate) : ''}
-            placeholder="Seleccionar fecha"
-            onClick={() => setIsOpen(!isOpen)}
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
-          />
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-            <FiCalendar className="h-5 w-5 text-gray-400" />
-          </div>
-        </div>
-        
-        {isOpen && (
-          <div className="absolute z-10 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-64">
-            <div className="flex justify-between items-center mb-4">
-              <button
-                type="button"
-                onClick={() => navigateMonth(-1)}
-                className="p-1 rounded-full hover:bg-gray-100"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <div className="font-semibold">
-                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-              </div>
-              <button
-                type="button"
-                onClick={() => navigateMonth(1)}
-                className="p-1 rounded-full hover:bg-gray-100"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {dayNames.map(day => (
-                <div key={day} className="h-8 w-8 flex items-center justify-center text-xs text-gray-500">
-                  {day}
-                </div>
-              ))}
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1">
-              {renderCalendarDays()}
-            </div>
-            
-            <div className="mt-4 flex justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  handleDateSelect(new Date());
-                }}
-                className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
-              >
-                Hoy
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onChange(null);
-                  setIsOpen(false);
-                }}
-                className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
-              >
-                Limpiar
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
+    },
+    {
+      field: 'fecha',
+      header: 'FECHA',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => formatDate(rowData.fecha) || 'N/A'
+    },
+    {
+      field: 'estado',
+      header: 'ESTADO',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => {
+        const estRef = estados.find((es) => es.id_estado == rowData.id_estado_ref);
+        return estRef?.descripcion || 'N/A';
+      }
+    },
+    {
+      field: 'fecha_compromiso',
+      header: 'FECHA COMPROMISO',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => formatDate(rowData.fecha_compromiso) || 'N/A'
+    }
+  ];
 
-  const eventoBodyTemplate = (estado) => {
-    if (estado.evento && estado.evento.municipalidad) {
-      return estado.evento.municipalidad.nombre || 'Sin municipalidad';
-    }
-    
-    const evento = eventos.find(e => e.id_evento === estado.id_evento);
-    if (evento && evento.municipalidad) {
-      return evento.municipalidad.nombre || 'Sin municipalidad';
-    }
-    
-    return 'N/A';
-  };
+  const renderActions = (rowData) => (
+    <div className="flex justify-end gap-2">
+      <button
+        onClick={() => {
+          setSelectedSeguimiento(rowData);
+          setViewDialogVisible(true);
+        }}
+        className="p-2 text-gray-600 hover:bg-gray-100 rounded-full"
+        title="Ver detalle"
+      >
+        <FiEye className="h-4 w-4" />
+      </button>
+      <button
+        onClick={() => handleEdit(rowData)}
+        className="p-2 text-blue-600 hover:bg-blue-100 rounded-full"
+        title="Editar"
+      >
+        <FiEdit className="h-4 w-4" />
+      </button>
+      <button
+        onClick={() => confirmDelete(rowData)}
+        className="p-2 text-red-600 hover:bg-red-100 rounded-full"
+        title="Eliminar"
+      >
+        <FiTrash2 className="h-4 w-4" />
+      </button>
+    </div>
+  );
 
-  const contactoBodyTemplate = (estado) => {
-    if (estado.contacto) {
-      return estado.contacto.nombre_completo || 'Sin nombre';
-    }
-    
-    const contacto = contactos.find(c => c.id_contacto === estado.id_contacto);
-    if (contacto) {
-      return contacto.nombre_completo || 'Sin nombre';
-    }
-    
-    return 'N/A';
-  };
+  const tableColumns = [...columns, { field: 'acciones', header: 'ACCIONES', body: renderActions }];
 
-  const tipoReunionBodyTemplate = (estado) => {
-    if (estado.tipoReunion) {
-      return estado.tipoReunion.descripcion || 'Sin descripción';
-    }
-    
-    const tipoReunion = tiposReunion.find(tr => tr.id_tipo_reunion === estado.id_tipo_reunion);
-    if (tipoReunion) {
-      return tipoReunion.descripcion || 'Sin descripción';
-    }
-    
-    return 'N/A';
-  };
+  // Columnas en móvil
+  const mobileColumns = ['evento.municipalidad.nombre', 'fecha', 'acciones'];
 
-  const getEstadoDescripcion = (estadoSeguimiento) => {
-    if (!estadoSeguimiento.id_estado_ref) return 'N/A';
-    
-    const estadoRef = estados.find(e => e.id_estado == estadoSeguimiento.id_estado_ref);
-    if (estadoRef) {
-      return estadoRef.descripcion || 'N/A';
-    }
-    
-    return 'N/A';
-  };
-
+  // =====================
+  // Render principal
+  // =====================
   return (
     <div className="p-6 bg-white rounded-lg shadow w-full max-w-full">
-      {toastMessage && (
-        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg border border-gray-200 ${
-          toastMessage.severity === 'success' ? 'bg-green-100 border-l-4 border-green-500 text-green-700' :
-          toastMessage.severity === 'error' ? 'bg-red-100 border-l-4 border-red-500 text-red-700' :
-          toastMessage.severity === 'warning' ? 'bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700' :
-          'bg-blue-100 border-l-4 border-blue-500 text-blue-700'
-        }`}>
-          <div className="flex items-center">
-            <div className="font-bold">{toastMessage.summary}</div>
-            <div className="ml-2">{toastMessage.detail}</div>
-          </div>
-        </div>
-      )}
-      
       <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center">
-          <h2 className="text-2xl font-bold text-gray-800">Estados de Seguimiento</h2>
-          <button
-            onClick={() => {
-              setEditData({
-                id_estado: '',
-                id_evento: '',
-                id_contacto: '',
-                id_tipo_reunion: '',
-                fecha: null,
-                id_estado_ref: '',
-                descripcion: '',
-                compromiso: '',
-                fecha_compromiso: null
-              });
-              setCreateDialogVisible(true);
-            }}
-            className="ml-4 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2"
-          >
-            <FiPlus className="w-5 h-5" />
-            <span>Nuevo Estado</span>
-          </button>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-800">Estados de Seguimiento</h1>
+        <button
+          className="px-4 py-2 bg-blue-600 text-white rounded-md flex items-center font-medium
+                     hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+          onClick={handleCreate}
+        >
+          <FiPlus className="mr-2" />
+          Nuevo Estado
+        </button>
+      </div>
+
+      {/* Búsqueda global */}
+      <div className="mb-4">
         <div className="relative">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar estado..."
-            className="w-full px-4 py-2 pr-10 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm 
+                       focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Buscar estados de seguimiento..."
           />
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-            <FiSearch className="w-5 h-5 text-gray-400" />
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            <FiSearch className="h-5 w-5 text-gray-400" />
           </div>
         </div>
       </div>
-      
-      <div className="overflow-x-auto w-full">
-        <table className="min-w-full w-full divide-y divide-gray-200 table-fixed">
-          <thead className="bg-gray-50">
-            <tr>
-              <th 
-                scope="col" 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                onClick={() => handleSort('evento.municipalidad.nombre')}
-              >
-                <div className="flex items-center space-x-1">
-                  <span>Municipalidad</span>
-                  {sortField === 'evento.municipalidad.nombre' && (
-                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
-                  )}
-                </div>
-                {!isMobile && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      value={columnFilters['evento.municipalidad.nombre']}
-                      onChange={(e) => setColumnFilters({...columnFilters, 'evento.municipalidad.nombre': e.target.value})}
-                      placeholder="Filtrar..."
-                      className="w-full px-2 py-1 text-xs border rounded"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                )}
-              </th>
-              
-              <th 
-                scope="col" 
-                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : ''}`}
-                onClick={() => handleSort('contacto.nombre')}
-              >
-                <div className="flex items-center space-x-1">
-                  <span>Contacto</span>
-                  {sortField === 'contacto.nombre' && (
-                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
-                  )}
-                </div>
-                {!isMobile && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      value={columnFilters['contacto.nombre']}
-                      onChange={(e) => setColumnFilters({...columnFilters, 'contacto.nombre': e.target.value})}
-                      placeholder="Filtrar..."
-                      className="w-full px-2 py-1 text-xs border rounded"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                )}
-              </th>
-              
-              <th 
-                scope="col" 
-                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : ''}`}
-                onClick={() => handleSort('tipoReunion.descripcion')}
-              >
-                <div className="flex items-center space-x-1">
-                  <span>Tipo Reunión</span>
-                  {sortField === 'tipoReunion.descripcion' && (
-                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
-                  )}
-                </div>
-                {!isMobile && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      value={columnFilters['tipoReunion.descripcion']}
-                      onChange={(e) => setColumnFilters({...columnFilters, 'tipoReunion.descripcion': e.target.value})}
-                      placeholder="Filtrar..."
-                      className="w-full px-2 py-1 text-xs border rounded"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                )}
-              </th>
-              
-              <th 
-                scope="col" 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                onClick={() => handleSort('fecha')}
-              >
-                <div className="flex items-center space-x-1">
-                  <span>Fecha</span>
-                  {sortField === 'fecha' && (
-                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
-                  )}
-                </div>
-                {!isMobile && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      value={columnFilters.fecha}
-                      onChange={(e) => setColumnFilters({...columnFilters, fecha: e.target.value})}
-                      placeholder="Filtrar..."
-                      className="w-full px-2 py-1 text-xs border rounded"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                )}
-              </th>
-              
-              <th 
-                scope="col" 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                onClick={() => handleSort('estado')}
-              >
-                <div className="flex items-center space-x-1">
-                  <span>Estado</span>
-                  {sortField === 'estado' && (
-                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
-                  )}
-                </div>
-                {!isMobile && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      value={columnFilters.estado}
-                      onChange={(e) => setColumnFilters({...columnFilters, estado: e.target.value})}
-                      placeholder="Filtrar..."
-                      className="w-full px-2 py-1 text-xs border rounded"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                )}
-              </th>
-              
-              <th 
-                scope="col" 
-                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer ${isMobile ? 'hidden md:table-cell' : ''}`}
-                onClick={() => handleSort('fecha_compromiso')}
-              >
-                <div className="flex items-center space-x-1">
-                  <span>Fecha Compromiso</span>
-                  {sortField === 'fecha_compromiso' && (
-                    sortOrder === 'asc' ? <FiChevronUp className="w-4 h-4" /> : <FiChevronDown className="w-4 h-4" />
-                  )}
-                </div>
-                {!isMobile && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      value={columnFilters.fecha_compromiso}
-                      onChange={(e) => setColumnFilters({...columnFilters, fecha_compromiso: e.target.value})}
-                      placeholder="Filtrar..."
-                      className="w-full px-2 py-1 text-xs border rounded"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                )}
-              </th>
-              
-              <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Acciones
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-          {loading ? (
-              <tr>
-                <td colSpan="7" className="px-6 py-4 text-center">
-                  <div className="flex justify-center">
-                    <svg className="animate-spin h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                  </div>
-                </td>
-              </tr>
-            ) : paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
-                  No se encontraron estados de seguimiento
-                </td>
-              </tr>
-            ) : (
-              paginatedData.map(estado => (
-                <tr key={estado.id_estado} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-normal">
-                    <div className="text-sm font-medium text-gray-900">
-                      {eventoBodyTemplate(estado)}
-                    </div>
-                  </td>
-                  
-                  {!isMobile && (
-                    <td className="px-6 py-4 whitespace-normal">
-                      <div className="text-sm text-gray-900">
-                        {contactoBodyTemplate(estado)}
-                      </div>
-                    </td>
-                  )}
-                  
-                  {!isMobile && (
-                    <td className="px-6 py-4 whitespace-normal">
-                      <div className="text-sm text-gray-900">
-                        {tipoReunionBodyTemplate(estado)}
-                      </div>
-                    </td>
-                  )}
-                  
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {formatDate(estado.fecha)}
-                    </div>
-                  </td>
-                  
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                      getEstadoDescripcion(estado) === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
-                      getEstadoDescripcion(estado) === 'En Proceso' ? 'bg-blue-100 text-blue-800' :
-                      getEstadoDescripcion(estado) === 'Completado' ? 'bg-green-100 text-green-800' :
-                      getEstadoDescripcion(estado) === 'Cancelado' ? 'bg-red-100 text-red-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {getEstadoDescripcion(estado)}
-                    </span>
-                  </td>
-                  
-                  {!isMobile && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {formatDate(estado.fecha_compromiso)}
-                      </div>
-                    </td>
-                  )}
-                  
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <div className="flex justify-center space-x-2">
-                      <button
-                        onClick={() => {
-                          setSelectedEstadoSeguimiento(estado);
-                          setViewDialogVisible(true);
-                        }}
-                        className="text-purple-600 hover:text-purple-900 focus:outline-none"
-                      >
-                        <FiEye className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          const editableData = {
-                            id_estado: estado.id_estado,
-                            id_evento: estado.id_evento,
-                            id_contacto: estado.id_contacto,
-                            id_tipo_reunion: estado.id_tipo_reunion,
-                            fecha: estado.fecha ? new Date(estado.fecha) : null,
-                            id_estado_ref: estado.id_estado_ref,
-                            descripcion: estado.descripcion || '',
-                            compromiso: estado.compromiso || '',
-                            fecha_compromiso: estado.fecha_compromiso ? new Date(estado.fecha_compromiso) : null
-                          };
-                          
-                          setEditData(editableData);
-                          setEditDialogVisible(true);
-                          
-                          if (estado.id_evento) {
-                            loadContactosPorEvento(estado.id_evento);
-                          }
-                        }}
-                        className="text-blue-600 hover:text-blue-900 focus:outline-none"
-                      >
-                        <FiEdit className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedEstadoSeguimiento(estado);
-                          setDeleteDialogVisible(true);
-                        }}
-                        className="text-red-600 hover:text-red-900 focus:outline-none"
-                      >
-                        <FiTrash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+
+      {/* Tabla */}
+      <div className="overflow-hidden">
+        <Table
+          data={paginatedData}
+          columns={tableColumns}
+          loading={loading}
+          sortField={sortField}
+          sortOrder={sortOrder}
+          onSort={(field, order) => {
+            setSortField(field);
+            setSortOrder(order);
+          }}
+          emptyMessage="No hay estados de seguimiento disponibles"
+          searchQuery={searchQuery}
+          columnFilters={columnFilters}
+          onFilterChange={(field, value) => {
+            setColumnFilters({
+              ...columnFilters,
+              [field]: value
+            });
+            setCurrentPage(1);
+          }}
+          isMobile={isMobile}
+          mobileColumns={mobileColumns}
+        />
       </div>
-      
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200 sm:px-6 mt-4">
-        <div className="flex justify-between sm:hidden w-full">
-          <button 
-            onClick={() => goToPage(Math.max(1, currentPage - 1))}
-            disabled={currentPage === 1}
-            className={`relative inline-flex items-center px-4 py-2 text-sm font-medium rounded-md ${
-              currentPage === 1 ? 'text-gray-400 bg-gray-100 cursor-not-allowed' : 'text-gray-700 bg-white hover:bg-gray-50'
-            }`}
-          >
-            Anterior
-          </button>
-          <button 
-            onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
-            disabled={currentPage === totalPages || totalPages === 0}
-            className={`relative inline-flex items-center px-4 py-2 ml-3 text-sm font-medium rounded-md ${
-              currentPage === totalPages || totalPages === 0 ? 'text-gray-400 bg-gray-100 cursor-not-allowed' : 'text-gray-700 bg-white hover:bg-gray-50'
-            }`}
-          >
-            Siguiente
-          </button>
+
+      {/* Paginación */}
+      {totalRecords > 0 && (
+        <div className="mt-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalRecords={totalRecords}
+            itemsPerPage={itemsPerPage}
+            onItemsPerPageChange={setItemsPerPage}
+          />
         </div>
-        <div className="hidden sm:flex sm:items-center sm:justify-between w-full">
+      )}
+
+      {/* MODAL CREAR/EDITAR UNIFICADO */}
+      <Modal
+        isOpen={upsertDialogVisible}
+        onClose={() => setUpsertDialogVisible(false)}
+        title={isEditMode ? 'Editar Estado de Seguimiento' : 'Nuevo Estado de Seguimiento'}
+        size="xl"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              onClick={() => setUpsertDialogVisible(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              onClick={handleSave}
+            >
+              {isEditMode ? 'Actualizar' : 'Guardar'}
+            </button>
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Evento con búsqueda */}
+          <div className="relative" ref={eventoDropdownRef}>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Evento <span className="text-red-500">*</span>
+            </label>
+            <div
+              className="w-full border border-gray-300 rounded-md p-2 flex justify-between items-center cursor-pointer"
+              onClick={() => setShowEventoDropdown(!showEventoDropdown)}
+            >
+              <span>
+                {formData.id_evento
+                  ? eventos.find((ev) => ev.id_evento.toString() === formData.id_evento.toString())
+                      ?.municipalidad?.nombre || 'Seleccione un evento'
+                  : 'Seleccione un evento'}
+              </span>
+              {showEventoDropdown ? <FiChevronUp /> : <FiChevronDown />}
+            </div>
+            {showEventoDropdown && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+                  <div className="relative">
+                    <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      className="w-full pl-10 pr-4 py-2 border rounded-md"
+                      placeholder="Buscar evento..."
+                      value={eventoSearchQuery}
+                      onChange={(e) => setEventoSearchQuery(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                </div>
+                <div className="py-1">
+                  {eventos
+                    .filter((ev) => {
+                      const q = eventoSearchQuery.toLowerCase();
+                      const muniName = ev.municipalidad?.nombre?.toLowerCase() || '';
+                      const ubigeo = ev.municipalidad?.ubigeo?.toLowerCase() || '';
+                      const dep = ev.municipalidad?.departamento?.toLowerCase() || '';
+                      const fechaEvt = ev.fecha ? formatDate(ev.fecha).toLowerCase() : '';
+                      return (
+                        muniName.includes(q) ||
+                        ubigeo.includes(q) ||
+                        dep.includes(q) ||
+                        fechaEvt.includes(q)
+                      );
+                    })
+                    .map((ev) => (
+                      <div
+                        key={ev.id_evento}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            id_evento: ev.id_evento,
+                            id_contacto: '' // reset
+                          }));
+                          setShowEventoDropdown(false);
+                        }}
+                      >
+                        <div className="font-medium">
+                          {ev.municipalidad?.nombre || '(Sin municipalidad)'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Fecha: {formatDate(ev.fecha)}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Contacto con búsqueda */}
+          <div className="relative" ref={contactoDropdownRef}>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Contacto <span className="text-red-500">*</span>
+            </label>
+            <div
+              className={`w-full border border-gray-300 rounded-md p-2 flex justify-between items-center ${
+                formData.id_evento ? 'cursor-pointer' : 'cursor-not-allowed bg-gray-100'
+              }`}
+              onClick={() => {
+                if (formData.id_evento) setShowContactoDropdown(!showContactoDropdown);
+              }}
+            >
+              <span>
+                {formData.id_contacto
+                  ? contactos.find(
+                      (c) => c.id_contacto.toString() === formData.id_contacto.toString()
+                    )?.nombre_completo || 'Seleccione un contacto'
+                  : 'Seleccione un contacto'}
+              </span>
+              {showContactoDropdown ? <FiChevronUp /> : <FiChevronDown />}
+            </div>
+            {showContactoDropdown && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+                  <div className="relative">
+                    <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      className="w-full pl-10 pr-4 py-2 border rounded-md"
+                      placeholder="Buscar contacto..."
+                      value={contactoSearchQuery}
+                      onChange={(e) => setContactoSearchQuery(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                </div>
+                <div className="py-1">
+                  {contactos
+                    .filter((c) =>
+                      c.nombre_completo
+                        ?.toLowerCase()
+                        .includes(contactoSearchQuery.toLowerCase())
+                    )
+                    .map((c) => (
+                      <div
+                        key={c.id_contacto}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => {
+                          setFormData((prev) => ({ ...prev, id_contacto: c.id_contacto }));
+                          setShowContactoDropdown(false);
+                        }}
+                      >
+                        <div className="font-medium">{c.nombre_completo}</div>
+                        <div className="text-xs text-gray-500">
+                          {c.cargo || 'Sin cargo'}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Tipo de Reunión con búsqueda */}
+          <div className="relative" ref={tipoReunionDropdownRef}>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Tipo de Reunión <span className="text-red-500">*</span>
+            </label>
+            <div
+              className="w-full border border-gray-300 rounded-md p-2 flex justify-between items-center cursor-pointer"
+              onClick={() => setShowTipoReunionDropdown(!showTipoReunionDropdown)}
+            >
+              <span>
+                {formData.id_tipo_reunion
+                  ? tiposReunion.find(
+                      (tr) => tr.id_tipo_reunion.toString() === formData.id_tipo_reunion.toString()
+                    )?.descripcion || 'Seleccione un tipo'
+                  : 'Seleccione un tipo de reunión'}
+              </span>
+              {showTipoReunionDropdown ? <FiChevronUp /> : <FiChevronDown />}
+            </div>
+            {showTipoReunionDropdown && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+                  <div className="relative">
+                    <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      className="w-full pl-10 pr-4 py-2 border rounded-md"
+                      placeholder="Buscar tipo..."
+                      value={tipoReunionSearchQuery}
+                      onChange={(e) => setTipoReunionSearchQuery(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                </div>
+                <div className="py-1">
+                  {tiposReunion
+                    .filter((tr) =>
+                      tr.descripcion
+                        ?.toLowerCase()
+                        .includes(tipoReunionSearchQuery.toLowerCase())
+                    )
+                    .map((tr) => (
+                      <div
+                        key={tr.id_tipo_reunion}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => {
+                          setFormData((prev) => ({ ...prev, id_tipo_reunion: tr.id_tipo_reunion }));
+                          setShowTipoReunionDropdown(false);
+                        }}
+                      >
+                        <div className="font-medium">{tr.descripcion}</div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Fecha */}
           <div>
-            <p className="text-sm text-gray-700">
-              Mostrando <span className="font-medium">{paginatedData.length > 0 ? startIndex + 1 : 0}</span> a <span className="font-medium">{Math.min(endIndex, filteredEstadosSeguimiento.length)}</span> de <span className="font-medium">{filteredEstadosSeguimiento.length}</span> resultados
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Fecha <span className="text-red-500">*</span>
+            </label>
+            <TailwindCalendar
+              selectedDate={formData.fecha}
+              onChange={(newDate) => setFormData((prev) => ({ ...prev, fecha: newDate }))}
+              id="fecha"
+              className="w-full"
+            />
+          </div>
+
+          {/* Estado (id_estado_ref) con dropdown (si deseas que se seleccione) */}
+          <div className="relative" ref={estadoDropdownRef}>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Estado (Referencia)
+            </label>
+            <div
+              className="w-full border border-gray-300 rounded-md p-2 flex justify-between items-center cursor-pointer"
+              onClick={() => setShowEstadoDropdown(!showEstadoDropdown)}
+            >
+              <span>
+                {formData.id_estado_ref
+                  ? estados.find((es) => es.id_estado.toString() === formData.id_estado_ref.toString())
+                      ?.descripcion || 'Seleccione un estado'
+                  : 'Seleccione un estado'}
+              </span>
+              {showEstadoDropdown ? <FiChevronUp /> : <FiChevronDown />}
+            </div>
+            {showEstadoDropdown && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+                  <div className="relative">
+                    <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      className="w-full pl-10 pr-4 py-2 border rounded-md"
+                      placeholder="Buscar estado..."
+                      value={estadoSearchQuery}
+                      onChange={(e) => setEstadoSearchQuery(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                </div>
+                <div className="py-1">
+                  {estados
+                    .filter((es) =>
+                      es.descripcion?.toLowerCase().includes(estadoSearchQuery.toLowerCase())
+                    )
+                    .map((es) => (
+                      <div
+                        key={es.id_estado}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => {
+                          setFormData((prev) => ({ ...prev, id_estado_ref: es.id_estado }));
+                          setShowEstadoDropdown(false);
+                        }}
+                      >
+                        <div className="font-medium">{es.descripcion}</div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Compromiso */}
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Compromiso
+            </label>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded-md p-2"
+              value={formData.compromiso || ''}
+              onChange={(e) => setFormData((prev) => ({ ...prev, compromiso: e.target.value }))}
+            />
+          </div>
+
+          {/* Fecha Compromiso */}
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Fecha de Compromiso
+            </label>
+            <TailwindCalendar
+              selectedDate={formData.fecha_compromiso}
+              onChange={(newDate) => setFormData((prev) => ({ ...prev, fecha_compromiso: newDate }))}
+              id="fecha_compromiso"
+              className="w-full"
+            />
+          </div>
+
+          {/* Descripción */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Descripción
+            </label>
+            <textarea
+              className="w-full border border-gray-300 rounded-md p-2"
+              rows={3}
+              value={formData.descripcion || ''}
+              onChange={(e) => setFormData((prev) => ({ ...prev, descripcion: e.target.value }))}
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal VER DETALLE */}
+      <Modal
+        isOpen={viewDialogVisible}
+        onClose={() => setViewDialogVisible(false)}
+        title="Detalle del Estado de Seguimiento"
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              onClick={() => setViewDialogVisible(false)}
+            >
+              Cerrar
+            </button>
+          </div>
+        }
+      >
+        {selectedSeguimiento && (
+          <div className="space-y-2">
+            <p>
+              <strong>Evento:</strong>{' '}
+              {
+                eventos.find((ev) => ev.id_evento === selectedSeguimiento.id_evento)
+                  ?.municipalidad?.nombre || 'N/A'
+              }
+            </p>
+            <p>
+              <strong>Contacto:</strong>{' '}
+              {
+                contactos.find((c) => c.id_contacto === selectedSeguimiento.id_contacto)
+                  ?.nombre_completo || 'N/A'
+              }
+            </p>
+            <p>
+              <strong>Tipo de Reunión:</strong>{' '}
+              {
+                tiposReunion.find((tr) => tr.id_tipo_reunion === selectedSeguimiento.id_tipo_reunion)
+                  ?.descripcion || 'N/A'
+              }
+            </p>
+            <p>
+              <strong>Fecha:</strong>{' '}
+              {formatDate(selectedSeguimiento.fecha) || 'N/A'}
+            </p>
+            <p>
+              <strong>Estado:</strong>{' '}
+              {
+                estados.find((es) => es.id_estado == selectedSeguimiento.id_estado_ref)
+                  ?.descripcion || 'N/A'
+              }
+            </p>
+            <p>
+              <strong>Fecha de Compromiso:</strong>{' '}
+              {formatDate(selectedSeguimiento.fecha_compromiso) || 'N/A'}
+            </p>
+            <p>
+              <strong>Compromiso:</strong>{' '}
+              {selectedSeguimiento.compromiso || 'N/A'}
+            </p>
+            <p>
+              <strong>Descripción:</strong>{' '}
+              {selectedSeguimiento.descripcion || 'N/A'}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <select
-              value={itemsPerPage}
-              onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="border border-gray-300 rounded-md text-sm py-1 pl-2 pr-8 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value={5}>5 por página</option>
-              <option value={10}>10 por página</option>
-              <option value={25}>25 por página</option>
-              <option value={50}>50 por página</option>
-            </select>
-            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-              <button
-                onClick={() => goToPage(1)}
-                disabled={currentPage === 1}
-                className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
-                  currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                <span className="sr-only">Primera página</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-                <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <button
-                onClick={() => goToPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className={`relative inline-flex items-center px-2 py-2 border border-gray-300 ${
-                  currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                <span className="sr-only">Anterior</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-              
-              {[...Array(Math.min(5, totalPages))].map((_, index) => {
-                let pageNumber;
-                if (totalPages <= 5) {
-                  pageNumber = index + 1;
-                } else if (currentPage <= 3) {
-                  pageNumber = index + 1;
-                } else if (currentPage >= totalPages - 2) {
-                  pageNumber = totalPages - 4 + index;
-                } else {
-                  pageNumber = currentPage - 2 + index;
-                }
-                
-                if (pageNumber <= 0 || pageNumber > totalPages) return null;
-                
-                return (
-                  <button
-                    key={pageNumber}
-                    onClick={() => goToPage(pageNumber)}
-                    className={`relative inline-flex items-center px-4 py-2 border ${
-                      currentPage === pageNumber
-                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                    } text-sm font-medium`}
-                  >
-                    {pageNumber}
-                  </button>
-                );
-              })}
-              
-              <button
-                onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages || totalPages === 0}
-                className={`relative inline-flex items-center px-2 py-2 border border-gray-300 ${
-                  currentPage === totalPages || totalPages === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                <span className="sr-only">Siguiente</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-              
-              <button
-                onClick={() => goToPage(totalPages)}
-                disabled={currentPage === totalPages || totalPages === 0}
-                className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 ${
-                  currentPage === totalPages || totalPages === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                <span className="sr-only">Última página</span>
-                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-                <svg className="h-5 w-5 -ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </nav>
-          </div>
-        </div>
-      </div>
-      
-    
-      
-      {viewDialogVisible && selectedEstadoSeguimiento && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
-            <div className="flex justify-between items-center p-4 border-b">
-              <h3 className="text-lg font-medium text-gray-900">Detalles del Estado de Seguimiento</h3>
-              <button
-                onClick={() => setViewDialogVisible(false)}
-                className="text-gray-400 hover:text-gray-500 focus:outline-none"
-              >
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="field">
-                  <label className="block text-gray-700 font-medium mb-1">Municipalidad</label>
-                  <p className="text-gray-800">{eventoBodyTemplate(selectedEstadoSeguimiento)}</p>
-                </div>
-                
-                <div className="field">
-                  <label className="block text-gray-700 font-medium mb-1">Tipo de Reunión</label>
-                  <p className="text-gray-800">{tipoReunionBodyTemplate(selectedEstadoSeguimiento)}</p>
-                </div>
-                
-                <div className="field">
-                  <label className="block text-gray-700 font-medium mb-1">Contacto</label>
-                  <p className="text-gray-800">{contactoBodyTemplate(selectedEstadoSeguimiento)}</p>
-                </div>
-                
-                <div className="field">
-                  <label className="block text-gray-700 font-medium mb-1">Fecha</label>
-                  <p className="text-gray-800">{formatDate(selectedEstadoSeguimiento.fecha)}</p>
-                </div>
+        )}
+      </Modal>
 
-                <div className="field col-span-1 md:col-span-2">
-                  <label className="block text-gray-700 font-medium mb-1">Descripción</label>
-                  <p className="text-gray-800 whitespace-pre-line">{selectedEstadoSeguimiento.descripcion || 'N/A'}</p>
-                </div>
-                
-                <div className="field">
-                  <label className="block text-gray-700 font-medium mb-1">Estado</label>
-                  <p className="text-gray-800">
-                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                      getEstadoDescripcion(selectedEstadoSeguimiento) === 'Pendiente' ? 'bg-yellow-100 text-yellow-800' :
-                      getEstadoDescripcion(selectedEstadoSeguimiento) === 'En Proceso' ? 'bg-blue-100 text-blue-800' :
-                      getEstadoDescripcion(selectedEstadoSeguimiento) === 'Completado' ? 'bg-green-100 text-green-800' :
-                      getEstadoDescripcion(selectedEstadoSeguimiento) === 'Cancelado' ? 'bg-red-100 text-red-800' :
-                       'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {getEstadoDescripcion(selectedEstadoSeguimiento)}
-                  </span>
-                  </p>
-                </div>
-                
-                <div className="field">
-                  <label className="block text-gray-700 font-medium mb-1">Fecha de Compromiso</label>
-                  <p className="text-gray-800">{formatDate(selectedEstadoSeguimiento.fecha_compromiso)}</p>
-                </div>
-                
-                <div className="field col-span-1 md:col-span-2">
-                  <label className="block text-gray-700 font-medium mb-1">Compromiso</label>
-                  <p className="text-gray-800 whitespace-pre-line">{selectedEstadoSeguimiento.compromiso || 'N/A'}</p>
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end p-4 border-t">
-              <button
-                onClick={() => setViewDialogVisible(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {(editDialogVisible || createDialogVisible) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white z-10">
-              <h3 className="text-lg font-medium text-gray-900">
-                {editDialogVisible ? 'Editar Estado de Seguimiento' : 'Nuevo Estado de Seguimiento'}
-              </h3>
-              <button
-                onClick={() => {
-                  setEditDialogVisible(false);
-                  setCreateDialogVisible(false);
-                }}
-                className="text-gray-400 hover:text-gray-500 focus:outline-none"
-              >
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="field">
-                  <label htmlFor="evento" className="block text-gray-700 font-medium mb-2">
-                    Evento (Municipalidad) <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative" ref={eventoDropdownRef}>
-                    <div 
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent flex justify-between items-center cursor-pointer bg-white"
-                      onClick={() => setShowEventoDropdown(!showEventoDropdown)}
-                    >
-                      <span className="truncate">
-                        {editData.id_evento 
-                          ? `${eventos.find(e => e.id_evento == editData.id_evento)?.municipalidad?.nombre || 'Sin municipalidad'} - ${formatDate(eventos.find(e => e.id_evento == editData.id_evento)?.fecha)}`
-                          : 'Seleccione un evento'}
-                      </span>
-                      <span>
-                        {showEventoDropdown ? (
-                          <FiChevronUp className="h-5 w-5 text-gray-400" />
-                        ) : (
-                          <FiChevronDown className="h-5 w-5 text-gray-400" />
-                        )}
-                      </span>
-                    </div>
-                    
-                    {showEventoDropdown && (
-                      <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
-                        <div className="sticky top-0 z-10 bg-white p-2">
-                          <div className="relative">
-                            <input
-                              type="text"
-                              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                              placeholder="Buscar evento por municipalidad..."
-                              value={eventoSearchQuery}
-                              onChange={(e) => setEventoSearchQuery(e.target.value)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <FiSearch className="h-5 w-5 text-gray-400" />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {eventosFiltered.length === 0 ? (
-                          <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
-                        ) : (
-                          eventosFiltered.map((evento) => (
-                            <div
-                              key={evento.id_evento}
-                              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
-                                editData.id_evento == evento.id_evento ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                              }`}
-                              onClick={() => {
-                                setEditData({
-                                  ...editData, 
-                                  id_evento: evento.id_evento,
-                                  id_contacto: ''
-                                });
-                                setShowEventoDropdown(false);
-                                if (evento.id_evento) {
-                                  loadContactosPorEvento(evento.id_evento);
-                                }
-                              }}
-                            >
-                              <div className="flex flex-col">
-                                <span className="font-medium truncate">
-                                  {evento.municipalidad?.nombre || 'Sin municipalidad'}
-                                </span>
-                                <span className="text-xs text-gray-500 truncate">
-                                  {evento.municipalidad?.ubigeo && <span className="font-semibold mr-1">[{evento.municipalidad.ubigeo}]</span>}
-                                  {formatDate(evento.fecha)}
-                                </span>
-                              </div>
-                              
-                              {editData.id_evento == evento.id_evento && (
-                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
-                                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                </span>
-                              )}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="field">
-                  <label htmlFor="contacto" className="block text-gray-700 font-medium mb-2">
-                    Contacto <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative" ref={contactoDropdownRef}>
-                    <div 
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent flex justify-between items-center cursor-pointer bg-white"
-                      onClick={() => {
-                        if (editData.id_evento) {
-                          setShowContactoDropdown(!showContactoDropdown);
-                        }
-                      }}
-                      style={{ opacity: editData.id_evento ? '1' : '0.6' }}
-                    >
-                      <span className="truncate">
-                        {editData.id_contacto 
-                          ? contactos.find(c => c.id_contacto == editData.id_contacto)?.nombre_completo || 'Sin nombre'
-                          : 'Seleccione un contacto'}
-                      </span>
-                      <span>
-                        {showContactoDropdown ? (
-                          <FiChevronUp className="h-5 w-5 text-gray-400" />
-                        ) : (
-                          <FiChevronDown className="h-5 w-5 text-gray-400" />
-                        )}
-                      </span>
-                    </div>
-                    
-                    {showContactoDropdown && editData.id_evento && (
-                      <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
-                        <div className="sticky top-0 z-10 bg-white p-2">
-                          <div className="relative">
-                            <input
-                              type="text"
-                              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                              placeholder="Buscar contacto..."
-                              value={contactoSearchQuery}
-                              onChange={(e) => setContactoSearchQuery(e.target.value)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <FiSearch className="h-5 w-5 text-gray-400" />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {contactosFiltered.length === 0 ? (
-                          <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
-                        ) : (
-                          contactosFiltered.map((contacto) => (
-                            <div
-                              key={contacto.id_contacto}
-                              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
-                                editData.id_contacto == contacto.id_contacto ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                              }`}
-                              onClick={() => {
-                                setEditData({...editData, id_contacto: contacto.id_contacto});
-                                setShowContactoDropdown(false);
-                              }}
-                            >
-                              <div className="flex flex-col">
-                                <span className="font-medium truncate">{contacto.nombre_completo || 'Sin nombre'}</span>
-                                <span className="text-xs text-gray-500 truncate">
-                                  {contacto.cargo || ''} {contacto.telefono ? `- Tel: ${contacto.telefono}` : ''}
-                                </span>
-                              </div>
-                              
-                              {editData.id_contacto == contacto.id_contacto && (
-                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
-                                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                </span>
-                              )}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="field">
-                  <label htmlFor="tipoReunion" className="block text-gray-700 font-medium mb-2">
-                    Tipo de Reunión <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative" ref={tipoReunionDropdownRef}>
-                    <div 
-                      className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent flex justify-between items-center cursor-pointer bg-white"
-                      onClick={() => setShowTipoReunionDropdown(!showTipoReunionDropdown)}
-                    >
-                      <span className="truncate">
-                        {editData.id_tipo_reunion 
-                          ? tiposReunion.find(t => t.id_tipo_reunion == editData.id_tipo_reunion)?.descripcion || 'Sin descripción'
-                          : 'Seleccione un tipo de reunión'}
-                      </span>
-                      <span>
-                        {showTipoReunionDropdown ? (
-                          <FiChevronUp className="h-5 w-5 text-gray-400" />
-                        ) : (
-                          <FiChevronDown className="h-5 w-5 text-gray-400" />
-                        )}
-                      </span>
-                    </div>
-                    
-                    {showTipoReunionDropdown && (
-                      <div className="absolute z-20 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
-                        <div className="sticky top-0 z-10 bg-white p-2">
-                          <div className="relative">
-                            <input
-                              type="text"
-                              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                              placeholder="Buscar tipo de reunión..."
-                              value={tipoReunionSearchQuery}
-                              onChange={(e) => setTipoReunionSearchQuery(e.target.value)}
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <FiSearch className="h-5 w-5 text-gray-400" />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {tiposReunionFiltered.length === 0 ? (
-                          <div className="py-2 px-3 text-gray-700">No se encontraron resultados</div>
-                        ) : (
-                          tiposReunionFiltered.map((tipo) => (
-                            <div
-                              key={tipo.id_tipo_reunion}
-                              className={`cursor-pointer select-none relative py-2 pl-3 pr-9 hover:bg-gray-100 ${
-                                editData.id_tipo_reunion == tipo.id_tipo_reunion ? 'bg-blue-50 text-blue-600' : 'text-gray-900'
-                              }`}
-                              onClick={() => {
-                                setEditData({...editData, id_tipo_reunion: tipo.id_tipo_reunion});
-                                setShowTipoReunionDropdown(false);
-                              }}
-                            >
-                              <div className="flex flex-col">
-                                <span className="font-medium truncate">{tipo.descripcion || 'Sin descripción'}</span>
-                              </div>
-                              
-                              {editData.id_tipo_reunion == tipo.id_tipo_reunion && (
-                                <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
-                                  <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                </span>
-                              )}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="field">
-                  <label htmlFor="estado" className="block text-gray-700 font-medium mb-2">
-                    Estado
-                  </label>
-                  <select
-                    id="estado"
-                    value={editData.id_estado_ref || ''}
-                    onChange={(e) => setEditData({ ...editData, id_estado_ref: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Seleccione un estado</option>
-                    {estados.map(estado => (
-                      <option key={estado.id_estado} value={estado.id_estado}>
-                        {estado.descripcion}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="field">
-                  <label htmlFor="fecha" className="block text-gray-700 font-medium mb-2">
-                    Fecha
-                  </label>
-                  <TailwindCalendar
-                    id="fecha"
-                    selectedDate={editData.fecha}
-                    onChange={(date) => setEditData({ ...editData, fecha: date })}
-                    className="w-full"
-                  />
-                </div>
-
-                <div className="field md:col-span-2">
-                  <label htmlFor="descripcion" className="block text-gray-700 font-medium mb-2">
-                    Descripción
-                  </label>
-                  <textarea
-                    id="descripcion"
-                    value={editData.descripcion}
-                    onChange={(e) => setEditData({ ...editData, descripcion: e.target.value })}
-                    rows={3}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                
-                <div className="field">
-                  <label htmlFor="fechaCompromiso" className="block text-gray-700 font-medium mb-2">
-                    Fecha de Compromiso
-                  </label>
-                  <TailwindCalendar
-                    id="fechaCompromiso"
-                    selectedDate={editData.fecha_compromiso}
-                    onChange={(date) => setEditData({ ...editData, fecha_compromiso: date })}
-                    className="w-full"
-                  />
-                </div>
-                
-                <div className="field md:col-span-2">
-                  <label htmlFor="compromiso" className="block text-gray-700 font-medium mb-2">
-                    Compromiso
-                  </label>
-                  <textarea
-                    id="compromiso"
-                    value={editData.compromiso}
-                    onChange={(e) => setEditData({ ...editData, compromiso: e.target.value })}
-                    rows={3}
-                    className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end p-4 border-t gap-2 sticky bottom-0 bg-white">
-              <button
-                onClick={() => {
-                  setEditDialogVisible(false);
-                  setCreateDialogVisible(false);
-                }}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSave}
-                className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none"
-              >
-                {editDialogVisible ? 'Guardar' : 'Crear'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {deleteDialogVisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <div className="bg-yellow-100 p-2 rounded-full mr-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path fillRule="evenodd" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium text-gray-900">Confirmar eliminación</h3>
-              </div>
-              <p className="text-gray-700 mb-4">
-                ¿Está seguro de que desea eliminar este estado de seguimiento? Esta acción no se puede deshacer.
-              </p>
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setDeleteDialogVisible(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => {
-                    confirmDelete(selectedEstadoSeguimiento);
-                    setDeleteDialogVisible(false);
-                  }}
-                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none"
-                >
-                  Eliminar
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Diálogo CONFIRMAR ELIMINACIÓN */}
+      <ConfirmDialog
+        visible={deleteDialogVisible}
+        onHide={() => setDeleteDialogVisible(false)}
+        message="¿Estás seguro de que deseas eliminar este Estado de Seguimiento?"
+        header="Confirmación"
+        icon={<FiTrash2 />}
+        acceptLabel="Eliminar"
+        rejectLabel="Cancelar"
+        acceptClassName="bg-red-600 text-white"
+        onAccept={handleDelete}
+        onReject={() => setDeleteDialogVisible(false)}
+      />
     </div>
   );
 }
