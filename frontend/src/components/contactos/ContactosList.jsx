@@ -362,25 +362,41 @@ export default function ContactosList() {
     <div className="p-6 bg-white rounded-lg shadow w-full max-w-full">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center">
-          <h2 className="text-2xl font-bold text-gray-800">Contactos</h2>
-          <button
-            onClick={() => {
-              setEditData({
-                id_contacto: '',
-                id_municipalidad: '',
-                nombre_completo: '',
-                cargo: '',
-                telefono: '',
-                email: '',
-              });
-              setCreateDialogVisible(true);
-            }}
-            className="ml-4 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-2"
-          >
-            <FiPlus className="w-5 h-5" />
-            <span>Nuevo Contacto</span>
-          </button>
+        <h2 className="text-2xl font-bold text-gray-800">Contactos</h2>
+        <button
+          onClick={() => {
+            setEditData({
+              id_contacto: '',
+              id_municipalidad: '',
+              nombre_completo: '',
+              cargo: '',
+              telefono: '',
+              email: '',
+            });
+            setCreateDialogVisible(true);
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md flex items-center font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+        >
+          <FiPlus className="mr-2" />
+          Nuevo Contacto
+        </button>
+      </div>
+      
+      {/* Búsqueda global - Siempre visible */}
+      <div className="mb-4">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Buscar contactos..."
+          />
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
         </div>
       </div>
       
@@ -418,7 +434,7 @@ export default function ContactosList() {
         isOpen={viewDialogVisible}
         onClose={() => setViewDialogVisible(false)}
         title="Detalles del Contacto"
-        size="lg"
+        size="xl"
       >
         {selectedContacto && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -454,7 +470,7 @@ export default function ContactosList() {
           setCreateDialogVisible(false);
         }}
         title={editDialogVisible ? 'Editar Contacto' : 'Nuevo Contacto'}
-        size="lg"
+        size="xl"
         footer={
           <div className="flex justify-end space-x-3">
             <button

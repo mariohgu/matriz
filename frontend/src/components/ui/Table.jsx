@@ -107,17 +107,8 @@ const Table = ({
       {/* Barra de búsqueda global siempre visible */}
       <div className="mb-4 flex">
         <div className="relative flex-1">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <FiSearch className="text-gray-400" />
-          </div>
-          <input
-            type="text"
-            value={localSearchQuery}
-            onChange={handleSearchChange}
-            onKeyDown={handleSearchKeyDown}
-            className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 p-2.5"
-            placeholder="Buscar..."
-          />
+          
+          
           {localSearchQuery && (
             <button
               className="absolute inset-y-0 right-0 flex items-center pr-3"

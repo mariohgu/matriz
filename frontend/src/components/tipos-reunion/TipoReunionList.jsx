@@ -192,9 +192,9 @@ export default function TipoReunionList() {
   );
 
   return (
-    <div className="p-4 md:p-6 bg-white rounded-lg shadow w-full max-w-full">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-        <h1 className="text-xl md:text-2xl font-bold text-gray-800">Tipos de Reunión</h1>
+    <div className="p-6 bg-white rounded-lg shadow w-full max-w-full">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Tipos de Reunión</h1>
         <button
           onClick={() => {
             setEditData({
@@ -203,7 +203,7 @@ export default function TipoReunionList() {
             });
             setCreateDialogVisible(true);
           }}
-          className="px-3 py-2 md:px-4 md:py-2 bg-blue-600 text-white rounded-md flex items-center font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-colors duration-200"
+          className="px-4 py-2 bg-blue-600 text-white rounded-md flex items-center font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
         >
           <FiPlus className="mr-2" />
           Nuevo Tipo
@@ -266,7 +266,7 @@ export default function TipoReunionList() {
         isOpen={editDialogVisible}
         onClose={() => setEditDialogVisible(false)}
         title="Editar Tipo de Reunión"
-        contentClassName="max-w-md mx-auto"
+        size="xl"
         footer={
           <div className="flex justify-end space-x-3">
             <button
@@ -308,7 +308,7 @@ export default function TipoReunionList() {
         isOpen={createDialogVisible}
         onClose={() => setCreateDialogVisible(false)}
         title="Nuevo Tipo de Reunión"
-        contentClassName="max-w-md mx-auto"
+        size="xl"
         footer={
           <div className="flex justify-end space-x-3">
             <button

@@ -363,6 +363,24 @@ export default function MunicipalidadesList() {
         </button>
       </div>
 
+      {/* Búsqueda global - Siempre visible */}
+      <div className="mb-4">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Buscar municipalidades..."
+          />
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+
       {/* Tabla de Municipalidades */}
       <Table
         data={paginatedData}
@@ -392,11 +410,12 @@ export default function MunicipalidadesList() {
         className="mt-4"
       />
 
-      {/* Modal de Vista */}
+      {/* Modal de Visualización */}
       <Modal
         isOpen={viewDialogVisible}
         onClose={() => setViewDialogVisible(false)}
-        title="Detalle de la Municipalidad"
+        title="Detalles de Municipalidad"
+        size="xl"
         footer={
           <div className="flex justify-end">
             <button
@@ -464,6 +483,7 @@ export default function MunicipalidadesList() {
         isOpen={editDialogVisible}
         onClose={() => setEditDialogVisible(false)}
         title="Editar Municipalidad"
+        size="xl"
         footer={
           <div className="flex justify-end space-x-3">
             <button
@@ -516,6 +536,7 @@ export default function MunicipalidadesList() {
         isOpen={createDialogVisible}
         onClose={() => setCreateDialogVisible(false)}
         title="Nueva Municipalidad"
+        size="xl"
         footer={
           <div className="flex justify-end space-x-3">
             <button
