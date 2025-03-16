@@ -651,7 +651,7 @@ export default function EventosList() {
                   </div>
                   <div className="py-1">
                     {municipalidades
-                      .filter(m => m.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()))
+                      .filter(m => m.nombre.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()) || m.ubigeo.toLowerCase().includes(municipalidadSearchQuery.toLowerCase()))
                       .map(m => (
                         <div 
                           key={m.id_municipalidad} 
@@ -664,7 +664,7 @@ export default function EventosList() {
                         >
                           <div className="font-medium">{m.nombre}</div>
                           <div className="text-xs text-gray-500">
-                            [{m.id_municipalidad}]
+                            [{m.ubigeo}, {m.departamento}]
                           </div>
                         </div>
                       ))}
@@ -725,7 +725,7 @@ export default function EventosList() {
                         >
                           <div className="font-medium">{c.nombre_completo}</div>
                           <div className="text-xs text-gray-500">
-                            [{c.id_contacto}]
+                            [{c.cargo}]
                           </div>
                         </div>
                       ))}
