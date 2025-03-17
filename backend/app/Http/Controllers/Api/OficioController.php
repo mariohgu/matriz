@@ -48,8 +48,8 @@ class OficioController extends Controller
             }
 
             // Agregar usuario actual como creador y actualizador
-            $validated['creado_por'] = 1;//Auth::id();
-            $validated['actualizado_por'] = 1;//Auth::id();
+            $validated['creado_por'] = Auth::id();
+            $validated['actualizado_por'] = Auth::id();
 
             $oficio = Oficio::create($validated);
             
@@ -111,7 +111,7 @@ class OficioController extends Controller
             }
 
             // Actualizar el usuario que modifica
-            $validated['actualizado_por'] = 1;//Auth::id();
+            $validated['actualizado_por'] = Auth::id();
 
             $oficio->update($validated);
             

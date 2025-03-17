@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bar, Pie, Line } from 'react-chartjs-2';
+import { api, authService } from '../services/authService';
 import { Chart as ChartJS, registerables } from 'chart.js';
 import { 
   FiUsers, 
@@ -19,7 +20,7 @@ import { apiService } from '../services/authService';
 
 // Registrar todos los componentes de ChartJS
 ChartJS.register(...registerables);
-
+console.log('ReactToPrint:', ReactToPrint);  // Si imprime undefined, hay un problema con la importación
 const DashboardDepartamentos = () => {
   // -----------------------------
   // ESTADOS PRINCIPALES
@@ -36,6 +37,10 @@ const DashboardDepartamentos = () => {
 
   // Referencia para imprimir con react-to-print
   const printRef = useRef(null);
+
+  // Modal o diálogo para visualizar detalles
+  const [viewDialogVisible, setViewDialogVisible] = useState(false);
+  const [selectedInteraction, setSelectedInteraction] = useState(null);
 
   // -----------------------------
   // FUNCIONES DE FORMATEO
@@ -174,8 +179,8 @@ const DashboardDepartamentos = () => {
       {
         label: 'Municipalidades Contactadas',
         data: departamentos.map(dep => municipalidadesContactadasPorDepartamento[dep] || 0),
-        backgroundColor: 'rgba(75, 192, 192, 0.5)',
-        borderColor: 'rgba(75, 192, 192, 1)',
+        backgroundColor: 'rgba(138,221,45,0.8)',
+        borderColor: 'rgba(138,221,45,0.8)',
         borderWidth: 1,
       },
     ],
@@ -286,42 +291,95 @@ const DashboardDepartamentos = () => {
       };
     });
 
-  const handleViewState = (id) => {
-    // Manejador para el botón "Visualizar"
-    alert(`Mostrar información detallada del estadoSeguimiento con ID: ${id}`);
-  };
-
-  const lastStatesColumns = [
-    {
-      field: 'fecha',
-      header: 'Fecha',
-      body: (row) => formatDate(row.fecha),
-    },
-    {
-      field: 'municipalidad',
-      header: 'Nombre Municipalidad'
-    },
-    {
-      field: 'estado',
-      header: 'Estado'
-    },
-    {
-      field: 'tipoReunion',
-      header: 'Tipo de Reunion'
-    },
-    {
-      field: 'visualizar',
-      header: 'Visualizar',
-      body: (row) => (
-        <button
-          onClick={() => handleViewState(row.eventoId)}
-          className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-        >
-          Visualizar
-        </button>
-      )
-    }
-  ];
+    const handleViewState = async (eventoId) => {
+      if (!eventoId) return;
+    
+      try {
+        // 1️⃣ Obtener los detalles del evento
+        const response = await api.get(`eventos/${eventoId}`);
+        const evento = response.data;
+    
+        if (!evento) {
+          console.error('No se encontró el evento.');
+          return;
+        }
+    
+        // 2️⃣ Buscar la municipalidad asociada al evento
+        const municipalidad = municipalidades.find(m => m.id_municipalidad === evento.id_municipalidad) || null;
+    
+        // 3️⃣ Buscar el contacto asociado al evento
+        const contacto = contactos.find(c => c.id_contacto === evento.id_contacto) || null;
+    
+        // 4️⃣ Obtener la descripción del tipo de reunión (si existe)
+        let tipoReunionDesc = 'N/A';
+        if (evento.id_tipo_reunion) {
+          const tipoReunionRes = await api.get(`tipos-reunion/${evento.id_tipo_reunion}`);
+          tipoReunionDesc = tipoReunionRes.data?.descripcion || 'N/A';
+        }
+    
+        // 5️⃣ Guardar los datos en el estado
+        setSelectedInteraction({
+          ...evento,
+          tipoReunionDesc,
+          municipalidad,
+          contacto
+        });
+    
+        // 6️⃣ Mostrar el modal
+        setViewDialogVisible(true);
+      } catch (error) {
+        console.error('Error al obtener detalles del evento:', error);
+      }
+    };
+    const lastStatesColumns = [
+      {
+        field: 'fecha',
+        header: 'Fecha',
+        body: (row) => formatDate(row.fecha),
+      },
+      {
+        field: 'municipalidad',
+        header: 'Nombre Municipalidad',
+        body: (row) => {
+          const evento = eventos.find(e => e.id_evento === row.eventoId);
+          const municipalidad = evento ? municipalidades.find(m => m.id_municipalidad === evento.id_municipalidad) : null;
+          return municipalidad ? municipalidad.nombre : 'N/A';
+        }
+      },
+      {
+        field: 'estado',
+        header: 'Estado',
+        body: (row) => (
+          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+            ${row.estado === 'ESTADO 01' ? 'bg-green-100 text-green-800' :
+              row.estado === 'ESTADO 02' ? 'bg-yellow-100 text-yellow-800' :
+              row.estado === 'ESTADO 03' ? 'bg-blue-100 text-blue-800' :
+              row.estado === 'ESTADO 04' ? 'bg-red-100 text-red-800' :
+              'bg-gray-100 text-gray-800'
+            }`}
+          >
+            {row.estado}
+          </span>
+        ),
+      },
+      {
+        field: 'tipoReunion',
+        header: 'Tipo de Reunion',
+        body: (row) => row.tipoReunion || 'N/A'
+      },
+      {
+        field: 'visualizar',
+        header: 'Visualizar',
+        body: (row) => (
+          <button
+            onClick={() => handleViewState(row.eventoId)}
+            className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+          >
+            Visualizar
+          </button>
+        )
+      }
+    ];
 
   // -----------------------------
   // OPCIONES COMUNES DE GRÁFICO
@@ -704,6 +762,86 @@ const DashboardDepartamentos = () => {
           {/* Paginación */}
   
         </div>
+
+        {/* Modal para ver detalle de interacción */}
+      {/* Modal para ver detalle de interacción */}
+{viewDialogVisible && selectedInteraction && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
+    <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+      {/* Encabezado del modal */}
+      <div className="flex justify-between items-center p-4 border-b">
+        <h3 className="text-lg font-medium text-gray-900">Detalles de la Interacción</h3>
+        <button
+          onClick={() => setViewDialogVisible(false)}
+          className="text-gray-400 hover:text-gray-500 focus:outline-none"
+        >
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Contenido del modal */}
+      <div className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="field">
+            <label className="block text-gray-700 font-medium mb-1">Municipalidad</label>
+            <p className="text-gray-800">{selectedInteraction.municipalidad?.nombre || 'N/A'}</p>
+          </div>
+
+          <div className="field">
+            <label className="block text-gray-700 font-medium mb-1">Fecha</label>
+            <p className="text-gray-800">{new Date(selectedInteraction.fecha).toLocaleDateString()}</p>
+          </div>
+
+          <div className="field">
+            <label className="block text-gray-700 font-medium mb-1">Tipo de Reunión</label>
+            <p className="text-gray-800">{selectedInteraction.tipoReunionDesc || 'N/A'}</p>
+          </div>
+
+          <div className="field">
+            <label className="block text-gray-700 font-medium mb-1">Estado</label>
+            <p className="text-gray-800">
+              <span
+                className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+                  selectedInteraction.estado === 'Pendiente'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : selectedInteraction.estado === 'En Proceso'
+                    ? 'bg-blue-100 text-blue-800'
+                    : selectedInteraction.estado === 'Completado'
+                    ? 'bg-green-100 text-green-800'
+                    : selectedInteraction.estado === 'Cancelado'
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}
+              >
+                {selectedInteraction.estado || 'N/A'}
+              </span>
+            </p>
+          </div>
+
+          <div className="field col-span-1 md:col-span-2">
+            <label className="block text-gray-700 font-medium mb-1">Descripción</label>
+            <p className="text-gray-800 whitespace-pre-line">
+              {selectedInteraction.descripcion || 'N/A'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Botón de cerrar */}
+      <div className="flex justify-end p-4 border-t">
+        <button
+          onClick={() => setViewDialogVisible(false)}
+          className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 focus:outline-none"
+        >
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
       </div>
     </>
   );
