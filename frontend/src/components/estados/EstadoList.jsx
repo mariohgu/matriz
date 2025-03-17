@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { FiEdit, FiTrash2, FiPlus } from 'react-icons/fi';
-import { ADDRESS } from '../../utils.jsx';
 import { api, apiService } from '../../services/authService';
 import { Table, Pagination, Modal, ConfirmDialog, useToast } from '../ui';
 

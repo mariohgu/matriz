@@ -35,7 +35,7 @@ export default function Sidebar({ isOpen, onToggle }) {
           title: "Dashboard",
           icon: <FaChartPie />,
           subItems: [
-            { href: "/dashboard/overview", title: "Vista General" },
+            { href: "/dashboard", title: "Vista General" },
             { href: "/dashboard/departamentos", title: "Por Departamentos" },
           ],
         },

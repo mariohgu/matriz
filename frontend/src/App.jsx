@@ -47,6 +47,7 @@ function MainLayout({ children }) {
     width: '100%',
     backgroundColor: 'rgb(243, 244, 246)', // opcional
     overflowX: 'hidden',
+    overflowY: 'hidden', // Importante: evita scroll en el contenedor principal
   };
 
   /**
@@ -58,6 +59,8 @@ function MainLayout({ children }) {
     display: 'flex',
     flexDirection: 'column',
     flex: 1,
+    height: '100vh', // Importante: altura completa para el contenedor
+    overflow: 'hidden', // Importante: evita scroll en este nivel
   };
 
   /**
@@ -68,9 +71,8 @@ function MainLayout({ children }) {
   const mainContentStyle = {
     flex: 1,
     width: '100%',
-    overflowY: 'auto',
-    // padding o margin si deseas un espacio interno:
-    // padding: '1rem'
+    overflowY: 'auto', // Importante: permite scroll solo aquí
+    padding: '1rem'
   };
 
   return (
