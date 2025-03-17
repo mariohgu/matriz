@@ -37,8 +37,8 @@ class ConvenioController extends Controller
             ]);
 
             // Agregar usuario actual como creador y actualizador
-            $validated['creado_por'] = 1;//Auth::id();
-            $validated['actualizado_por'] = 1;//Auth::id();
+            $validated['creado_por'] = Auth::id();
+            $validated['actualizado_por'] = Auth::id();
 
             $convenio = Convenio::create($validated);
             
@@ -88,7 +88,7 @@ class ConvenioController extends Controller
             ]);
 
             // Actualizar el usuario que modifica
-            $validated['actualizado_por'] = 1;//Auth::id();
+            $validated['actualizado_por'] = Auth::id();
 
             $convenio->update($validated);
             

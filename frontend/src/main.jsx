@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import './assets/custom-styles.css'
+import './styles/print.css' // Estilos para impresión
 import App from './App.jsx'
 import { ToastProvider } from './components/ui/ToastContext'
 

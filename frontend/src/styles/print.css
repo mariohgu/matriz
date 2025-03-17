@@ -1,0 +1,80 @@
+/* Estilos para impresión */
+@media print {
+  /* Ocultar elementos que no deben imprimirse */
+  .sidebar,
+  .no-print,
+  nav.navbar {
+    display: none !important;
+  }
+  
+  /* Asegurar que se muestre todo el contenido principal */
+  #root > div > div:last-child {
+    width: 100% !important;
+    left: 0 !important;
+    position: absolute !important;
+    padding: 20px !important;
+  }
+  
+  /* Mostrar todo el contenido del dashboard */
+  .py-6, 
+  .max-w-7xl, 
+  .grid,
+  .rounded-lg,
+  .shadow,
+  .bg-white,
+  canvas {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+  
+  /* Ajustar tamaño de página a landscape */
+  @page {
+    size: landscape;
+    margin: 1cm;
+  }
+  
+  /* Hacer que los gráficos se vean correctamente */
+  canvas {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  
+  /* Asegurar que las tablas y grids se rendericen bien */
+  .grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 20px !important;
+  }
+  
+  /* Ajustar margen y padding */
+  .py-6 {
+    padding: 0 !important;
+  }
+  
+  /* Asegurar que todo el contenido es visible */
+  body {
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background-color: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Remove fixed positioning during print */
+  .fixed {
+    position: relative !important;
+  }
+  
+  /* Arreglar colores de impresión para mejor legibilidad */
+  h1, h2, h3, p, span, div {
+    color: black !important;
+  }
+  
+  .bg-white {
+    background-color: white !important;
+    box-shadow: none !important;
+  }
+}

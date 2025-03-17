@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api, authService, apiService } from '../services/authService';
-import { ADDRESS } from '../utils.jsx';
+import { TailwindCalendar } from '../components/ui';
 import {
   FiCalendar,
   FiUsers,
@@ -10,7 +10,9 @@ import {
   FiFilter,
   FiSearch,
   FiChevronDown,
-  FiChevronUp
+  FiChevronUp,
+  FiPrinter,
+  FiRefreshCw
 } from 'react-icons/fi';
 import {
   Chart as ChartJS,
@@ -92,173 +94,91 @@ function Dashboard() {
     return estadoRef ? estadoRef.descripcion || 'N/A' : 'N/A';
   };
 
-  // ----------------------
-  // TAILWINDCALENDAR
-  // ----------------------
-  const TailwindCalendar = ({ selectedDate, onChange, id, className }) => {
-    const [currentDate, setCurrentDate] = useState(selectedDate || new Date());
-    const [isOpen, setIsOpen] = useState(false);
-    const calendarRef = useRef(null);
-
-    useEffect(() => {
-      const handleClickOutside = (event) => {
-        if (calendarRef.current && !calendarRef.current.contains(event.target)) {
-          setIsOpen(false);
-        }
-      };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }, []);
-
-    const handleDateSelect = (date) => {
-      onChange(date);
-      setIsOpen(false);
-    };
-
-    const navigateMonth = (step) => {
-      const newDate = new Date(currentDate);
-      newDate.setMonth(newDate.getMonth() + step);
-      setCurrentDate(newDate);
-    };
-
-    const monthNames = [
-      'Enero',
-      'Febrero',
-      'Marzo',
-      'Abril',
-      'Mayo',
-      'Junio',
-      'Julio',
-      'Agosto',
-      'Septiembre',
-      'Octubre',
-      'Noviembre',
-      'Diciembre'
-    ];
-    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-
-    const renderCalendarDays = () => {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      const firstDayOfMonth = new Date(year, month, 1).getDay();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-      const days = [];
-      for (let i = 0; i < firstDayOfMonth; i++) {
-        days.push(<div key={`empty-${i}`} className="h-8 w-8"></div>);
-      }
-
-      for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(year, month, day);
-        const isToday = new Date().toDateString() === date.toDateString();
-        const isSelected = selectedDate && selectedDate.toDateString() === date.toDateString();
-
-        days.push(
-          <button
-            key={`day-${day}`}
-            type="button"
-            onClick={() => handleDateSelect(date)}
-            className={`h-8 w-8 rounded-full flex items-center justify-center text-sm ${
-              isSelected
-                ? 'bg-blue-500 text-white'
-                : isToday
-                ? 'bg-blue-100 text-blue-800'
-                : 'hover:bg-gray-100'
-            }`}
-          >
-            {day}
-          </button>
-        );
-      }
-      return days;
-    };
-
-    return (
-      <div className="relative" ref={calendarRef}>
-        <div className={`relative ${className}`}>
-          <input
-            id={id}
-            type="text"
-            readOnly
-            value={selectedDate ? formatDate(selectedDate) : ''}
-            placeholder="Seleccionar fecha"
-            onClick={() => setIsOpen(!isOpen)}
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer"
-          />
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-            <FiCalendar className="h-5 w-5 text-gray-400" />
+  // Función para manejar la impresión del dashboard
+  const handlePrintDashboard = () => {
+    // Crear una nueva ventana para imprimir
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    
+    // Obtener el contenido del dashboard
+    const dashboardContent = document.getElementById('print-areas');
+    if (!dashboardContent) {
+      console.error('No se pudo encontrar el contenido del dashboard');
+      printWindow.close();
+      return;
+    }
+    
+    // Crear el HTML para la ventana de impresión
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Dashboard - Matriz de Seguimiento</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              padding: 20px;
+              background: white;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 20px;
+              padding-bottom: 10px;
+              border-bottom: 1px solid #ccc;
+            }
+            .grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 20px;
+            }
+            .card {
+              background: white;
+              border-radius: 8px;
+              padding: 15px;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            h1 {
+              font-size: 24px;
+              color: #333;
+            }
+            h3 {
+              font-size: 18px;
+              color: #444;
+              margin-top: 0;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+              .header {
+                margin-bottom: 10px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Dashboard - Matriz de Seguimiento</h1>
+            <div>Fecha: ${formatDate(new Date())}</div>
           </div>
-        </div>
-
-        {isOpen && (
-          <div className="absolute z-50 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-64">
-            <div className="flex justify-between items-center mb-4">
-              <button
-                type="button"
-                onClick={() => navigateMonth(-1)}
-                className="p-1 rounded-full hover:bg-gray-100"
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <div className="font-semibold">
-                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-              </div>
-              <button
-                type="button"
-                onClick={() => navigateMonth(1)}
-                className="p-1 rounded-full hover:bg-gray-100"
-              >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {dayNames.map((day) => (
-                <div key={day} className="h-8 w-8 flex items-center justify-center text-xs text-gray-500">
-                  {day}
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-1">{renderCalendarDays()}</div>
-            <div className="mt-4 flex justify-between">
-              <button
-                type="button"
-                onClick={() => handleDateSelect(new Date())}
-                className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
-              >
-                Hoy
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onChange(null);
-                  setIsOpen(false);
-                }}
-                className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded"
-              >
-                Limpiar
-              </button>
-            </div>
+          <div class="content">
+            ${dashboardContent.innerHTML}
           </div>
-        )}
-      </div>
-    );
+          <script>
+            // Imprimir automáticamente y cerrar
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
   };
+
 
   // -------------------------------------------------
   // CARGA DE DATOS PRINCIPAL (SÓLO ACTUALIZA ESTADO)
@@ -557,36 +477,36 @@ function Dashboard() {
   // RENDER
   // ----------------------
   return (
-    <div
-      className="p-6 max-w-full"
-      style={{
-        paddingRight: '1.5rem',
-        paddingLeft: '1.5rem',
-        boxSizing: 'border-box',
-        width: '100%'
-      }}
-    >
-      {/* Encabezado */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold mb-4 md:mb-0">Dashboard de Interacciones</h2>
-        <div className="text-sm text-gray-500 flex items-center">
-          <span>
-            Última actualización:{' '}
-            {lastUpdateDate instanceof Date
-              ? lastUpdateDate.toLocaleString()
-              : new Date(lastUpdateDate).toLocaleString()}
-          </span>
+    <div className="py-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Header - Título y controles */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
+        
+        <div className="flex items-center gap-2">
           <button
             onClick={loadAllData}
-            className="ml-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs"
+            className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center gap-2 no-print"
           >
+            <FiRefreshCw className={loading ? "animate-spin" : ""} />
             Actualizar
+          </button>
+          
+          <button 
+            onClick={handlePrintDashboard}
+            className="bg-green-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 flex items-center gap-2 no-print"
+          >
+            <FiPrinter />
+            Imprimir
           </button>
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="bg-white p-6 rounded-lg shadow mb-6">
+      <div className="text-sm text-gray-500 mb-4">
+        Última actualización: {formatDate(lastUpdateDate)}
+      </div>
+
+      {/* Panel de filtros */}
+      <div className="bg-white rounded-lg shadow mb-6 p-4 no-print">
         <h3 className="text-lg font-semibold mb-4 flex items-center">
           <FiFilter className="mr-2" /> Filtros
         </h3>
@@ -726,7 +646,7 @@ function Dashboard() {
       </div>
 
       {/* Tarjetas de resumen */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div id="print-area" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center">
             <div className="p-3 rounded-full bg-blue-100 text-blue-600 mr-4">
@@ -774,7 +694,7 @@ function Dashboard() {
       </div>
 
       {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div id="print-areas" className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Interacciones por Estado */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-lg font-semibold mb-4">Interacciones por Estado</h3>
