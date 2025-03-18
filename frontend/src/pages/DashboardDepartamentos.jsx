@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Bar, Pie, Line } from 'react-chartjs-2';
 import { api, authService } from '../services/authService';
-import { useReactToPrint } from "react-to-print";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import { Chart as ChartJS, registerables } from 'chart.js';
 import PrintableInteraccionesReport from '../components/reports/PrintableInteraccionesReport';
 import '../styles/print-styles.css';
@@ -50,17 +51,33 @@ const DashboardDepartamentos = () => {
   const printComponentRef = useRef(null);
   
   // Configuración de impresión
-  const handlePrintInteracciones = useReactToPrint({
-    content: () => printComponentRef.current,
-    documentTitle: `Interacciones_${selectedDepartamento || 'Todas'}_${new Date().toISOString().split('T')[0]}`,
-    onBeforeGetContent: () => {
-      console.log("Preparando para imprimir", printComponentRef.current);
-      return Promise.resolve();
-    },
-    onAfterPrint: () => {
-      console.log('Impresión completada');
-    }
-  });
+  const handlePrintInteracciones = async () => {
+    const pdf = new jsPDF("p", "mm", "a4");
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(16);
+    pdf.text("Reporte de Interacciones", 10, 10);
+  
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(12);
+    pdf.text("Fecha: " + new Date().toLocaleDateString(), 10, 20);
+  
+    pdf.line(10, 25, 200, 25); // Línea separadora
+  
+    pdf.text("Detalles del Reporte:", 10, 35);
+  
+    let yPos = 45;
+    filteredInteracciones.forEach((interaccion, index) => {
+      if (yPos > 280) { // Salto de página si es necesario
+        pdf.addPage();
+        yPos = 10;
+      }
+      pdf.text(`${index + 1}. Municipalidad: ${interaccion.municipalidad.nombre}`, 10, yPos);
+      pdf.text(`Estado: ${interaccion.estado_desc}`, 10, yPos + 5);
+      yPos += 15;
+    });
+  
+    pdf.save(`Reporte_Interacciones.pdf`);
+  };
 
   // Función para imprimir las interacciones manualmente
   const imprimirInteraccionesSinLibreria = () => {
@@ -1197,7 +1214,7 @@ const DashboardDepartamentos = () => {
         </div>
 
         {/* Últimas Interacciones */}
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
+        <div id="print-section" className="bg-white p-6 rounded-lg shadow mb-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">Últimas Interacciones</h3>
             <div className="flex space-x-2">
