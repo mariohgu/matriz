@@ -1,0 +1,107 @@
+/* Estilos específicos para impresión */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  .printable-component,
+  .printable-component * {
+    visibility: visible;
+  }
+  
+  .printable-component {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 20px;
+  }
+  
+  .print-container,
+  .print-container * {
+    visibility: visible;
+  }
+  
+  .print-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 20px;
+  }
+  
+  .print-header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .print-title {
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+  
+  .print-subtitle {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 15px;
+  }
+  
+  .print-date {
+    font-size: 14px;
+    font-style: italic;
+    margin-bottom: 20px;
+  }
+  
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 30px;
+  }
+  
+  .print-table th,
+  .print-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+  
+  .print-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+  }
+  
+  .print-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+  
+  .print-municipalidad-header {
+    margin-top: 30px;
+    margin-bottom: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    border-bottom: 2px solid #333;
+    padding-bottom: 5px;
+  }
+  
+  .print-event-info {
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: #f5f5f5;
+    border-radius: 5px;
+  }
+  
+  .print-event-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+  
+  .print-interactions-table {
+    margin-left: 15px;
+    margin-bottom: 25px;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+}

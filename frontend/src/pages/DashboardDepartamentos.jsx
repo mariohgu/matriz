@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Bar, Pie, Line } from 'react-chartjs-2';
 import { api, authService } from '../services/authService';
 import { useReactToPrint } from "react-to-print";
 import { Chart as ChartJS, registerables } from 'chart.js';
+import PrintableInteraccionesReport from '../components/reports/PrintableInteraccionesReport';
+import '../styles/print-styles.css';
 import { 
   FiUsers, 
   FiActivity, 
@@ -44,10 +46,42 @@ const DashboardDepartamentos = () => {
   const [sortOrder, setSortOrder] = useState('desc');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Referencia para imprimir con react-to-print
-  //const printRef = useRef(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const reactToPrintFn = useReactToPrint({ contentRef });
+  // Referencias para imprimir
+  const printComponentRef = useRef(null);
+  
+  // Configuración de impresión
+  const handlePrintInteracciones = useReactToPrint({
+    content: () => printComponentRef.current,
+    documentTitle: `Interacciones_${selectedDepartamento || 'Todas'}_${new Date().toISOString().split('T')[0]}`,
+    onBeforeGetContent: () => {
+      console.log("Preparando para imprimir", printComponentRef.current);
+      return Promise.resolve();
+    },
+    onAfterPrint: () => {
+      console.log('Impresión completada');
+    }
+  });
+
+  // Función para imprimir las interacciones manualmente
+  const imprimirInteraccionesSinLibreria = () => {
+    // Guardar el contenido original del body
+    const originalContents = document.body.innerHTML;
+    
+    // Obtener el contenido del componente a imprimir
+    const printContents = document.getElementById('print-section').innerHTML;
+    
+    // Reemplazar todo el contenido del body con el contenido a imprimir
+    document.body.innerHTML = printContents;
+    
+    // Llamar al diálogo de impresión del navegador
+    window.print();
+    
+    // Restaurar el contenido original
+    document.body.innerHTML = originalContents;
+    
+    // Recargar los scripts que pudieron ser eliminados (como eventos)
+    window.location.reload();
+  };
 
   // Modal o diálogo para visualizar detalles
   const [viewDialogVisible, setViewDialogVisible] = useState(false);
@@ -659,8 +693,12 @@ const DashboardDepartamentos = () => {
     return filteredData;
   };
 
+  // Memoizar las interacciones filtradas para evitar cálculos innecesarios
+  const filteredInteracciones = useMemo(() => {
+    return getFilteredInteracciones();
+  }, [estadosSeguimiento, eventos, municipalidades, contactos, selectedDepartamento, searchQuery, sortField, sortOrder]);
+
   // Obtener datos filtrados para cálculos
-  const filteredInteracciones = getFilteredInteracciones();
   const totalInteraccionesRecords = filteredInteracciones.length;
   const totalInteraccionesPages = Math.ceil(totalInteraccionesRecords / itemsPerPage);
   
@@ -684,7 +722,7 @@ const DashboardDepartamentos = () => {
           setSelectedInteraction(item);
           setViewDialogVisible(true);
         }}
-        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium flex items-center justify-center"
+        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg transition duration-150 ease-in-out"
       >
         <FiEye className="mr-1" /> Ver
       </button>
@@ -754,7 +792,17 @@ const DashboardDepartamentos = () => {
   return (
     <>
       {/* Componente para Imprimir */}
-      
+      <div id="print-section" style={{ position: 'absolute', left: '-9999px' }}>
+        <PrintableInteraccionesReport 
+          ref={printComponentRef}
+          interacciones={filteredInteracciones}
+          municipalidades={municipalidades}
+          eventos={eventos}
+          contactos={contactos}
+          estados={estados}
+          selectedDepartamento={selectedDepartamento}
+        />
+      </div>
 
       {/* Contenido del Dashboard (lo que se va a imprimir) */}
       <div id="print-area" className="p-6 max-w-full">
@@ -1150,7 +1198,25 @@ const DashboardDepartamentos = () => {
 
         {/* Últimas Interacciones */}
         <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <h3 className="text-lg font-semibold mb-4">Últimas Interacciones</h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Últimas Interacciones</h3>
+            <div className="flex space-x-2">
+              <button
+                onClick={handlePrintInteracciones}
+                className="flex items-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition duration-150 ease-in-out"
+              >
+                <FiPrinter className="mr-2" />
+                ReactToPrint
+              </button>
+              <button
+                onClick={imprimirInteraccionesSinLibreria}
+                className="flex items-center bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition duration-150 ease-in-out"
+              >
+                <FiPrinter className="mr-2" />
+                Imprimir Tradicional
+              </button>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             {/* Tabla usando el componente Table */}
             <Table
