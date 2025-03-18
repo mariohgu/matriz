@@ -12,6 +12,13 @@ const nivelOptions = [
   { value: 'Asociación', label: 'Asociación' }
 ];
 
+const nivelRegional = [
+  { value: '', label: 'Seleccionar nivel' },
+  { value: 'Provincial', label: 'Provincial' },
+  { value: 'Distrital', label: 'Distrital' },
+  { value: 'Mancomunidad', label: 'Mancomunidad' }
+];
+
 export default function MunicipalidadesList() {
   const [municipalidades, setMunicipalidades] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -495,7 +502,7 @@ export default function MunicipalidadesList() {
                 <p className="text-base">{selectedMunicipalidad.region || '-'}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-gray-500">Región Natural</p>
+                <p className="text-sm font-medium text-gray-500">Subnivel</p>
                 <p className="text-base">{selectedMunicipalidad.region_natural || '-'}</p>
               </div>
               <div>
@@ -520,8 +527,13 @@ export default function MunicipalidadesList() {
                 <p className="text-sm font-medium text-gray-500">Nivel</p>
                 <p className="text-base">{selectedMunicipalidad.nivel || '-'}</p>
               </div>
-            </div>
-            {(selectedMunicipalidad.X || selectedMunicipalidad.Y) && (
+              </div>
+              <div className="space-y-3">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Subnivel</p>
+                <p className="text-base">{selectedMunicipalidad.region_natural || '-'}</p>
+              </div>
+              {(selectedMunicipalidad.X || selectedMunicipalidad.Y) && (
               <div className="col-span-1 md:col-span-2">
                 <p className="text-sm font-medium text-gray-500">Coordenadas</p>
                 <p className="text-base">
@@ -529,6 +541,8 @@ export default function MunicipalidadesList() {
                 </p>
               </div>
             )}
+            </div>
+            
           </div>
         )}
       </Modal>
@@ -569,22 +583,7 @@ export default function MunicipalidadesList() {
           )}
           {renderFormField('region', 'Región', formData.region, (e) =>
             setFormData((prev) => ({ ...prev, region: e.target.value }))
-          )}
-
-          {renderFormField(
-            'region_natural',
-            'Región Natural',
-            formData.region_natural,
-            (e) => setFormData((prev) => ({ ...prev, region_natural: e.target.value })),
-            'text',
-            [
-              { value: 'No especificada', label: 'No especificada' },
-              { value: 'Costa', label: 'Costa' },
-              { value: 'Sierra', label: 'Sierra' },
-              { value: 'Selva baja', label: 'Selva baja' },
-              { value: 'Selva alta', label: 'Selva alta' }
-            ]
-          )}
+          )}         
 
           {renderFormField('departamento', 'Departamento', formData.departamento, (e) =>
             setFormData((prev) => ({ ...prev, departamento: e.target.value }))
@@ -605,6 +604,14 @@ export default function MunicipalidadesList() {
             (e) => setFormData((prev) => ({ ...prev, nivel: e.target.value })),
             'text',
             nivelOptions
+          )}
+          {renderFormField(
+            'region_natural',
+            'Subnivel',
+            formData.region_natural,
+            (e) => setFormData((prev) => ({ ...prev, region_natural: e.target.value })),
+            'text',
+            nivelRegional
           )}
 
           <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">

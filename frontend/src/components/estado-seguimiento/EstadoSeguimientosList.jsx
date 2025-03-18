@@ -664,6 +664,18 @@ export default function EstadoSeguimientoList() {
                 </div>
                 <div className="py-1">
                   {contactos
+                    .filter((c) => {
+                      // Filtrar contactos por municipalidad en lugar de evento
+                      if (!formData.id_evento) return false;
+                      
+                      // Obtener la municipalidad del evento seleccionado
+                      const selectedEvento = eventos.find(ev => ev.id_evento.toString() === formData.id_evento.toString());
+                      const eventoMunicipId = selectedEvento?.id_municipalidad;
+                      
+                      // Mostrar contactos relacionados con la municipalidad del evento
+                      return eventoMunicipId && c.id_municipalidad && 
+                             c.id_municipalidad.toString() === eventoMunicipId.toString();
+                    })
                     .filter((c) =>
                       c.nombre_completo
                         ?.toLowerCase()
@@ -812,19 +824,18 @@ export default function EstadoSeguimientoList() {
               </div>
             )}
           </div>
-
-          {/* Compromiso */}
-          <div>
+          {/* Descripción */}
+          <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-500 mb-1">
-              Compromiso
+              Descripción
             </label>
-            <input
-              type="text"
+            <textarea
               className="w-full border border-gray-300 rounded-md p-2"
-              value={formData.compromiso || ''}
-              onChange={(e) => setFormData((prev) => ({ ...prev, compromiso: e.target.value }))}
+              rows={3}
+              value={formData.descripcion || ''}
+              onChange={(e) => setFormData((prev) => ({ ...prev, descripcion: e.target.value }))}
             />
-          </div>
+          </div>          
 
           {/* Fecha Compromiso */}
           <div>
@@ -838,19 +849,20 @@ export default function EstadoSeguimientoList() {
               className="w-full"
             />
           </div>
-
-          {/* Descripción */}
+          {/* Compromiso */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-500 mb-1">
-              Descripción
+              Compromiso
             </label>
             <textarea
               className="w-full border border-gray-300 rounded-md p-2"
               rows={3}
-              value={formData.descripcion || ''}
-              onChange={(e) => setFormData((prev) => ({ ...prev, descripcion: e.target.value }))}
+              value={formData.compromiso || ''}
+              onChange={(e) => setFormData((prev) => ({ ...prev, compromiso: e.target.value }))}
             />
           </div>
+
+          
         </div>
       </Modal>
 

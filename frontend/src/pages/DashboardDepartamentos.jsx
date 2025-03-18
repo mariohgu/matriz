@@ -8,13 +8,15 @@ import {
   FiActivity, 
   FiFilter, 
   FiRefreshCw,
-  FiPrinter
+  FiPrinter,
+  FiEye
 } from 'react-icons/fi';
 
 import PeruMap from '../components/common/PeruMap';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 import { apiService } from '../services/authService';
+import { Table, Pagination, Modal } from '../components/ui';
 
 // Registrar todos los componentes de ChartJS
 ChartJS.register(...registerables);
@@ -32,6 +34,15 @@ const DashboardDepartamentos = () => {
   const [selectedDepartamento, setSelectedDepartamento] = useState('');
   const [lastUpdateDate, setLastUpdateDate] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Estados para la paginación de la tabla de interacciones
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  
+  // Estados para la tabla de interacciones
+  const [sortField, setSortField] = useState('fecha');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Referencia para imprimir con react-to-print
   //const printRef = useRef(null);
@@ -110,9 +121,39 @@ const DashboardDepartamentos = () => {
       .map(muni => muni.departamento)
   )].sort();
 
+  // Obtener las provincias de cada departamento
+  const provinciasPorDepartamento = municipalidades.reduce((acc, muni) => {
+    if (!muni.departamento || !muni.provincia) return acc;
+    
+    if (!acc[muni.departamento]) {
+      acc[muni.departamento] = new Set();
+    }
+    
+    acc[muni.departamento].add(muni.provincia);
+    return acc;
+  }, {});
+
+  // Convertir Sets a arrays ordenados
+  const provinciasArrayPorDepartamento = Object.keys(provinciasPorDepartamento).reduce((acc, dep) => {
+    acc[dep] = [...provinciasPorDepartamento[dep]].sort();
+    return acc;
+  }, {});
+
   // Contar total de municipalidades por dpto
   const totalMunicipalidadesPorDepartamento = departamentos.reduce((acc, dep) => {
     acc[dep] = municipalidades.filter(muni => muni.departamento === dep).length;
+    return acc;
+  }, {});
+
+  // Contar total de municipalidades por provincia
+  const totalMunicipalidadesPorProvincia = municipalidades.reduce((acc, muni) => {
+    if (!muni.provincia) return acc;
+    
+    if (!acc[muni.provincia]) {
+      acc[muni.provincia] = 0;
+    }
+    
+    acc[muni.provincia]++;
     return acc;
   }, {});
 
@@ -132,11 +173,35 @@ const DashboardDepartamentos = () => {
     return acc;
   }, {});
 
-  // Calcular % de avance
+  // Contar cuántas están contactadas por provincia
+  const municipalidadesContactadasPorProvincia = municipalidades.reduce((acc, muni) => {
+    if (!muni.provincia) return acc;
+    
+    if (!acc[muni.provincia]) {
+      acc[muni.provincia] = 0;
+    }
+    
+    const contactada = contactos.some(contact => contact.id_municipalidad === muni.id_municipalidad);
+    if (contactada) {
+      acc[muni.provincia]++;
+    }
+    
+    return acc;
+  }, {});
+
+  // Calcular % de avance por departamento
   const porcentajeAvancePorDepartamento = departamentos.reduce((acc, dep) => {
     const total = totalMunicipalidadesPorDepartamento[dep] || 0;
     const contactadas = municipalidadesContactadasPorDepartamento[dep] || 0;
     acc[dep] = total > 0 ? (contactadas / total) * 100 : 0;
+    return acc;
+  }, {});
+
+  // Calcular % de avance por provincia
+  const porcentajeAvancePorProvincia = Object.keys(totalMunicipalidadesPorProvincia).reduce((acc, prov) => {
+    const total = totalMunicipalidadesPorProvincia[prov] || 0;
+    const contactadas = municipalidadesContactadasPorProvincia[prov] || 0;
+    acc[prov] = total > 0 ? (contactadas / total) * 100 : 0;
     return acc;
   }, {});
 
@@ -264,7 +329,7 @@ const DashboardDepartamentos = () => {
       const lastEvent = sortedEvents[0];
       
       // Encontrar el estado de seguimiento para este evento
-      const estadoSeg = estadosSeguimiento.find(es => es.id_evento === lastEvent.id_evento);
+      const estadoSeg = estadosSeguimiento.find(es => es.id_estado === lastEvent.id_estado || es.id === lastEvent.estado_seguimiento_id);
       
       // Descripción del estado
       const estadoDesc = estadoSeg && estadoSeg.id_estado_ref
@@ -287,29 +352,32 @@ const DashboardDepartamentos = () => {
   // -----------------------------
   // GRÁFICO: PROGRESO EN EL TIEMPO (Line)
   // -----------------------------
-  const filteredEvents = selectedDepartamento
-    ? eventos.filter(evento => {
+  const filteredInteractionsSeries = selectedDepartamento
+    ? estadosSeguimiento.filter(estado => {
+        const evento = eventos.find(e => e.id_evento === estado.id_evento);
+        if (!evento) return false;
+        
         const muni = municipalidades.find(m => m.id_municipalidad === evento.id_municipalidad);
         return muni && muni.departamento === selectedDepartamento;
       })
-    : eventos;
+    : estadosSeguimiento;
   
-  const eventsByDate = {};
-  filteredEvents.forEach(event => {
-    if (!event.fecha) return;
-    const dateKey = new Date(event.fecha).toISOString().split('T')[0];
-    if (!eventsByDate[dateKey]) {
-      eventsByDate[dateKey] = 0;
+  const interactionsByDate = {};
+  filteredInteractionsSeries.forEach(interaction => {
+    if (!interaction.fecha) return;
+    const dateKey = new Date(interaction.fecha).toISOString().split('T')[0];
+    if (!interactionsByDate[dateKey]) {
+      interactionsByDate[dateKey] = 0;
     }
-    eventsByDate[dateKey]++;
+    interactionsByDate[dateKey]++;
   });
-  const sortedDates = Object.keys(eventsByDate).sort((a, b) => new Date(a) - new Date(b));
+  const sortedDates = Object.keys(interactionsByDate).sort((a, b) => new Date(a) - new Date(b));
   const progressChartData = {
     labels: sortedDates,
     datasets: [
       {
-        label: 'Total de Eventos',
-        data: sortedDates.map(d => eventsByDate[d]),
+        label: 'Total de Interacciones',
+        data: sortedDates.map(d => interactionsByDate[d]),
         fill: false,
         borderColor: 'rgba(75, 192, 192, 1)',
         tension: 0.1,
@@ -327,7 +395,7 @@ const DashboardDepartamentos = () => {
         title: { display: true, text: 'Fecha' }
       },
       y: {
-        title: { display: true, text: 'Cantidad de Eventos' },
+        title: { display: true, text: 'Cantidad de Interacciones' },
         beginAtZero: true
       }
     }
@@ -445,6 +513,185 @@ const DashboardDepartamentos = () => {
     ];
 
   // -----------------------------
+  // CÁLCULOS PARA LA TABLA DE INTERACCIONES
+  // -----------------------------
+  // Definición de columnas para la tabla de interacciones
+  const interaccionesColumns = [
+    {
+      field: 'fecha',
+      header: 'Fecha',
+      sortable: true,
+      filterable: true,
+      hideOnMobile: true,
+      body: (item) => new Date(item.fecha).toLocaleDateString()
+    },
+    {
+      field: 'municipalidad',
+      header: 'Municipalidad',
+      sortable: true,
+      filterable: true,
+      body: (item) => item.municipalidad ? item.municipalidad.nombre : 'N/A'
+    },
+    {
+      field: 'contacto',
+      header: 'Contacto',
+      sortable: true,
+      filterable: true,
+      hideOnMobile: true,
+      body: (item) => item.contacto ? item.contacto.nombre_completo : 'N/A'
+    },
+    {
+      field: 'estado',
+      header: 'Estado',
+      sortable: true,
+      filterable: true,
+      body: (item) => (
+        <span
+          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+            ${
+              item.id_estado_ref === 1 // Completado
+                ? 'bg-green-100 text-green-800'
+                : item.id_estado_ref === 2 // En Proceso
+                ? 'bg-yellow-100 text-yellow-800'
+                : item.id_estado_ref === 3 // Pendiente
+                ? 'bg-blue-100 text-blue-800'
+                : item.id_estado_ref === 4 // Cancelado
+                ? 'bg-red-100 text-red-800'
+                : 'bg-gray-100 text-gray-800'
+            }`}
+        >
+          {item.estado_desc || 'N/A'}
+        </span>
+      )
+    },
+    {
+      field: 'fecha_compromiso',
+      header: 'Fecha Compromiso',
+      sortable: true,
+      filterable: true,
+      hideOnMobile: true,
+      body: (item) => item.fecha_compromiso 
+        ? new Date(item.fecha_compromiso).toLocaleDateString()
+        : 'N/A'
+    }
+  ];
+
+  // Función para preparar los datos de interacciones para la tabla
+  const getFilteredInteracciones = () => {
+    const interacciones = estadosSeguimiento
+      .filter((estado) => {
+        // Filtrar por departamento seleccionado
+        if (selectedDepartamento) {
+          const evento = eventos.find((e) => e.id_evento === estado.id_evento);
+          if (!evento) return false;
+          
+          const muni = municipalidades.find(
+            (m) => m.id_municipalidad === evento.id_municipalidad
+          );
+          
+          return muni && muni.departamento === selectedDepartamento;
+        }
+        
+        return true;
+      })
+      .map((estado) => {
+        const evento = eventos.find((e) => e.id_evento === estado.id_evento);
+        const municipalidad = evento &&
+          municipalidades.find(
+            (m) => m.id_municipalidad === evento.id_municipalidad
+          );
+        const contacto = contactos.find((c) => c.id_contacto === estado.id_contacto);
+        
+        return {
+          ...estado,
+          evento,
+          municipalidad,
+          contacto,
+          estado_desc: estados.find(e => e.id_estado === estado.id_estado_ref)?.descripcion || 'N/A'
+        };
+      });
+
+    // Filtrado por campo de búsqueda
+    let filteredData = interacciones;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filteredData = interacciones.filter(item => {
+        const municipalidadNombre = item.municipalidad?.nombre?.toLowerCase() || '';
+        const contactoNombre = item.contacto?.nombre_completo?.toLowerCase() || '';
+        const estadoDesc = item.estado_desc?.toLowerCase() || '';
+        
+        return municipalidadNombre.includes(query) || 
+               contactoNombre.includes(query) || 
+               estadoDesc.includes(query) ||
+               (item.descripcion && item.descripcion.toLowerCase().includes(query));
+      });
+    }
+    
+    // Ordenamiento
+    if (sortField) {
+      filteredData.sort((a, b) => {
+        let valA, valB;
+        
+        if (sortField === 'municipalidad') {
+          valA = a.municipalidad?.nombre?.toLowerCase() || '';
+          valB = b.municipalidad?.nombre?.toLowerCase() || '';
+        } else if (sortField === 'contacto') {
+          valA = a.contacto?.nombre_completo?.toLowerCase() || '';
+          valB = b.contacto?.nombre_completo?.toLowerCase() || '';
+        } else if (sortField === 'estado') {
+          valA = a.estado_desc?.toLowerCase() || '';
+          valB = b.estado_desc?.toLowerCase() || '';
+        } else {
+          valA = a[sortField] || '';
+          valB = b[sortField] || '';
+        }
+        
+        if (typeof valA === 'string') {
+          const compareResult = valA.localeCompare(valB);
+          return sortOrder === 'asc' ? compareResult : -compareResult;
+        } else {
+          const compareResult = valA > valB ? 1 : valA < valB ? -1 : 0;
+          return sortOrder === 'asc' ? compareResult : -compareResult;
+        }
+      });
+    }
+    
+    return filteredData;
+  };
+
+  // Obtener datos filtrados para cálculos
+  const filteredInteracciones = getFilteredInteracciones();
+  const totalInteraccionesRecords = filteredInteracciones.length;
+  const totalInteraccionesPages = Math.ceil(totalInteraccionesRecords / itemsPerPage);
+  
+  // Aplicar paginación a los datos filtrados
+  const paginatedInteracciones = filteredInteracciones.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Ordenamiento para la tabla de interacciones
+  const handleSort = (field, order) => {
+    setSortField(field);
+    setSortOrder(order);
+  };
+
+  // Renderizar botones de acciones
+  const renderInteraccionActions = (item) => {
+    return (
+      <button
+        onClick={() => {
+          setSelectedInteraction(item);
+          setViewDialogVisible(true);
+        }}
+        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium flex items-center justify-center"
+      >
+        <FiEye className="mr-1" /> Ver
+      </button>
+    );
+  };
+
+  // -----------------------------
   // OPCIONES COMUNES DE GRÁFICO
   // -----------------------------
   const chartOptions = {
@@ -475,8 +722,6 @@ const DashboardDepartamentos = () => {
   });
 
   // Paginación local
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
   const totalPages = Math.ceil(sortedDepartamentos.length / itemsPerPage);
 
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -535,7 +780,10 @@ const DashboardDepartamentos = () => {
               <select 
                 className="appearance-none rounded-lg border border-gray-300 bg-white pl-3 pr-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 value={selectedDepartamento}
-                onChange={(e) => setSelectedDepartamento(e.target.value)}
+                onChange={(e) => {
+                  setSelectedDepartamento(e.target.value);
+                  setCurrentPage(1); // Resetear paginación al cambiar el filtro
+                }}
               >
                 <option value="">Todos los departamentos</option>
                 {departamentos.map((dep) => (
@@ -750,15 +998,19 @@ const DashboardDepartamentos = () => {
           </div>
         </div>
 
-        {/* Tabla de estadísticas por departamento (paginada) */}
+        {/* Tabla de estadísticas por departamento/provincia */}
         <div className="bg-white p-6 rounded-lg shadow mb-6 overflow-x-auto">
-          <h3 className="text-lg font-semibold mb-4">Estadísticas por Departamento</h3>
+          <h3 className="text-lg font-semibold mb-4">
+            {selectedDepartamento 
+              ? `Estadísticas por Provincia en ${selectedDepartamento}` 
+              : "Estadísticas por Departamento"}
+          </h3>
           <div className="overflow-x-auto">
             <table className="min-w-full bg-white">
               <thead>
                 <tr className="bg-gray-100 border-b">
                   <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Departamento
+                    {selectedDepartamento ? "Provincia" : "Departamento"}
                   </th>
                   <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Total Municipalidades
@@ -778,52 +1030,94 @@ const DashboardDepartamentos = () => {
                       <LoadingSpinner />
                     </td>
                   </tr>
-                ) : sortedDepartamentos.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" className="py-4 px-4 text-center text-gray-500">
-                      No hay datos disponibles
-                    </td>
-                  </tr>
-                ) : (
-                  displayedDepartamentos.map(dep => {
-                    const avance = porcentajeAvancePorDepartamento[dep] || 0;
-                    const colorBar = getAvanceColor(avance);
-                    return (
-                      <tr
-                        key={dep}
-                        className={`hover:bg-gray-50 ${selectedDepartamento === dep ? 'bg-blue-50' : ''}`}
-                        onClick={() => setSelectedDepartamento(dep)}
-                      >
-                        <td className="py-3 px-4 text-sm font-medium text-gray-900">
-                          {dep}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-500">
-                          {totalMunicipalidadesPorDepartamento[dep] || 0}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-500">
-                          {municipalidadesContactadasPorDepartamento[dep] || 0}
-                        </td>
-                        <td className="py-3 px-4 text-sm text-gray-500">
-                          <div className="flex items-center">
-                            <span className="mr-2">{avance.toFixed(2)}%</span>
-                            <div className="w-24 bg-gray-200 rounded-full h-2.5">
-                              <div
-                                className={`${colorBar} h-2.5 rounded-full`}
-                                style={{ width: `${avance}%` }}
-                              />
+                ) : selectedDepartamento ? (
+                  // Mostrar estadísticas por provincia del departamento seleccionado
+                  provinciasArrayPorDepartamento[selectedDepartamento] && 
+                  provinciasArrayPorDepartamento[selectedDepartamento].length > 0 ? (
+                    provinciasArrayPorDepartamento[selectedDepartamento].map(prov => {
+                      const avance = porcentajeAvancePorProvincia[prov] || 0;
+                      const colorBar = getAvanceColor(avance);
+                      return (
+                        <tr key={prov} className="hover:bg-gray-50">
+                          <td className="py-3 px-4 text-sm font-medium text-gray-900">
+                            {prov}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-500">
+                            {totalMunicipalidadesPorProvincia[prov] || 0}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-500">
+                            {municipalidadesContactadasPorProvincia[prov] || 0}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-500">
+                            <div className="flex items-center">
+                              <span className="mr-2">{avance.toFixed(2)}%</span>
+                              <div className="w-24 bg-gray-200 rounded-full h-2.5">
+                                <div
+                                  className={`${colorBar} h-2.5 rounded-full`}
+                                  style={{ width: `${avance}%` }}
+                                />
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan="4" className="py-4 px-4 text-center text-gray-500">
+                        No hay datos de provincias disponibles para {selectedDepartamento}
+                      </td>
+                    </tr>
+                  )
+                ) : (
+                  // Mostrar estadísticas por departamento
+                  sortedDepartamentos.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" className="py-4 px-4 text-center text-gray-500">
+                        No hay datos disponibles
+                      </td>
+                    </tr>
+                  ) : (
+                    displayedDepartamentos.map(dep => {
+                      const avance = porcentajeAvancePorDepartamento[dep] || 0;
+                      const colorBar = getAvanceColor(avance);
+                      return (
+                        <tr
+                          key={dep}
+                          className={`hover:bg-gray-50 ${selectedDepartamento === dep ? 'bg-blue-50' : ''}`}
+                          onClick={() => setSelectedDepartamento(dep)}
+                        >
+                          <td className="py-3 px-4 text-sm font-medium text-gray-900">
+                            {dep}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-500">
+                            {totalMunicipalidadesPorDepartamento[dep] || 0}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-500">
+                            {municipalidadesContactadasPorDepartamento[dep] || 0}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-500">
+                            <div className="flex items-center">
+                              <span className="mr-2">{avance.toFixed(2)}%</span>
+                              <div className="w-24 bg-gray-200 rounded-full h-2.5">
+                                <div
+                                  className={`${colorBar} h-2.5 rounded-full`}
+                                  style={{ width: `${avance}%` }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )
                 )}
               </tbody>
             </table>
           </div>
 
-          {/* Botones de paginación */}
-          {!loading && sortedDepartamentos.length > 10 && (
+          {/* Botones de paginación solo se muestran para la vista de departamentos */}
+          {!loading && !selectedDepartamento && sortedDepartamentos.length > 10 && (
             <div className="flex justify-end items-center mt-4 space-x-2">
               <button
                 onClick={handlePrevPage}
@@ -858,246 +1152,124 @@ const DashboardDepartamentos = () => {
         <div className="bg-white p-6 rounded-lg shadow mb-6">
           <h3 className="text-lg font-semibold mb-4">Últimas Interacciones</h3>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                    Fecha
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Municipalidad
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                    Contacto
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                    Fecha Compromiso
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {estadosSeguimiento
-                  .filter((estado) => {
-                    // Filtrar por fecha (últimos 30 días por defecto)
-                    const estadoDate = new Date(estado.fecha);
-                    const thirtyDaysAgo = new Date();
-                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 60);
-                    
-                    // Primero filtramos por fecha
-                    if (estadoDate < thirtyDaysAgo) return false;
-                    
-                    // Luego por departamento seleccionado
-                    if (selectedDepartamento) {
-                      const evento = eventos.find((e) => e.id_evento === estado.id_evento);
-                      if (!evento) return false;
-                      
-                      const muni = municipalidades.find(
-                        (m) => m.id_municipalidad === evento.id_municipalidad
-                      );
-                      
-                      return muni && muni.departamento === selectedDepartamento;
-                    }
-                    
-                    return true;
-                  })
-                  .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-                  .slice(0, 5)
-                  .map((estado, index) => {
-                    const evento = eventos.find((e) => e.id_evento === estado.id_evento);
-                    const municipalidad =
-                      evento &&
-                      municipalidades.find(
-                        (m) => m.id_municipalidad === evento.id_municipalidad
-                      );
-                    const contacto = contactos.find((c) => c.id_contacto === estado.id_contacto);
-
-                    return (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
-                          {new Date(estado.fecha).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-800">
-                          <div className="font-medium">{municipalidad ? municipalidad.nombre : 'N/A'}</div>
-                          <div className="text-xs text-gray-500 md:hidden">
-                            {new Date(estado.fecha).toLocaleDateString()}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
-                          {contacto ? contacto.nombre_completo : 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <span
-                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                              ${
-                                estado.id_estado_ref === 1 // Completado
-                                  ? 'bg-green-100 text-green-800'
-                                  : estado.id_estado_ref === 2 // En Proceso
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : estado.id_estado_ref === 3 // Pendiente
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : estado.id_estado_ref === 4 // Cancelado
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-gray-100 text-gray-800'
-                              }`}
-                          >
-                            {estados.find(e => e.id_estado === estado.id_estado_ref)?.descripcion || 'N/A'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
-                          {estado.fecha_compromiso
-                            ? new Date(estado.fecha_compromiso).toLocaleDateString()
-                            : 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                          <button
-                            onClick={() => {
-                              setSelectedInteraction({
-                                ...estado,
-                                evento,
-                                municipalidad,
-                                contacto,
-                                descripcion: estado.descripcion,
-                                estado_desc: estados.find(e => e.id_estado === estado.id_estado_ref)?.descripcion || 'N/A'
-                              });
-                              setViewDialogVisible(true);
-                            }}
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium"
-                          >
-                            Ver
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                {estadosSeguimiento
-                  .filter((estado) => {
-                    if (selectedDepartamento) {
-                      const evento = eventos.find((e) => e.id_evento === estado.id_evento);
-                      if (!evento) return false;
-                      
-                      const muni = municipalidades.find(
-                        (m) => m.id_municipalidad === evento.id_municipalidad
-                      );
-                      
-                      return muni && muni.departamento === selectedDepartamento;
-                    }
-                    return true;
-                  })
-                  .length === 0 && (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
-                      No hay interacciones recientes
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+            {/* Tabla usando el componente Table */}
+            <Table
+              data={paginatedInteracciones}
+              columns={interaccionesColumns}
+              sortField={sortField}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+              searchQuery={searchQuery}
+              onSearch={(value) => {
+                setSearchQuery(value);
+                setCurrentPage(1); // Resetear a primera página cuando se busca
+              }}
+              loading={loading}
+              emptyMessage="No hay interacciones recientes"
+              actions={renderInteraccionActions}
+              isMobile={window.innerWidth < 768}
+              mobileColumns={['municipalidad', 'estado', 'acciones']}
+            />
+            
+            {/* Paginación */}
+            {totalInteraccionesRecords > 0 && (
+              <div className="mt-4">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalInteraccionesPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={totalInteraccionesRecords}
+                  itemsPerPage={itemsPerPage}
+                  onItemsPerPageChange={setItemsPerPage}
+                />
+              </div>
+            )}
           </div>
         </div>
 
         {/* Modal para ver detalle de interacción */}
-        {viewDialogVisible && selectedInteraction && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
-              {/* Encabezado del modal */}
-              <div className="flex justify-between items-center p-4 border-b">
-                <h3 className="text-lg font-medium text-gray-900">Detalles de la Interacción</h3>
-                <button
-                  onClick={() => setViewDialogVisible(false)}
-                  className="text-gray-400 hover:text-gray-500 focus:outline-none"
-                >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Contenido del modal */}
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="field">
-                    <label className="block text-gray-700 font-medium mb-1">Municipalidad</label>
-                    <p className="text-gray-800">
-                      {selectedInteraction.municipalidad
-                        ? selectedInteraction.municipalidad.nombre
-                        : 'N/A'}
-                    </p>
-                  </div>
-                  <div className="field">
-                    <label className="block text-gray-700 font-medium mb-1">Contacto</label>
-                    <p className="text-gray-800">
-                      {selectedInteraction.contacto
-                        ? selectedInteraction.contacto.nombre_completo
-                        : 'N/A'}
-                    </p>
-                  </div>
-                  <div className="field">
-                    <label className="block text-gray-700 font-medium mb-1">Fecha</label>
-                    <p className="text-gray-800">
-                      {new Date(selectedInteraction.fecha).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="field">
-                    <label className="block text-gray-700 font-medium mb-1">Fecha de Compromiso</label>
-                    <p className="text-gray-800">
-                      {selectedInteraction.fecha_compromiso
-                        ? new Date(selectedInteraction.fecha_compromiso).toLocaleDateString()
-                        : 'N/A'}
-                    </p>
-                  </div>
-                  <div className="field">
-                    <label className="block text-gray-700 font-medium mb-1">Estado</label>
-                    <p className="text-gray-800">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                          ${
-                            selectedInteraction.estado_desc === 'Completado'
-                              ? 'bg-green-100 text-green-800'
-                              : selectedInteraction.estado_desc === 'En Proceso'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : selectedInteraction.estado_desc === 'Pendiente'
-                              ? 'bg-blue-100 text-blue-800'
-                              : selectedInteraction.estado_desc === 'Cancelado'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                      >
-                        {selectedInteraction.estado_desc}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <label className="block text-gray-700 font-medium mb-1">Descripción</label>
-                  <p className="text-gray-800 whitespace-pre-wrap">
-                    {selectedInteraction.descripcion || 'Sin descripción'}
-                  </p>
-                </div>
-                <div className="mt-4">
-                  <label className="block text-gray-700 font-medium mb-1">Observaciones</label>
-                  <p className="text-gray-800 whitespace-pre-wrap">
-                    {selectedInteraction.observaciones || 'Sin observaciones'}
-                  </p>
+        <Modal
+          isOpen={viewDialogVisible}
+          onClose={() => setViewDialogVisible(false)}
+          title="Detalle de Interacción"
+          size="lg"
+          footer={
+            <div className="flex justify-end">
+              <button
+                onClick={() => setViewDialogVisible(false)}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-150 ease-in-out"
+              >
+                Cerrar
+              </button>
+            </div>
+          }
+        >
+          {selectedInteraction && (
+            <div className="space-y-4">
+              <div className="border-b pb-3">
+                <div className="text-sm font-medium text-gray-500">Municipalidad</div>
+                <div className="mt-1 text-sm text-gray-900">
+                  {selectedInteraction.municipalidad ? selectedInteraction.municipalidad.nombre : 'N/A'}
                 </div>
               </div>
-              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse rounded-b-lg">
-                <button
-                  type="button"
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-                  onClick={() => setViewDialogVisible(false)}
-                >
-                  Cerrar
-                </button>
+              
+              <div className="border-b pb-3">
+                <div className="text-sm font-medium text-gray-500">Contacto</div>
+                <div className="mt-1 text-sm text-gray-900">
+                  {selectedInteraction.contacto ? selectedInteraction.contacto.nombre_completo : 'N/A'}
+                </div>
+              </div>
+              
+              <div className="border-b pb-3">
+                <div className="text-sm font-medium text-gray-500">Estado</div>
+                <div className="mt-1">
+                  <span
+                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                      ${
+                        selectedInteraction.estado_desc === 'Completado'
+                          ? 'bg-green-100 text-green-800'
+                          : selectedInteraction.estado_desc === 'En Proceso'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : selectedInteraction.estado_desc === 'Pendiente'
+                          ? 'bg-blue-100 text-blue-800'
+                          : selectedInteraction.estado_desc === 'Cancelado'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                  >
+                    {selectedInteraction.estado_desc}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="border-b pb-3">
+                <div className="text-sm font-medium text-gray-500">Fecha</div>
+                <div className="mt-1 text-sm text-gray-900">
+                  {formatDate(selectedInteraction.fecha)}
+                </div>
+              </div>
+              
+              <div>
+                <div className="text-sm font-medium text-gray-500">Descripción</div>
+                <div className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">
+                  {selectedInteraction.descripcion || 'Sin descripción'}
+                </div>
+              </div>
+              <div className="border-b pb-3">
+                <div className="text-sm font-medium text-gray-500">Fecha Compromiso</div>
+                <div className="mt-1 text-sm text-gray-900">
+                  {selectedInteraction.fecha_compromiso ? formatDate(selectedInteraction.fecha_compromiso) : 'N/A'}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-gray-500">Compromiso</div>
+                <div className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">
+                  {selectedInteraction.compromiso || 'Sin compromiso'}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </Modal>
       </div>
     </>
   );
