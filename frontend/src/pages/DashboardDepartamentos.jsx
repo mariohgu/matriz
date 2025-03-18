@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bar, Pie, Line } from 'react-chartjs-2';
 import { api, authService } from '../services/authService';
+import { useReactToPrint } from "react-to-print";
 import { Chart as ChartJS, registerables } from 'chart.js';
 import { 
   FiUsers, 
@@ -12,15 +13,12 @@ import {
 
 import PeruMap from '../components/common/PeruMap';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import { Table, Pagination } from '../components/ui';  // Importa tu Table.jsx
-import ReactToPrint from 'react-to-print';        // <-- Nueva importación para la impresión
 
-import { ADDRESS } from '../utils.jsx';
 import { apiService } from '../services/authService';
 
 // Registrar todos los componentes de ChartJS
 ChartJS.register(...registerables);
-console.log('ReactToPrint:', ReactToPrint);  // Si imprime undefined, hay un problema con la importación
+//console.log('ReactToPrint:', ReactToPrint);  // Si imprime undefined, hay un problema con la importación
 const DashboardDepartamentos = () => {
   // -----------------------------
   // ESTADOS PRINCIPALES
@@ -36,7 +34,9 @@ const DashboardDepartamentos = () => {
   const [loading, setLoading] = useState(true);
 
   // Referencia para imprimir con react-to-print
-  const printRef = useRef(null);
+  //const printRef = useRef(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const reactToPrintFn = useReactToPrint({ contentRef });
 
   // Modal o diálogo para visualizar detalles
   const [viewDialogVisible, setViewDialogVisible] = useState(false);
@@ -193,9 +193,12 @@ const DashboardDepartamentos = () => {
   const contactedSet = new Set(
     contactos.map(c => c.id_municipalidad).filter(Boolean)
   );
-  const contactedMunicipalitiesData = municipalidades.filter(m =>
-    contactedSet.has(m.id_municipalidad)
-  );
+  
+  // Filtramos por departamento seleccionado si existe
+  const contactedMunicipalitiesData = municipalidades
+    .filter(m => contactedSet.has(m.id_municipalidad))
+    .filter(m => selectedDepartamento ? m.departamento === selectedDepartamento : true);
+  
   // Agrupamos por nivel
   const countsByNivel = {};
   contactedMunicipalitiesData.forEach(m => {
@@ -205,6 +208,7 @@ const DashboardDepartamentos = () => {
     }
     countsByNivel[nivel]++;
   });
+  
   const nivelLabels = Object.keys(countsByNivel).sort();
   const nivelCounts = nivelLabels.map(n => countsByNivel[n]);
 
@@ -220,6 +224,65 @@ const DashboardDepartamentos = () => {
       },
     ],
   };
+
+  // -----------------------------
+  // OBTENER DATOS DE MUNICIPALIDADES CONTACTADAS CON ÚLTIMA INTERACCIÓN
+  // -----------------------------
+  // Obtener las municipalidades contactadas con su última interacción
+  const getMunicipalidadesContactadas = () => {
+    // Filtrar municipalidades según departamento seleccionado
+    const filteredMunis = selectedDepartamento 
+      ? municipalidades.filter(m => m.departamento === selectedDepartamento)
+      : municipalidades;
+    
+    // Obtener solo las que han sido contactadas
+    const contactadasMunis = filteredMunis.filter(m => 
+      contactos.some(c => c.id_municipalidad === m.id_municipalidad)
+    );
+    
+    // Para cada municipalidad contactada, buscar su última interacción
+    return contactadasMunis.map(muni => {
+      // Encontrar todos los eventos relacionados con esta municipalidad
+      const relatedEvents = eventos.filter(e => e.id_municipalidad === muni.id_municipalidad);
+      
+      // Si no hay eventos, devolver datos básicos
+      if (relatedEvents.length === 0) {
+        return {
+          id: muni.id_municipalidad,
+          nombre: muni.nombre,
+          ultimaInteraccion: 'Sin interacciones',
+          fecha: null
+        };
+      }
+      
+      // Ordenar eventos por fecha (más reciente primero)
+      const sortedEvents = [...relatedEvents].sort((a, b) => 
+        new Date(b.fecha || 0) - new Date(a.fecha || 0)
+      );
+      
+      // Obtener el evento más reciente
+      const lastEvent = sortedEvents[0];
+      
+      // Encontrar el estado de seguimiento para este evento
+      const estadoSeg = estadosSeguimiento.find(es => es.id_evento === lastEvent.id_evento);
+      
+      // Descripción del estado
+      const estadoDesc = estadoSeg && estadoSeg.id_estado_ref
+        ? estados.find(e => e.id_estado === estadoSeg.id_estado_ref)?.descripcion || 'Desconocido'
+        : 'Desconocido';
+      
+      return {
+        id: muni.id_municipalidad,
+        nombre: muni.nombre,
+        ultimaInteraccion: estadoDesc,
+        fecha: lastEvent.fecha ? new Date(lastEvent.fecha) : null
+      };
+    })
+    .filter(m => m.fecha) // Filtrar solo las que tienen fecha
+    .sort((a, b) => b.fecha - a.fecha); // Ordenar por fecha más reciente
+  };
+  
+  const municipalidadesContactadasConInteraccion = getMunicipalidadesContactadas();
 
   // -----------------------------
   // GRÁFICO: PROGRESO EN EL TIEMPO (Line)
@@ -449,7 +512,7 @@ const DashboardDepartamentos = () => {
       
 
       {/* Contenido del Dashboard (lo que se va a imprimir) */}
-      <div id="print-area" className="p-6 max-w-full" ref={printRef}>
+      <div id="print-area" className="p-6 max-w-full">
         {/* Encabezado y filtros */}
         <div className="flex flex-wrap items-center justify-between mb-6">
           <div className="w-full md:w-auto mb-4 md:mb-0">
@@ -462,6 +525,7 @@ const DashboardDepartamentos = () => {
               >
                 Actualizar
               </button>
+
             </p>
           </div>
 
@@ -597,12 +661,53 @@ const DashboardDepartamentos = () => {
 
           {/* Gráfico de barras: Municipalidades por departamento */}
           <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-4">Municipalidades por Departamento</h3>
-            <div className="h-80">
+            <h3 className="text-lg font-semibold mb-4">
+              {selectedDepartamento 
+                ? `Municipalidades Contactadas en ${selectedDepartamento}` 
+                : 'Municipalidades por Departamento'}
+            </h3>
+            <div className="h-80 overflow-y-auto">
               {loading ? (
                 <LoadingSpinner />
               ) : (
-                <Bar data={departamentosChartData} options={chartOptions} />
+                selectedDepartamento ? (
+                  municipalidadesContactadasConInteraccion.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full bg-white">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Municipalidad
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Última Interacción
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Fecha
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {municipalidadesContactadasConInteraccion.map((muni) => (
+                            <tr key={muni.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-3 text-sm text-gray-900">{muni.nombre}</td>
+                              <td className="px-6 py-3 text-sm text-gray-500">{muni.ultimaInteraccion}</td>
+                              <td className="px-6 py-3 text-sm text-gray-500">
+                                {muni.fecha ? formatDate(muni.fecha) : 'N/A'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="flex justify-center items-center h-full">
+                      <p className="text-gray-500">No hay municipalidades contactadas en este departamento</p>
+                    </div>
+                  )
+                ) : (
+                  <Bar data={departamentosChartData} options={chartOptions} />
+                )
               )}
             </div>
           </div>
@@ -749,99 +854,250 @@ const DashboardDepartamentos = () => {
           )}
         </div>
 
-        {/* TABLA con últimos 10 EstadosSeguimientos */}
-        <div className="bg-white p-6 rounded-lg shadow mb-6 overflow-x-auto">
-          <h3 className="text-lg font-semibold mb-4">Últimos Estados de Seguimiento</h3>
-          <Table
-            data={last10StatesData}
-            columns={lastStatesColumns}
-            loading={loading}
-            emptyMessage="No hay registros de seguimiento"
-            className="text-sm"
-          />
-          {/* Paginación */}
-  
+        {/* Últimas Interacciones */}
+        <div className="bg-white p-6 rounded-lg shadow mb-6">
+          <h3 className="text-lg font-semibold mb-4">Últimas Interacciones</h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                    Fecha
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Municipalidad
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                    Contacto
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Estado
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                    Fecha Compromiso
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {estadosSeguimiento
+                  .filter((estado) => {
+                    // Filtrar por fecha (últimos 30 días por defecto)
+                    const estadoDate = new Date(estado.fecha);
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 60);
+                    
+                    // Primero filtramos por fecha
+                    if (estadoDate < thirtyDaysAgo) return false;
+                    
+                    // Luego por departamento seleccionado
+                    if (selectedDepartamento) {
+                      const evento = eventos.find((e) => e.id_evento === estado.id_evento);
+                      if (!evento) return false;
+                      
+                      const muni = municipalidades.find(
+                        (m) => m.id_municipalidad === evento.id_municipalidad
+                      );
+                      
+                      return muni && muni.departamento === selectedDepartamento;
+                    }
+                    
+                    return true;
+                  })
+                  .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+                  .slice(0, 5)
+                  .map((estado, index) => {
+                    const evento = eventos.find((e) => e.id_evento === estado.id_evento);
+                    const municipalidad =
+                      evento &&
+                      municipalidades.find(
+                        (m) => m.id_municipalidad === evento.id_municipalidad
+                      );
+                    const contacto = contactos.find((c) => c.id_contacto === estado.id_contacto);
+
+                    return (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
+                          {new Date(estado.fecha).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-800">
+                          <div className="font-medium">{municipalidad ? municipalidad.nombre : 'N/A'}</div>
+                          <div className="text-xs text-gray-500 md:hidden">
+                            {new Date(estado.fecha).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
+                          {contacto ? contacto.nombre_completo : 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <span
+                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                              ${
+                                estado.id_estado_ref === 1 // Completado
+                                  ? 'bg-green-100 text-green-800'
+                                  : estado.id_estado_ref === 2 // En Proceso
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : estado.id_estado_ref === 3 // Pendiente
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : estado.id_estado_ref === 4 // Cancelado
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}
+                          >
+                            {estados.find(e => e.id_estado === estado.id_estado_ref)?.descripcion || 'N/A'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
+                          {estado.fecha_compromiso
+                            ? new Date(estado.fecha_compromiso).toLocaleDateString()
+                            : 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                          <button
+                            onClick={() => {
+                              setSelectedInteraction({
+                                ...estado,
+                                evento,
+                                municipalidad,
+                                contacto,
+                                descripcion: estado.descripcion,
+                                estado_desc: estados.find(e => e.id_estado === estado.id_estado_ref)?.descripcion || 'N/A'
+                              });
+                              setViewDialogVisible(true);
+                            }}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium"
+                          >
+                            Ver
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                {estadosSeguimiento
+                  .filter((estado) => {
+                    if (selectedDepartamento) {
+                      const evento = eventos.find((e) => e.id_evento === estado.id_evento);
+                      if (!evento) return false;
+                      
+                      const muni = municipalidades.find(
+                        (m) => m.id_municipalidad === evento.id_municipalidad
+                      );
+                      
+                      return muni && muni.departamento === selectedDepartamento;
+                    }
+                    return true;
+                  })
+                  .length === 0 && (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">
+                      No hay interacciones recientes
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Modal para ver detalle de interacción */}
-      {/* Modal para ver detalle de interacción */}
-{viewDialogVisible && selectedInteraction && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
-    <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
-      {/* Encabezado del modal */}
-      <div className="flex justify-between items-center p-4 border-b">
-        <h3 className="text-lg font-medium text-gray-900">Detalles de la Interacción</h3>
-        <button
-          onClick={() => setViewDialogVisible(false)}
-          className="text-gray-400 hover:text-gray-500 focus:outline-none"
-        >
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
+        {viewDialogVisible && selectedInteraction && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+              {/* Encabezado del modal */}
+              <div className="flex justify-between items-center p-4 border-b">
+                <h3 className="text-lg font-medium text-gray-900">Detalles de la Interacción</h3>
+                <button
+                  onClick={() => setViewDialogVisible(false)}
+                  className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
-      {/* Contenido del modal */}
-      <div className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="field">
-            <label className="block text-gray-700 font-medium mb-1">Municipalidad</label>
-            <p className="text-gray-800">{selectedInteraction.municipalidad?.nombre || 'N/A'}</p>
+              {/* Contenido del modal */}
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="field">
+                    <label className="block text-gray-700 font-medium mb-1">Municipalidad</label>
+                    <p className="text-gray-800">
+                      {selectedInteraction.municipalidad
+                        ? selectedInteraction.municipalidad.nombre
+                        : 'N/A'}
+                    </p>
+                  </div>
+                  <div className="field">
+                    <label className="block text-gray-700 font-medium mb-1">Contacto</label>
+                    <p className="text-gray-800">
+                      {selectedInteraction.contacto
+                        ? selectedInteraction.contacto.nombre_completo
+                        : 'N/A'}
+                    </p>
+                  </div>
+                  <div className="field">
+                    <label className="block text-gray-700 font-medium mb-1">Fecha</label>
+                    <p className="text-gray-800">
+                      {new Date(selectedInteraction.fecha).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="field">
+                    <label className="block text-gray-700 font-medium mb-1">Fecha de Compromiso</label>
+                    <p className="text-gray-800">
+                      {selectedInteraction.fecha_compromiso
+                        ? new Date(selectedInteraction.fecha_compromiso).toLocaleDateString()
+                        : 'N/A'}
+                    </p>
+                  </div>
+                  <div className="field">
+                    <label className="block text-gray-700 font-medium mb-1">Estado</label>
+                    <p className="text-gray-800">
+                      <span
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                          ${
+                            selectedInteraction.estado_desc === 'Completado'
+                              ? 'bg-green-100 text-green-800'
+                              : selectedInteraction.estado_desc === 'En Proceso'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : selectedInteraction.estado_desc === 'Pendiente'
+                              ? 'bg-blue-100 text-blue-800'
+                              : selectedInteraction.estado_desc === 'Cancelado'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                      >
+                        {selectedInteraction.estado_desc}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <label className="block text-gray-700 font-medium mb-1">Descripción</label>
+                  <p className="text-gray-800 whitespace-pre-wrap">
+                    {selectedInteraction.descripcion || 'Sin descripción'}
+                  </p>
+                </div>
+                <div className="mt-4">
+                  <label className="block text-gray-700 font-medium mb-1">Observaciones</label>
+                  <p className="text-gray-800 whitespace-pre-wrap">
+                    {selectedInteraction.observaciones || 'Sin observaciones'}
+                  </p>
+                </div>
+              </div>
+              <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse rounded-b-lg">
+                <button
+                  type="button"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  onClick={() => setViewDialogVisible(false)}
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
           </div>
-
-          <div className="field">
-            <label className="block text-gray-700 font-medium mb-1">Fecha</label>
-            <p className="text-gray-800">{new Date(selectedInteraction.fecha).toLocaleDateString()}</p>
-          </div>
-
-          <div className="field">
-            <label className="block text-gray-700 font-medium mb-1">Tipo de Reunión</label>
-            <p className="text-gray-800">{selectedInteraction.tipoReunionDesc || 'N/A'}</p>
-          </div>
-
-          <div className="field">
-            <label className="block text-gray-700 font-medium mb-1">Estado</label>
-            <p className="text-gray-800">
-              <span
-                className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                  selectedInteraction.estado === 'Pendiente'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : selectedInteraction.estado === 'En Proceso'
-                    ? 'bg-blue-100 text-blue-800'
-                    : selectedInteraction.estado === 'Completado'
-                    ? 'bg-green-100 text-green-800'
-                    : selectedInteraction.estado === 'Cancelado'
-                    ? 'bg-red-100 text-red-800'
-                    : 'bg-gray-100 text-gray-800'
-                }`}
-              >
-                {selectedInteraction.estado || 'N/A'}
-              </span>
-            </p>
-          </div>
-
-          <div className="field col-span-1 md:col-span-2">
-            <label className="block text-gray-700 font-medium mb-1">Descripción</label>
-            <p className="text-gray-800 whitespace-pre-line">
-              {selectedInteraction.descripcion || 'N/A'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Botón de cerrar */}
-      <div className="flex justify-end p-4 border-t">
-        <button
-          onClick={() => setViewDialogVisible(false)}
-          className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 focus:outline-none"
-        >
-          Cerrar
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
+        )}
       </div>
     </>
   );
