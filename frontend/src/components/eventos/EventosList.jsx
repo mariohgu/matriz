@@ -16,9 +16,14 @@ import { Table, Pagination, Modal, ConfirmDialog, useToast, TailwindCalendar } f
 export default function EventosList() {
   // Opciones de modalidad a usar en el <select>
   const modalidadOptions = [
+    { value: 'Correo Electrónico', label: 'Correo Electrónico' },
+    { value: 'Documento Oficial', label: 'Documento Oficial' },
+    { value: 'Eventos Oficiales', label: 'Eventos Oficiales' },
+    { value: 'Plataforma de comunicacion', label: 'Plataforma de comunicacion' },
     { value: 'Presencial', label: 'Presencial' },
+    { value: 'Telefónico', label: 'Telefónico' },
     { value: 'Virtual', label: 'Virtual' },
-    { value: 'Híbrido', label: 'Híbrido' }
+    { value: 'Visita de Campo', label: 'Visita de Campo' }
   ];
 
   // ======== Estados principales ========

@@ -43,7 +43,7 @@ export default function Sidebar({ isOpen, onToggle }) {
           title: "Items",
           icon: <FaBoxes />,
           subItems: [
-            { href: "/municipalidades", title: "Municipalidades" },
+            { href: "/municipalidades", title: "Entidades" },
             { href: "/contactos", title: "Contactos" },
             { href: "/tipos-reunion", title: "Tipos de Reunión" },
             { href: "/estados", title: "Estados" },

@@ -9,14 +9,18 @@ const nivelOptions = [
   { value: 'Gobierno Local', label: 'Gobierno Local' },
   { value: 'Gobierno Regional', label: 'Gobierno Regional' },
   { value: 'Gobierno Provincial', label: 'Gobierno Provincial' },
-  { value: 'Asociación', label: 'Asociación' }
+  { value: 'Asociación', label: 'Asociación' },
+  { value: 'Otro', label: 'Otro' }
 ];
 
 const nivelRegional = [
   { value: '', label: 'Seleccionar nivel' },
+  { value: 'Regional', label: 'Regional' },
   { value: 'Provincial', label: 'Provincial' },
   { value: 'Distrital', label: 'Distrital' },
-  { value: 'Mancomunidad', label: 'Mancomunidad' }
+  { value: 'Local', label: 'Local' },
+  { value: 'Mancomunidad', label: 'Mancomunidad' },
+  { value: 'Otros', label: 'Otros' }
 ];
 
 export default function MunicipalidadesList() {
@@ -165,18 +169,18 @@ export default function MunicipalidadesList() {
       if (isEditMode && dataToSend.id_municipalidad) {
         // Actualizar
         await apiService.update('municipalidades', dataToSend.id_municipalidad, dataToSend);
-        toast.showSuccess('Éxito', 'Municipalidad actualizada correctamente');
+        toast.showSuccess('Éxito', 'Entidad actualizada correctamente');
       } else {
         // Crear
         await apiService.create('municipalidades', dataToSend);
-        toast.showSuccess('Éxito', 'Municipalidad creada correctamente');
+        toast.showSuccess('Éxito', 'Entidad creada correctamente');
       }
 
       setUpsertDialogVisible(false);
       loadMunicipalidades();
     } catch (error) {
-      console.error('Error al guardar municipalidad:', error);
-      toast.showError('Error', 'No se pudo guardar la municipalidad');
+      console.error('Error al guardar entidad:', error);
+      toast.showError('Error', 'No se pudo guardar la entidad');
     }
   };
 
@@ -192,12 +196,12 @@ export default function MunicipalidadesList() {
     if (!selectedMunicipalidad) return;
     try {
       await apiService.delete('municipalidades', selectedMunicipalidad.id_municipalidad);
-      toast.showSuccess('Éxito', 'Municipalidad eliminada correctamente');
+      toast.showSuccess('Éxito', 'Entidad eliminada correctamente');
       setDeleteDialogVisible(false);
       loadMunicipalidades();
     } catch (error) {
-      console.error('Error al eliminar municipalidad:', error);
-      toast.showError('Error', 'No se pudo eliminar la municipalidad');
+      console.error('Error al eliminar entidad:', error);
+      toast.showError('Error', 'No se pudo eliminar la entidad');
     }
   };
 
@@ -414,14 +418,14 @@ export default function MunicipalidadesList() {
     <div className="p-6 bg-white rounded-lg shadow w-full max-w-full">
       {/* Encabezado */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Municipalidades</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Entidades</h1>
         <button
           onClick={handleCreate}
           className="px-4 py-2 bg-blue-600 text-white rounded-md flex items-center font-medium 
                      hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
         >
           <FiPlus className="mr-2" />
-          Nueva Municipalidad
+          Nueva Entidad
         </button>
       </div>
 
@@ -434,7 +438,7 @@ export default function MunicipalidadesList() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm 
                        focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Buscar municipalidades..."
+            placeholder="Buscar entidades..."
           />
           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
             <FiEye className="h-5 w-5 text-gray-400" />
@@ -456,7 +460,7 @@ export default function MunicipalidadesList() {
         columnFilters={columnFilters}
         onColumnFilterChange={setColumnFilters}
         loading={loading}
-        emptyMessage="No hay municipalidades disponibles"
+        emptyMessage="No hay entidades disponibles"
         actions={renderActions}
       />
 
@@ -475,7 +479,7 @@ export default function MunicipalidadesList() {
       <Modal
         isOpen={viewDialogVisible}
         onClose={() => setViewDialogVisible(false)}
-        title="Detalles de Municipalidad"
+        title="Detalles de Entidad"
         size="xl"
         footer={
           <div className="flex justify-end">
@@ -554,7 +558,7 @@ export default function MunicipalidadesList() {
       <Modal
         isOpen={upsertDialogVisible}
         onClose={() => setUpsertDialogVisible(false)}
-        title={isEditMode ? 'Editar Municipalidad' : 'Nueva Municipalidad'}
+        title={isEditMode ? 'Editar Entidad' : 'Nueva Entidad'}
         size="xl"
         footer={
           <div className="flex justify-end space-x-3">
@@ -635,8 +639,8 @@ export default function MunicipalidadesList() {
         title="Confirmar Eliminación"
         message={
           selectedMunicipalidad
-            ? `¿Está seguro de que desea eliminar la municipalidad "${selectedMunicipalidad.nombre}"?`
-            : '¿Está seguro de que desea eliminar esta municipalidad?'
+            ? `¿Está seguro de que desea eliminar la entidad "${selectedMunicipalidad.nombre}"?`
+            : '¿Está seguro de que desea eliminar esta entidad?'
         }
         confirmLabel="Eliminar"
         variant="danger"

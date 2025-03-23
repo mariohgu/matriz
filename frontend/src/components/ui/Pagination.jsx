@@ -7,10 +7,14 @@ const Pagination = ({
   onPageChange,
   itemsPerPage,
   onItemsPerPageChange,
+  totalRecords,
   totalItems,
   className = '',
   showItemsPerPage = true,
 }) => {
+  // Compatibilidad para usar cualquiera de los dos nombres de props
+  const total = totalRecords || totalItems || 0;
+  
   // No renderizar si no hay páginas o solo hay una
   if (totalPages <= 1) return null;
 
@@ -70,7 +74,7 @@ const Pagination = ({
     <div className={`flex flex-col md:flex-row justify-between items-center mt-4 ${className}`}>
       {/* Información de elementos */}
       <div className="text-sm text-gray-600 mb-2 md:mb-0">
-        Mostrando {Math.min((currentPage - 1) * itemsPerPage + 1, totalItems)} a {Math.min(currentPage * itemsPerPage, totalItems)} de {totalItems} elementos
+        Mostrando {Math.min((currentPage - 1) * itemsPerPage + 1, total)} a {Math.min(currentPage * itemsPerPage, total)} de {total} elementos
       </div>
       
       <div className="flex items-center">
