@@ -132,8 +132,8 @@ export default function EventosList() {
 
       setEventos(eventosProcessed);
     } catch (error) {
-      console.error('Error al cargar eventos:', error);
-      toast.showError('Error', 'No se pudieron cargar los eventos');
+      console.error('Error al cargar primer acercamiento:', error);
+      toast.showError('Error', 'No se pudieron cargar los acercamientos');
     } finally {
       setLoading(false);
     }
@@ -251,12 +251,12 @@ export default function EventosList() {
     if (!selectedEvento) return;
     try {
       await apiService.delete('eventos', selectedEvento.id_evento);
-      toast.showSuccess('Éxito', 'Evento eliminado correctamente');
+      toast.showSuccess('Éxito', 'Primer acercamiento eliminado correctamente');
       setDeleteDialogVisible(false);
       loadEventos();
     } catch (error) {
-      console.error('Error al eliminar evento:', error);
-      toast.showError('Error', 'No se pudo eliminar el evento');
+      console.error('Error al eliminar primer acercamiento:', error);
+      toast.showError('Error', 'No se pudo eliminar el primer acercamiento');
     }
   };
 
@@ -447,13 +447,13 @@ export default function EventosList() {
     <div className="p-6 bg-white rounded-lg shadow w-full max-w-full">
       {/* Encabezado */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Eventos</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Primeros Acercamientos</h1>
         <button
           className="px-4 py-2 bg-blue-600 text-white rounded-md flex items-center font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
           onClick={handleCreate}
         >
           <FiPlus className="mr-2" />
-          Nuevo Evento
+          Nuevo Primer Acercamiento
         </button>
       </div>
 
@@ -465,7 +465,7 @@ export default function EventosList() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Buscar eventos..."
+            placeholder="Buscar primeros acercamientos..."
           />
           <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
             <FiSearch className="h-5 w-5 text-gray-400" />
@@ -485,7 +485,7 @@ export default function EventosList() {
             setSortField(field);
             setSortOrder(order);
           }}
-          emptyMessage="No hay eventos disponibles"
+          emptyMessage="No hay primeros acercamientos disponibles"
           searchQuery={searchQuery}
           columnFilters={columnFilters}
           onFilterChange={(field, value) => {
@@ -520,7 +520,7 @@ export default function EventosList() {
       <Modal
         isOpen={upsertDialogVisible}
         onClose={() => setUpsertDialogVisible(false)}
-        title={isEditMode ? 'Editar Evento' : 'Nuevo Evento'}
+        title={isEditMode ? 'Editar Primer Acercamiento' : 'Nuevo Primer Acercamiento'}
         size="xl"
         footer={
           <div className="flex justify-end gap-2">
@@ -754,7 +754,7 @@ export default function EventosList() {
       <Modal
         isOpen={viewDialogVisible}
         onClose={() => setViewDialogVisible(false)}
-        title="Detalle de Evento"
+        title="Detalle de Primer Acercamiento"
         size="md"
         footer={
           <div className="flex justify-end gap-2">
@@ -808,7 +808,7 @@ export default function EventosList() {
       <ConfirmDialog
         isOpen={deleteDialogVisible}
         onClose={() => setDeleteDialogVisible(false)}
-        message="¿Estás seguro de que deseas eliminar este evento?"
+        message="¿Estás seguro de que deseas eliminar este primer acercamiento?"
         title="Confirmación"
         icon={<FiTrash2 />}
         acceptLabel="Eliminar"

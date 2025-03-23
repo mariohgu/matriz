@@ -50,10 +50,10 @@ export default function Sidebar({ isOpen, onToggle }) {
           ],
         },
         {
-          title: "Eventos",
+          title: "Primer Acercamiento",
           icon: <FaCalendarAlt />,
           subItems: [
-            { href: "/eventos", title: "Lista de Eventos" },
+            { href: "/eventos", title: "Lista de Primer Acercamiento" },
           ],
         },
         {
