@@ -18,7 +18,7 @@ class MunicipalidadController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'ubigeo' => 'required|string|max:10|unique:municipalidades',
+            'ubigeo' => 'required|string|max:6|unique:municipalidades',
             'nombre' => 'required|string',
             'departamento' => 'required|string|max:50',
             'provincia' => 'required|string|max:50',
