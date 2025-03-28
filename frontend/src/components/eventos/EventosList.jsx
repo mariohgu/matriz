@@ -62,6 +62,9 @@ export default function EventosList() {
   const [selectedEvento, setSelectedEvento] = useState(null);
   const [viewDialogVisible, setViewDialogVisible] = useState(false);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+  const [confirmDialogVisible, setConfirmDialogVisible] = useState(false);
+  const [confirmDialogMessage, setConfirmDialogMessage] = useState('');
+  const [pendingAction, setPendingAction] = useState(null);
 
   // ======== Dropdowns con búsqueda (para municipalidad y contacto) ========
   const [showMunicipalidadDropdown, setShowMunicipalidadDropdown] = useState(false);
@@ -223,6 +226,33 @@ export default function EventosList() {
       return;
     }
 
+    // Verificar si la municipalidad ya tiene eventos registrados (solo para nuevos eventos)
+    if (!isEditMode) {
+      const municipalidadConEventos = eventos.some(
+        evento => evento.id_municipalidad === parseInt(formData.id_municipalidad)
+      );
+      
+      if (municipalidadConEventos) {
+        // Mostrar modal de confirmación personalizado
+        const municipalidadSeleccionada = municipalidades.find(
+          m => m.id_municipalidad === parseInt(formData.id_municipalidad)
+        );
+        
+        setConfirmDialogMessage(
+          `La municipalidad "${municipalidadSeleccionada?.nombre || 'seleccionada'}" ya tiene eventos registrados. ¿Desea continuar de todos modos?`
+        );
+        setPendingAction(() => saveEventoConfirmed);
+        setConfirmDialogVisible(true);
+        return;
+      }
+    }
+
+    // Si no hay validaciones pendientes, guardar directamente
+    saveEventoConfirmed();
+  };
+
+  // Función para guardar el evento después de la confirmación
+  const saveEventoConfirmed = async () => {
     const eventoPayload = {
       ...formData,
       fecha: formData.fecha?.toISOString().split('T')[0]
@@ -244,6 +274,22 @@ export default function EventosList() {
       console.error('Error al guardar evento:', error);
       toast.showError('Error', 'No se pudo guardar el evento');
     }
+  };
+
+  // Manejar confirmación del diálogo
+  const handleConfirmDialogConfirm = () => {
+    setConfirmDialogVisible(false);
+    // Ejecutar la acción pendiente
+    if (pendingAction) {
+      pendingAction();
+      setPendingAction(null);
+    }
+  };
+
+  // Manejar cancelación del diálogo
+  const handleConfirmDialogCancel = () => {
+    setConfirmDialogVisible(false);
+    setPendingAction(null);
   };
 
   // ======== Eliminar ========
@@ -593,13 +639,44 @@ export default function EventosList() {
                           key={m.id_municipalidad}
                           className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                           onClick={() => {
+                            // Verificar si la municipalidad ya tiene eventos registrados (solo para nuevos eventos)
+                            if (!isEditMode) {
+                              const municipalidadConEventos = eventos.some(
+                                evento => evento.id_municipalidad === parseInt(m.id_municipalidad)
+                              );
+                              
+                              if (municipalidadConEventos) {
+                                // Mostrar modal de confirmación personalizado
+                                setConfirmDialogMessage(
+                                  `La municipalidad "${m.nombre}" ya tiene eventos registrados. ¿Desea continuar de todos modos?`
+                                );
+                                
+                                // Guardar la acción que se ejecutará si se confirma
+                                setPendingAction(() => {
+                                  return () => {
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      id_municipalidad: m.id_municipalidad,
+                                      id_contacto: '' // reset
+                                    }));
+                                    setShowMunicipalidadDropdown(false);
+                                    loadContactosPorMunicipalidad(m.id_municipalidad);
+                                  };
+                                });
+                                
+                                setConfirmDialogVisible(true);
+                                return; // No continuar con la selección hasta confirmar
+                              }
+                            }
+                            
+                            // Si no hay evento previo o estamos en modo edición, proceder normalmente
                             setFormData((prev) => ({
                               ...prev,
                               id_municipalidad: m.id_municipalidad,
                               id_contacto: '' // reset
                             }));
-                            loadContactosPorMunicipalidad(m.id_municipalidad);
                             setShowMunicipalidadDropdown(false);
+                            loadContactosPorMunicipalidad(m.id_municipalidad);
                           }}
                         >
                           <div className="font-medium">{m.nombre}</div>
@@ -822,6 +899,30 @@ export default function EventosList() {
         onConfirm={handleDelete}
         onReject={() => setDeleteDialogVisible(false)}
       />
+
+      {/* Modal de confirmación personalizado */}
+      {confirmDialogVisible && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-full max-w-md p-6 mx-auto bg-white rounded-lg shadow-xl">
+            <h3 className="mb-4 text-lg font-semibold text-gray-800">Confirmación</h3>
+            <p className="mb-6 text-gray-600">{confirmDialogMessage}</p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleConfirmDialogCancel}
+                className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmDialogConfirm}
+                className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
