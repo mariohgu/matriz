@@ -26,7 +26,9 @@ const Table = ({
   isMobile = false,
   mobileColumns = [], // Columnas a mostrar en vista móvil
   actions = null, // Componente de acciones (botones editar, eliminar, etc.)
-  className = ''
+  className = '',
+  hideGlobalSearch = false, // Ocultar campo de búsqueda global
+  showFiltersButton = true // Mostrar botón de filtros (independiente del campo de búsqueda)
 }) => {
   const [showFilters, setShowFilters] = useState(false);
   const [localColumnFilters, setLocalColumnFilters] = useState(columnFilters);
@@ -104,35 +106,37 @@ const Table = ({
 
   return (
     <div className={`w-full ${className}`}>
-      {/* Barra de búsqueda global siempre visible */}
-      <div className="mb-4 flex">
-        <div className="relative flex-1">
-          <input
-            type="text"
-            value={localSearchQuery}
-            onChange={handleSearchChange}
-            onKeyDown={handleSearchKeyDown}
-            className="w-full rounded-lg border border-gray-300 pl-10 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Buscar..."
-          />
-          <div className="absolute inset-y-0 left-0 flex items-center pl-3">
-            <FiSearch className="text-gray-400" />
+      {/* Barra de búsqueda global o botón de filtros */}
+      <div className="mb-4 flex justify-end">
+        {!hideGlobalSearch && (
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={localSearchQuery}
+              onChange={handleSearchChange}
+              onKeyDown={handleSearchKeyDown}
+              className="w-full rounded-lg border border-gray-300 pl-10 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Buscar..."
+            />
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+              <FiSearch className="text-gray-400" />
+            </div>
+            {localSearchQuery && (
+              <button
+                className="absolute inset-y-0 right-0 flex items-center pr-3"
+                onClick={clearSearch}
+              >
+                <FiX className="text-gray-400 hover:text-gray-600" />
+              </button>
+            )}
           </div>
-          {localSearchQuery && (
-            <button
-              className="absolute inset-y-0 right-0 flex items-center pr-3"
-              onClick={clearSearch}
-            >
-              <FiX className="text-gray-400 hover:text-gray-600" />
-            </button>
-          )}
-        </div>
+        )}
         
         {/* Botón para mostrar/ocultar filtros en versión desktop */}
-        {!isMobile && (
+        {!isMobile && showFiltersButton && (
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="ml-2 px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg flex items-center"
+            className={`${!hideGlobalSearch ? 'ml-2' : ''} px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg flex items-center`}
           >
             <FiFilter className="mr-1" />
             Filtros

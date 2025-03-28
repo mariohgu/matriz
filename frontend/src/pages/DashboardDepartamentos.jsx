@@ -1297,6 +1297,8 @@ const DashboardDepartamentos = () => {
               onColumnFilterChange={(column, value) => {
                 setInteraccionesColumnFilters(prevFilters => ({ ...prevFilters, [column]: value }));
               }}
+              hideGlobalSearch={true}
+              showFiltersButton={true}
             />
             
             {/* Paginación */}
