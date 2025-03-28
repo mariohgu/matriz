@@ -8,3 +8,4 @@ export { default as ConfirmDialog } from './ConfirmDialog';
 export { ToastProvider, useToast } from './ToastContext';
 export { default as TailwindCalendar } from './TailwindCalendar';
 export { default as MunicipalidadesDetails } from './MunicipalidadesDetails';
+export { default as InteraccionDetails } from './InteraccionDetails';

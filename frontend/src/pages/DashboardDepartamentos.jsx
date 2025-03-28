@@ -21,7 +21,7 @@ import PeruMap from '../components/common/PeruMap';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 import { apiService } from '../services/authService';
-import { Table, Pagination, Modal, MunicipalidadesDetails } from '../components/ui';
+import { Table, Pagination, Modal, MunicipalidadesDetails, InteraccionDetails } from '../components/ui';
 import { generateInteraccionesPDF } from '../utils/printUtils';
 
 // Registrar todos los componentes de ChartJS
@@ -49,6 +49,7 @@ const DashboardDepartamentos = () => {
   const [sortField, setSortField] = useState('fecha');
   const [sortOrder, setSortOrder] = useState('desc');
   const [searchQuery, setSearchQuery] = useState('');
+  const [interaccionesColumnFilters, setInteraccionesColumnFilters] = useState({});
 
   // Referencias para imprimir
   const printComponentRef = useRef(null);
@@ -572,14 +573,14 @@ const DashboardDepartamentos = () => {
       body: (item) => new Date(item.fecha).toLocaleDateString()
     },
     {
-      field: 'municipalidad',
+      field: 'municipalidad.nombre', 
       header: 'Municipalidad',
       sortable: true,
       filterable: true,
       body: (item) => item.municipalidad ? item.municipalidad.nombre : 'N/A'
     },
     {
-      field: 'contacto',
+      field: 'contacto.nombre_completo', 
       header: 'Contacto',
       sortable: true,
       filterable: true,
@@ -673,15 +674,36 @@ const DashboardDepartamentos = () => {
       });
     }
     
+    // Filtrado por columnas
+    Object.keys(interaccionesColumnFilters).forEach(column => {
+      const filterValue = interaccionesColumnFilters[column];
+      if (filterValue) {
+        filteredData = filteredData.filter(item => {
+          // Manejo especial para campos que son objetos
+          if (column === 'municipalidad.nombre' && item.municipalidad) {
+            return item.municipalidad.nombre.toLowerCase().includes(filterValue.toLowerCase());
+          } 
+          else if (column === 'contacto.nombre_completo' && item.contacto) {
+            return item.contacto.nombre_completo.toLowerCase().includes(filterValue.toLowerCase());
+          }
+          // Manejo general para valores primitivos
+          else {
+            const value = item[column] || '';
+            return value.toString().toLowerCase().includes(filterValue.toLowerCase());
+          }
+        });
+      }
+    });
+    
     // Ordenamiento
     if (sortField) {
       filteredData.sort((a, b) => {
         let valA, valB;
         
-        if (sortField === 'municipalidad') {
+        if (sortField === 'municipalidad.nombre') {
           valA = a.municipalidad?.nombre?.toLowerCase() || '';
           valB = b.municipalidad?.nombre?.toLowerCase() || '';
-        } else if (sortField === 'contacto') {
+        } else if (sortField === 'contacto.nombre_completo') {
           valA = a.contacto?.nombre_completo?.toLowerCase() || '';
           valB = b.contacto?.nombre_completo?.toLowerCase() || '';
         } else if (sortField === 'estado') {
@@ -708,7 +730,7 @@ const DashboardDepartamentos = () => {
   // Memoizar las interacciones filtradas para evitar cálculos innecesarios
   const filteredInteracciones = useMemo(() => {
     return getFilteredInteracciones();
-  }, [estadosSeguimiento, eventos, municipalidades, contactos, selectedDepartamento, searchQuery, sortField, sortOrder]);
+  }, [estadosSeguimiento, eventos, municipalidades, contactos, selectedDepartamento, searchQuery, sortField, sortOrder, interaccionesColumnFilters]);
 
   // Obtener datos filtrados para cálculos
   const totalInteraccionesRecords = filteredInteracciones.length;
@@ -1270,7 +1292,11 @@ const DashboardDepartamentos = () => {
               emptyMessage="No hay interacciones recientes"
               actions={renderInteraccionActions}
               isMobile={window.innerWidth < 768}
-              mobileColumns={['municipalidad', 'estado', 'acciones']}
+              mobileColumns={['municipalidad.nombre', 'estado', 'acciones']}
+              columnFilters={interaccionesColumnFilters}
+              onColumnFilterChange={(column, value) => {
+                setInteraccionesColumnFilters(prevFilters => ({ ...prevFilters, [column]: value }));
+              }}
             />
             
             {/* Paginación */}
@@ -1294,7 +1320,7 @@ const DashboardDepartamentos = () => {
           isOpen={viewDialogVisible}
           onClose={() => setViewDialogVisible(false)}
           title="Detalle de Interacción"
-          size="lg"
+          size="xl"
           footer={
             <div className="flex justify-end">
               <button
@@ -1307,69 +1333,13 @@ const DashboardDepartamentos = () => {
           }
         >
           {selectedInteraction && (
-            <div className="space-y-4">
-              <div className="border-b pb-3">
-                <div className="text-sm font-medium text-gray-500">Municipalidad</div>
-                <div className="mt-1 text-sm text-gray-900">
-                  {selectedInteraction.municipalidad ? selectedInteraction.municipalidad.nombre : 'N/A'}
-                </div>
-              </div>
-              
-              <div className="border-b pb-3">
-                <div className="text-sm font-medium text-gray-500">Contacto</div>
-                <div className="mt-1 text-sm text-gray-900">
-                  {selectedInteraction.contacto ? selectedInteraction.contacto.nombre_completo : 'N/A'}
-                </div>
-              </div>
-              
-              <div className="border-b pb-3">
-                <div className="text-sm font-medium text-gray-500">Estado</div>
-                <div className="mt-1">
-                  <span
-                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                      ${
-                        selectedInteraction.estado_desc === 'Completado'
-                          ? 'bg-green-100 text-green-800'
-                          : selectedInteraction.estado_desc === 'En Proceso'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : selectedInteraction.estado_desc === 'Pendiente'
-                          ? 'bg-blue-100 text-blue-800'
-                          : selectedInteraction.estado_desc === 'Cancelado'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                  >
-                    {selectedInteraction.estado_desc}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="border-b pb-3">
-                <div className="text-sm font-medium text-gray-500">Fecha</div>
-                <div className="mt-1 text-sm text-gray-900">
-                  {formatDate(selectedInteraction.fecha)}
-                </div>
-              </div>
-              
-              <div>
-                <div className="text-sm font-medium text-gray-500">Descripción</div>
-                <div className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">
-                  {selectedInteraction.descripcion || 'Sin descripción'}
-                </div>
-              </div>
-              <div className="border-b pb-3">
-                <div className="text-sm font-medium text-gray-500">Fecha Compromiso</div>
-                <div className="mt-1 text-sm text-gray-900">
-                  {selectedInteraction.fecha_compromiso ? formatDate(selectedInteraction.fecha_compromiso) : 'N/A'}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-gray-500">Compromiso</div>
-                <div className="mt-1 text-sm text-gray-900 whitespace-pre-wrap">
-                  {selectedInteraction.compromiso || 'Sin compromiso'}
-                </div>
-              </div>
-            </div>
+            <InteraccionDetails 
+              evento={selectedInteraction}
+              municipalidad={selectedInteraction.municipalidad}
+              contacto={selectedInteraction.contacto}
+              estadosSeguimiento={estadosSeguimiento.filter(es => es.id_evento === selectedInteraction.id_evento)}
+              estados={estados}
+            />
           )}
         </Modal>
 

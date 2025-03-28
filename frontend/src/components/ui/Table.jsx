@@ -107,8 +107,17 @@ const Table = ({
       {/* Barra de búsqueda global siempre visible */}
       <div className="mb-4 flex">
         <div className="relative flex-1">
-          
-          
+          <input
+            type="text"
+            value={localSearchQuery}
+            onChange={handleSearchChange}
+            onKeyDown={handleSearchKeyDown}
+            className="w-full rounded-lg border border-gray-300 pl-10 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Buscar..."
+          />
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+            <FiSearch className="text-gray-400" />
+          </div>
           {localSearchQuery && (
             <button
               className="absolute inset-y-0 right-0 flex items-center pr-3"
@@ -207,12 +216,8 @@ const Table = ({
                 data.map((row, rowIndex) => (
                   <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                     {visibleColumns.map((column, colIndex) => (
-                      <td key={`${rowIndex}-${colIndex}`} className="px-6 py-4 text-sm text-gray-900">
-                        {column.body ? column.body(row) : (
-                          typeof getNestedValue(row, column.field) === 'object' ? 
-                            JSON.stringify(getNestedValue(row, column.field)) :
-                            getNestedValue(row, column.field) || 'N/A'
-                        )}
+                      <td key={`${rowIndex}-${colIndex}`} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {column.body ? column.body(row) : getNestedValue(row, column.field) || 'N/A'}
                       </td>
                     ))}
                     {actions && (
@@ -246,11 +251,7 @@ const Table = ({
                       {column.header}
                     </div>
                     <div className="text-sm text-gray-900">
-                      {column.body ? column.body(row) : (
-                        typeof getNestedValue(row, column.field) === 'object' ? 
-                          JSON.stringify(getNestedValue(row, column.field)) :
-                          getNestedValue(row, column.field) || 'N/A'
-                      )}
+                      {column.body ? column.body(row) : getNestedValue(row, column.field) || 'N/A'}
                     </div>
                   </div>
                 ))}
