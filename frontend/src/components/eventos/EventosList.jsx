@@ -600,12 +600,16 @@ export default function EventosList() {
           }}
           emptyMessage="No hay primeros acercamientos disponibles"
           searchQuery={searchQuery}
+          onSearch={(value) => {
+            setSearchQuery(value);
+            setCurrentPage(1);
+          }}
           columnFilters={columnFilters}
-          onFilterChange={(field, value) => {
-            setColumnFilters({
-              ...columnFilters,
-              [field]: value
-            });
+          onColumnFilterChange={(columnName, value) => {
+            setColumnFilters(prev => ({
+              ...prev,
+              [columnName]: value
+            }));
             setCurrentPage(1);
           }}
           isMobile={isMobile}

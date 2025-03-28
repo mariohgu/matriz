@@ -241,7 +241,12 @@ export default function TipoReunionList() {
           searchQuery={searchQuery}
           onSearch={setSearchQuery}
           columnFilters={columnFilters}
-          onColumnFilterChange={setColumnFilters}
+          onColumnFilterChange={(columnName, value) => {
+            setColumnFilters(prev => ({
+              ...prev,
+              [columnName]: value
+            }));
+          }}
           loading={loading}
           emptyMessage="No hay tipos de reunión disponibles"
           actions={renderActions}

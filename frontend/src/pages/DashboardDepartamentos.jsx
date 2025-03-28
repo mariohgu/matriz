@@ -21,7 +21,7 @@ import PeruMap from '../components/common/PeruMap';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 import { apiService } from '../services/authService';
-import { Table, Pagination, Modal } from '../components/ui';
+import { Table, Pagination, Modal, MunicipalidadesDetails } from '../components/ui';
 import { generateInteraccionesPDF } from '../utils/printUtils';
 
 // Registrar todos los componentes de ChartJS
@@ -92,6 +92,10 @@ const DashboardDepartamentos = () => {
   // Modal o diálogo para visualizar detalles
   const [viewDialogVisible, setViewDialogVisible] = useState(false);
   const [selectedInteraction, setSelectedInteraction] = useState(null);
+
+  // Estado para el modal de detalles de municipalidades
+  const [municipalidadesDetailsVisible, setMunicipalidadesDetailsVisible] = useState(false);
+  const [selectedProvincia, setSelectedProvincia] = useState(null);
 
   // -----------------------------
   // FUNCIONES DE FORMATEO
@@ -1098,7 +1102,16 @@ const DashboardDepartamentos = () => {
                             {prov}
                           </td>
                           <td className="py-3 px-4 text-sm text-gray-500">
-                            {totalMunicipalidadesPorProvincia[prov] || 0}
+                            <button 
+                              className="hover:text-blue-600 hover:underline focus:outline-none"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedProvincia(prov);
+                                setMunicipalidadesDetailsVisible(true);
+                              }}
+                            >
+                              {totalMunicipalidadesPorProvincia[prov] || 0}
+                            </button>
                           </td>
                           <td className="py-3 px-4 text-sm text-gray-500">
                             {municipalidadesContactadasPorProvincia[prov] || 0}
@@ -1146,7 +1159,22 @@ const DashboardDepartamentos = () => {
                             {dep}
                           </td>
                           <td className="py-3 px-4 text-sm text-gray-500">
-                            {totalMunicipalidadesPorDepartamento[dep] || 0}
+                            <button 
+                              className="hover:text-blue-600 hover:underline focus:outline-none"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Si hay una sola provincia, usamos esa
+                                if (provinciasArrayPorDepartamento[dep]?.length === 1) {
+                                  setSelectedProvincia(provinciasArrayPorDepartamento[dep][0]);
+                                  setMunicipalidadesDetailsVisible(true);
+                                } else {
+                                  // Si hay más de una provincia, seleccionamos el departamento primero
+                                  setSelectedDepartamento(dep);
+                                }
+                              }}
+                            >
+                              {totalMunicipalidadesPorDepartamento[dep] || 0}
+                            </button>
                           </td>
                           <td className="py-3 px-4 text-sm text-gray-500">
                             {municipalidadesContactadasPorDepartamento[dep] || 0}
@@ -1343,6 +1371,16 @@ const DashboardDepartamentos = () => {
             </div>
           )}
         </Modal>
+
+        {/* Modal para ver detalles de municipalidades */}
+        <MunicipalidadesDetails
+          isOpen={municipalidadesDetailsVisible}
+          onClose={() => setMunicipalidadesDetailsVisible(false)}
+          provincia={selectedProvincia}
+          municipalidades={municipalidades}
+          eventos={eventos}
+          departamento={selectedDepartamento}
+        />
       </div>
     </>
   );

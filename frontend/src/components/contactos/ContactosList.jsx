@@ -432,8 +432,11 @@ export default function ContactosList() {
   };
 
   // Filtros por columna
-  const handleColumnFilterChange = (filters) => {
-    setColumnFilters(filters);
+  const handleColumnFilterChange = (columnName, value) => {
+    setColumnFilters(prev => ({
+      ...prev,
+      [columnName]: value
+    }));
     setCurrentPage(1);
   };
 

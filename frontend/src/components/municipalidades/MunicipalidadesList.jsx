@@ -435,7 +435,10 @@ export default function MunicipalidadesList() {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
             className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm 
                        focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             placeholder="Buscar entidades..."
@@ -456,9 +459,18 @@ export default function MunicipalidadesList() {
         sortOrder={sortOrder}
         onSort={handleSort}
         searchQuery={searchQuery}
-        onSearch={setSearchQuery}
+        onSearch={(value) => {
+          setSearchQuery(value);
+          setCurrentPage(1);
+        }}
         columnFilters={columnFilters}
-        onColumnFilterChange={setColumnFilters}
+        onColumnFilterChange={(columnName, value) => {
+          setColumnFilters(prev => ({
+            ...prev,
+            [columnName]: value
+          }));
+          setCurrentPage(1);
+        }}
         loading={loading}
         emptyMessage="No hay entidades disponibles"
         actions={renderActions}
