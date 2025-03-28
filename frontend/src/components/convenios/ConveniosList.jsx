@@ -441,6 +441,8 @@ export default function ConveniosList() {
         columns={columns}
         mobileColumns={mobileColumns}
         isMobile={isMobile}
+        hideGlobalSearch={true}
+        showFiltersButton={true}
         sortField={sortField}
         sortOrder={sortOrder}
         onSort={handleSort}

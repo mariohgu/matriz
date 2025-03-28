@@ -496,6 +496,8 @@ export default function ContactosList() {
         actions={renderActions}
         loading={loading}
         isMobile={isMobile}
+        hideGlobalSearch={true}
+        showFiltersButton={true}
         mobileColumns={mobileColumns}
         sortField={sortField}
         sortOrder={sortOrder}

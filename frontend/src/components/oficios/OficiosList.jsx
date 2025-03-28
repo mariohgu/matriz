@@ -437,6 +437,8 @@ export default function OficiosList() {
           data={paginatedData}
           columns={tableColumns}
           loading={loading}
+          hideGlobalSearch={true}
+          showFiltersButton={true}
           sortField={sortField}
           sortOrder={sortOrder}
           onSort={(field, order) => {
