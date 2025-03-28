@@ -66,6 +66,16 @@ export default function EventosList() {
   const [confirmDialogMessage, setConfirmDialogMessage] = useState('');
   const [pendingAction, setPendingAction] = useState(null);
 
+  // Modal de creación de contacto
+  const [newContactDialogVisible, setNewContactDialogVisible] = useState(false);
+  const [newContactData, setNewContactData] = useState({
+    nombre_completo: '',
+    cargo: '',
+    telefono: '',
+    correo: '',
+    id_municipalidad: ''
+  });
+
   // ======== Dropdowns con búsqueda (para municipalidad y contacto) ========
   const [showMunicipalidadDropdown, setShowMunicipalidadDropdown] = useState(false);
   const [municipalidadSearchQuery, setMunicipalidadSearchQuery] = useState('');
@@ -172,6 +182,58 @@ export default function EventosList() {
     } catch (error) {
       console.error('Error al cargar contactos:', error);
       toast.showError('Error', 'No se pudieron cargar los contactos');
+    }
+  };
+
+  // Crear nuevo contacto desde el formulario de eventos
+  const handleCreateNewContact = () => {
+    if (!formData.id_municipalidad) {
+      toast.showWarning('Advertencia', 'Primero debe seleccionar una municipalidad');
+      return;
+    }
+    
+    // Inicializar el formulario de contacto
+    setNewContactData({
+      nombre_completo: '',
+      cargo: '',
+      telefono: '',
+      correo: '',
+      id_municipalidad: formData.id_municipalidad // Mantener la relación con la municipalidad
+    });
+    
+    // Mostrar el modal
+    setNewContactDialogVisible(true);
+  };
+  
+  // Guardar el nuevo contacto
+  const handleSaveNewContact = async () => {
+    // Validar campos obligatorios
+    if (!newContactData.nombre_completo) {
+      toast.showWarning('Advertencia', 'El nombre completo es obligatorio');
+      return;
+    }
+    
+    try {
+      // Crear el contacto
+      const response = await apiService.create('contactos', newContactData);
+      
+      // Actualizar la lista de contactos
+      await loadContactosPorMunicipalidad(formData.id_municipalidad);
+      
+      // Seleccionar automáticamente el contacto recién creado
+      if (response && response.id_contacto) {
+        setFormData(prev => ({
+          ...prev,
+          id_contacto: response.id_contacto
+        }));
+      }
+      
+      // Cerrar el modal y mostrar mensaje
+      setNewContactDialogVisible(false);
+      toast.showSuccess('Éxito', 'Contacto creado correctamente');
+    } catch (error) {
+      console.error('Error al crear contacto:', error);
+      toast.showError('Error', 'No se pudo crear el contacto');
     }
   };
 
@@ -697,24 +759,35 @@ export default function EventosList() {
               Contacto <span className="text-red-500">*</span>
             </label>
             <div className="relative" ref={contactoDropdownRef}>
-              <div
-                className={`w-full border border-gray-300 rounded-md p-2 flex justify-between items-center ${
-                  formData.id_municipalidad ? 'cursor-pointer' : 'cursor-not-allowed bg-gray-100'
-                }`}
-                onClick={() => {
-                  if (formData.id_municipalidad) {
-                    setShowContactoDropdown(!showContactoDropdown);
-                  }
-                }}
-              >
-                <span>
-                  {formData.id_contacto
-                    ? contactos.find(
-                        (c) => c.id_contacto.toString() === formData.id_contacto.toString()
-                      )?.nombre_completo || 'Seleccione un contacto'
-                    : 'Seleccione un contacto'}
-                </span>
-                {showContactoDropdown ? <FiChevronUp /> : <FiChevronDown />}
+              <div className="flex items-center gap-2">
+                <div
+                  className="flex-1 border border-gray-300 rounded-md p-2 flex justify-between items-center cursor-pointer"
+                  onClick={() => {
+                    if (formData.id_municipalidad) {
+                      setShowContactoDropdown(!showContactoDropdown);
+                    } else {
+                      toast.showWarning('Advertencia', 'Primero debe seleccionar una municipalidad');
+                    }
+                  }}
+                >
+                  <span>
+                    {formData.id_contacto
+                      ? contactos.find(
+                          (c) => c.id_contacto.toString() === formData.id_contacto.toString()
+                        )?.nombre_completo || 'Seleccione un contacto'
+                      : 'Seleccione un contacto'}
+                  </span>
+                  {showContactoDropdown ? <FiChevronUp /> : <FiChevronDown />}
+                </div>
+                <button
+                  type="button"
+                  className="p-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center gap-1"
+                  onClick={handleCreateNewContact}
+                  title="Crear nuevo contacto"
+                >
+                  <FiPlus className="w-4 h-4" />
+                  <span className="hidden md:inline">Nuevo</span>
+                </button>
               </div>
               {showContactoDropdown && (
                 <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
@@ -827,6 +900,77 @@ export default function EventosList() {
               className="w-full border border-gray-300 rounded-md p-2"
               value={formData.descripcion || ''}
               onChange={(e) => setFormData((prev) => ({ ...prev, descripcion: e.target.value }))}
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de creación de contacto */}
+      <Modal
+        isOpen={newContactDialogVisible}
+        onClose={() => setNewContactDialogVisible(false)}
+        title="Nuevo Contacto"
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              onClick={() => setNewContactDialogVisible(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              onClick={handleSaveNewContact}
+            >
+              Guardar
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Nombre Completo <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              className="w-full p-2 border border-gray-300 rounded-md"
+              value={newContactData.nombre_completo}
+              onChange={(e) => setNewContactData(prev => ({ ...prev, nombre_completo: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Cargo
+            </label>
+            <input
+              type="text"
+              className="w-full p-2 border border-gray-300 rounded-md"
+              value={newContactData.cargo}
+              onChange={(e) => setNewContactData(prev => ({ ...prev, cargo: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Teléfono
+            </label>
+            <input
+              type="text"
+              className="w-full p-2 border border-gray-300 rounded-md"
+              value={newContactData.telefono}
+              onChange={(e) => setNewContactData(prev => ({ ...prev, telefono: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              className="w-full p-2 border border-gray-300 rounded-md"
+              value={newContactData.correo}
+              onChange={(e) => setNewContactData(prev => ({ ...prev, correo: e.target.value }))}
             />
           </div>
         </div>

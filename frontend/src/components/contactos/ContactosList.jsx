@@ -45,7 +45,8 @@ export default function ContactosList() {
     cargo: '',
     telefono: '',
     email: '',
-    municipalidad: ''
+    municipalidad: '',
+    departamento: ''
   });
   const [sortField, setSortField] = useState('nombre_completo');
   const [sortOrder, setSortOrder] = useState('asc');
@@ -235,18 +236,30 @@ export default function ContactosList() {
     return m ? m.nombre : '';
   };
 
+  // Función para obtener el departamento de una municipalidad
+  const getDepartamentoName = (id_municipalidad) => {
+    const m = municipalidades.find((x) => x.id_municipalidad === id_municipalidad);
+    return m ? m.departamento : '';
+  };
+
   /* =========================================
    *   Filtrado, Búsqueda y Orden
    * ========================================= */
   const applyFilters = () => {
     // Filtro de búsqueda global
     let filtered = contactos.filter((c) => {
+      // Buscar municipalidad para obtener info adicional
+      const municipalidad = municipalidades.find((m) => m.id_municipalidad === c.id_municipalidad);
+      
       const searchFields = [
         c.nombre_completo,
         c.cargo,
         c.telefono,
         c.email,
-        getMunicipalidadName(c.id_municipalidad)
+        getMunicipalidadName(c.id_municipalidad),
+        getDepartamentoName(c.id_municipalidad),
+        // Incluir ubigeo para búsqueda (aunque no se muestre en la tabla)
+        municipalidad?.ubigeo
       ].map((fld) => fld?.toLowerCase() || '');
 
       const matchesSearch =
@@ -270,6 +283,12 @@ export default function ContactosList() {
       const matchMunicipalidad =
         !columnFilters.municipalidad ||
         municipalidadName.includes(columnFilters.municipalidad.toLowerCase());
+      
+      // Incluir filtro por departamento
+      const departamentoName = getDepartamentoName(c.id_municipalidad).toLowerCase();
+      const matchDepartamento =
+        !columnFilters.departamento ||
+        departamentoName.includes(columnFilters.departamento?.toLowerCase() || '');
 
       return (
         matchesSearch &&
@@ -277,7 +296,8 @@ export default function ContactosList() {
         matchCargo &&
         matchTelefono &&
         matchEmail &&
-        matchMunicipalidad
+        matchMunicipalidad &&
+        matchDepartamento
       );
     });
 
@@ -289,6 +309,9 @@ export default function ContactosList() {
       if (sortField === 'id_municipalidad') {
         aValue = getMunicipalidadName(a.id_municipalidad) || '';
         bValue = getMunicipalidadName(b.id_municipalidad) || '';
+      } else if (sortField === 'departamento') {
+        aValue = getDepartamentoName(a.id_municipalidad) || '';
+        bValue = getDepartamentoName(b.id_municipalidad) || '';
       } else {
         aValue = a[sortField] || '';
         bValue = b[sortField] || '';
@@ -356,6 +379,13 @@ export default function ContactosList() {
       sortable: true,
       filterable: true,
       body: (rowData) => getMunicipalidadName(rowData.id_municipalidad) || 'N/A'
+    },
+    {
+      field: 'departamento',
+      header: 'Departamento',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => getDepartamentoName(rowData.id_municipalidad) || 'N/A'
     }
   ];
 
@@ -413,6 +443,13 @@ export default function ContactosList() {
     setItemsPerPage(value);
     setCurrentPage(1);
   };
+
+  useEffect(() => {
+    setColumnFilters((prev) => ({
+      ...prev,
+      departamento: ''
+    }));
+  }, []);
 
   /* =========================================
    * Render principal
