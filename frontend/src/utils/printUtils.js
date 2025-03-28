@@ -8,6 +8,7 @@ import autoTable from "jspdf-autotable";
  * @param {Array} options.eventos - Lista de eventos
  * @param {Array} options.estadosSeguimiento - Lista de estados de seguimiento
  * @param {Array} options.contactos - Lista de contactos
+ * @param {Array} options.estados - Lista de estados
  * @param {string} options.selectedDepartamento - Departamento seleccionado (o vacío para todos)
  * @param {Function} options.onComplete - Función a llamar cuando se complete la generación
  */
@@ -16,6 +17,7 @@ export const generateInteraccionesPDF = async ({
   eventos = [],
   estadosSeguimiento = [],
   contactos = [],
+  estados = [],
   selectedDepartamento = '',
   onComplete = null
 }) => {
@@ -73,138 +75,156 @@ export const generateInteraccionesPDF = async ({
     ? municipalidades.filter(m => m.departamento === selectedDepartamento && eventos.some(e => e.id_municipalidad === m.id_municipalidad)) 
     : municipalidades.filter(m => eventos.some(e => e.id_municipalidad === m.id_municipalidad));
   
-  // Recorrer cada municipalidad
-  for (const muni of municipalidadesRelevantes) {
-    // Comprobar si hay espacio suficiente, sino añadir nueva página
-    if (yPos > pageHeight - 40) {
-      pdf.addPage();
-      yPos = margin;
-    }
-    
-    // ENCABEZADO DE MUNICIPALIDAD (con fondo)
-    pdf.setFillColor(230, 230, 230);
-    pdf.rect(margin, yPos - 5, contentWidth, 10, 'F');
-    
-    styles.subtitle();
-    pdf.text(`Municipalidad: ${muni.nombre}`, margin, yPos);
-    yPos += 10;
-    
-    // Buscar eventos relacionados con esta municipalidad
-    const eventosRelacionados = eventos.filter(e => e.id_municipalidad === muni.id_municipalidad);
-    
-    if (eventosRelacionados.length === 0) {
-      styles.small();
-      pdf.text("No hay eventos registrados para esta municipalidad.", margin + 5, yPos);
-      yPos += 10;
-      continue;
-    }
-    
-    // Para cada evento de la municipalidad
-    for (const evento of eventosRelacionados) {
-      // Verificar espacio
-      if (yPos > pageHeight - 60) {
+  // Si no hay municipalidades que mostrar
+  if (municipalidadesRelevantes.length === 0) {
+    styles.normal();
+    pdf.text("No hay municipalidades para mostrar con los filtros seleccionados.", pageWidth / 2, 100, { align: "center" });
+  } else {
+    // Recorrer cada municipalidad
+    for (const muni of municipalidadesRelevantes) {
+      // Comprobar si hay espacio suficiente, sino añadir nueva página
+      if (yPos > pageHeight - 40) {
         pdf.addPage();
         yPos = margin;
       }
       
-      // INFORMACIÓN DEL EVENTO
+      // ENCABEZADO DE MUNICIPALIDAD (con fondo)
+      pdf.setFillColor(230, 230, 230);
+      pdf.rect(margin, yPos - 5, contentWidth, 10, 'F');
+      
       styles.subtitle();
-      // Usar un fondo más claro para el título del evento
-      pdf.setFillColor(240, 240, 240);
-      pdf.rect(margin + 5, yPos - 5, contentWidth - 10, 8, 'F');
+      pdf.text(`Municipalidad: ${muni.nombre}`, margin, yPos);
+      yPos += 10;
       
-      // Presentar el título del evento en una tabla para evitar que se pase de los márgenes
-      const eventoTipo = evento.tipo_evento || evento.tipo_acercamiento || "No especificado";
-      const eventoTipoLines = eventoTipo.split('\n');
+      // Buscar eventos relacionados con esta municipalidad
+      const eventosRelacionados = eventos.filter(e => e.id_municipalidad === muni.id_municipalidad);
       
-      autoTable(pdf, {
-        startY: yPos,
-        margin: { left: margin + 5 },
-        tableWidth: contentWidth - 10,
-        styles: { fontSize: 10, cellPadding: 2 },
-        headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
-        body: [
-          ['Evento:', eventoTipoLines.join('\n')],
-        ],
-        theme: 'grid',
-        columnStyles: {
-          0: { fontStyle: 'bold', cellWidth: 30 }
+      if (eventosRelacionados.length === 0) {
+        styles.small();
+        pdf.text("No hay eventos registrados para esta municipalidad.", margin + 5, yPos);
+        yPos += 10;
+        continue;
+      }
+      
+      // Para cada evento de la municipalidad
+      for (const evento of eventosRelacionados) {
+        // Verificar espacio
+        if (yPos > pageHeight - 60) {
+          pdf.addPage();
+          yPos = margin;
         }
-      });
-      
-      // Actualizar posición Y después de la tabla
-      yPos = pdf.lastAutoTable.finalY + 5;
-      
-      // Tabla con los detalles del evento
-      const contactoEvento = contactos.find(c => c.id_contacto === evento.id_contacto);
-      const fechaEvento = evento.fecha ? new Date(evento.fecha).toLocaleDateString('es-ES') : 'No especificada';
-      
-      autoTable(pdf, {
-        startY: yPos,
-        margin: { left: margin + 5 },
-        tableWidth: contentWidth - 10,
-        styles: { fontSize: 9, cellPadding: 2 },
-        headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontStyle: 'bold' },
-        body: [
-          ['Contacto', contactoEvento ? contactoEvento.nombre_completo : 'No especificado'],
-          ['Fecha', fechaEvento],
-          ['Modalidad', evento.modalidad || 'No especificada'],
-          ['Lugar', evento.lugar || 'No especificado'],
-          ['Descripción', evento.descripcion || 'Sin descripción']
-        ],
-        theme: 'grid',
-        columnStyles: {
-          0: { fontStyle: 'bold', cellWidth: 30 }
-        }
-      });
-      
-      // Actualizar posición Y después de la tabla
-      yPos = pdf.lastAutoTable.finalY + 5;
-      
-      // INTERACCIONES RELACIONADAS CON EL EVENTO
-      const interaccionesEvento = estadosSeguimiento.filter(es => es.id_evento === evento.id_evento);
-      
-      if (interaccionesEvento.length > 0) {
-        // Cabecera de interacciones
-        styles.normal();
-        pdf.text("Interacciones:", margin + 5, yPos);
-        yPos += 5;
         
-        // Tabla de interacciones
-        const interaccionesData = interaccionesEvento.map(interaccion => {
-          const estadoName = interaccion.estado_seguimiento || 'No especificado';
-          const fechaInteraccion = interaccion.fecha 
-            ? new Date(interaccion.fecha).toLocaleDateString('es-ES') 
-            : 'No especificada';
-          
-          return [
-            fechaInteraccion,
-            estadoName,
-            interaccion.observacion || 'Sin observaciones'
-          ];
-        });
+        // INFORMACIÓN DEL EVENTO
+        styles.subtitle();
+        // Usar un fondo más claro para el título del evento
+        pdf.setFillColor(240, 240, 240);
+        pdf.rect(margin + 5, yPos - 5, contentWidth - 10, 8, 'F');
+        
+        // Presentar el título del evento en una tabla para evitar que se pase de los márgenes
+        const eventoTipo = evento.tipo_evento || evento.tipo_acercamiento || "No especificado";
+        const eventoTipoLines = eventoTipo.split('\n');
         
         autoTable(pdf, {
           startY: yPos,
-          margin: { left: margin + 10 },
-          tableWidth: contentWidth - 20,
-          styles: { fontSize: 8, cellPadding: 2 },
-          headStyles: { fillColor: [200, 200, 200], textColor: [0, 0, 0], fontStyle: 'bold' },
-          head: [['Fecha', 'Estado', 'Observación']],
-          body: interaccionesData,
+          margin: { left: margin + 5 },
+          tableWidth: contentWidth - 10,
+          styles: { fontSize: 10, cellPadding: 2 },
+          headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+          body: [
+            ['Evento:', eventoTipoLines.join('\n')],
+          ],
           theme: 'grid',
           columnStyles: {
-            0: { cellWidth: 25 },
-            1: { cellWidth: 35 }
+            0: { fontStyle: 'bold', cellWidth: 30 }
           }
         });
         
         // Actualizar posición Y después de la tabla
-        yPos = pdf.lastAutoTable.finalY + 15;
-      } else {
-        styles.small();
-        pdf.text("No hay interacciones registradas para este evento.", margin + 10, yPos);
-        yPos += 15;
+        yPos = pdf.lastAutoTable.finalY + 5;
+        
+        // Tabla con los detalles del evento
+        const contactoEvento = contactos.find(c => c.id_contacto === evento.id_contacto);
+        const fechaEvento = evento.fecha ? new Date(evento.fecha).toLocaleDateString('es-ES') : 'No especificada';
+        
+        autoTable(pdf, {
+          startY: yPos,
+          margin: { left: margin + 5 },
+          tableWidth: contentWidth - 10,
+          styles: { fontSize: 9, cellPadding: 2 },
+          headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0], fontStyle: 'bold' },
+          body: [
+            ['Contacto', contactoEvento ? contactoEvento.nombre_completo : 'No especificado'],
+            ['Fecha', fechaEvento],
+            ['Modalidad', evento.modalidad || 'No especificada'],
+            ['Lugar', evento.lugar || 'No especificado'],
+            ['Descripción', evento.descripcion || 'Sin descripción']
+          ],
+          theme: 'grid',
+          columnStyles: {
+            0: { fontStyle: 'bold', cellWidth: 30 }
+          }
+        });
+        
+        // Actualizar posición Y después de la tabla
+        yPos = pdf.lastAutoTable.finalY + 5;
+        
+        // INTERACCIONES RELACIONADAS CON EL EVENTO
+        const interaccionesEvento = estadosSeguimiento.filter(es => es.id_evento === evento.id_evento);
+        
+        if (interaccionesEvento.length > 0) {
+          // Verificar espacio
+          if (yPos > pageHeight - 40) {
+            pdf.addPage();
+            yPos = margin;
+          }
+          
+          styles.subtitle();
+          pdf.text("Historial de interacciones", margin + 5, yPos);
+          yPos += 5;
+          
+          // Preparar datos para la tabla de interacciones
+          const interaccionesTableData = interaccionesEvento.map(interaccion => {
+            const fechaInteraccion = interaccion.fecha ? new Date(interaccion.fecha).toLocaleDateString('es-ES') : 'Sin fecha';
+            const estadoDesc = estados.find(e => e.id_estado === interaccion.id_estado_ref)?.descripcion || "No especificado";
+            const compromiso = interaccion.compromiso || 'No especificado';
+            const comentario = interaccion.descripcion || 'Sin comentarios';
+            
+            return [fechaInteraccion, estadoDesc, compromiso, comentario];
+          });
+          
+          // Tabla de interacciones
+          autoTable(pdf, {
+            startY: yPos,
+            margin: { left: margin + 5 },
+            tableWidth: contentWidth - 10,
+            head: [['Fecha', 'Estado', 'Compromiso', 'Comentario']],
+            body: interaccionesTableData,
+            styles: { fontSize: 8, cellPadding: 2 },
+            headStyles: { fillColor: [180, 180, 180], textColor: [0, 0, 0], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+            theme: 'grid',
+            columnStyles: {
+              0: { cellWidth: 25 },
+              1: { cellWidth: 35 },
+              2: { cellWidth: 35 }
+            },
+            rowPageBreak: 'auto',
+            bodyStyles: { valign: 'top' }
+          });
+          
+          // Actualizar posición Y después de la tabla
+          yPos = pdf.lastAutoTable.finalY + 10;
+        } else {
+          styles.small();
+          pdf.text("No hay interacciones registradas para este evento.", margin + 5, yPos);
+          yPos += 8;
+        }
+        
+        // Línea divisoria entre eventos (más sutil)
+        pdf.setDrawColor(200, 200, 200);
+        pdf.setLineWidth(0.5);
+        pdf.line(margin + 15, yPos - 5, pageWidth - margin - 15, yPos - 5);
+        yPos += 5;
       }
     }
   }
@@ -217,8 +237,16 @@ export const generateInteraccionesPDF = async ({
     pdf.text(`Página ${i} de ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
   }
   
+  // Formatear la fecha actual para el nombre del archivo
+  const today = new Date();
+  const formattedDate = today.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+  
+  // Crear nombre del archivo con formato "Reporte_Interacciones_[departamento]_[fecha]"
+  const departamentoStr = selectedDepartamento ? selectedDepartamento : 'Todos';
+  const fileName = `Reporte_Interacciones_${departamentoStr}_${formattedDate}.pdf`;
+  
   // Generar PDF
-  pdf.save("reporte_interacciones.pdf");
+  pdf.save(fileName);
   
   // Llamar a la función de callback si existe
   if (onComplete && typeof onComplete === 'function') {

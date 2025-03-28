@@ -61,6 +61,7 @@ const DashboardDepartamentos = () => {
       eventos,
       estadosSeguimiento,
       contactos,
+      estados,
       selectedDepartamento,
       onComplete: () => {
         console.log('PDF generado correctamente');
