@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar } from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
-import { apiService } from '../services/authService';
-import { FiCheck, FiX, FiCalendar } from 'react-icons/fi';
+import { apiService, api } from '../services/authService';
+import { FiCheck, FiX, FiCalendar, FiEye } from 'react-icons/fi';
+import { Modal } from '../components/ui';
+import InteraccionDetails from '../components/ui/InteraccionDetails';
 import SweetAlert from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 
@@ -15,6 +17,11 @@ const CalendarioCompromisos = () => {
   const [comprimisosDelDia, setCompromisosDelDia] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showCompromisos, setShowCompromisos] = useState(false);
+  const [viewDialogVisible, setViewDialogVisible] = useState(false);
+  const [selectedInteraction, setSelectedInteraction] = useState(null);
+  const [contactos, setContactos] = useState([]);
+  const [eventos, setEventos] = useState([]);
+  const [estados, setEstados] = useState([]);
 
   // Obtener compromisos al cargar el componente
   useEffect(() => {
@@ -25,11 +32,23 @@ const CalendarioCompromisos = () => {
   const fetchCompromisos = async () => {
     setIsLoading(true);
     try {
-      // Obtener los datos directamente, no contienen .data
-      const estadosSeguimientoData = await apiService.getAll('estados-seguimiento');
+      // Obtener todos los datos necesarios en paralelo
+      const [
+        estadosSeguimientoData, 
+        eventosData, 
+        contactosData,
+        estadosData
+      ] = await Promise.all([
+        apiService.getAll('estados-seguimiento'),
+        apiService.getAll('eventos'),
+        apiService.getAll('contactos'),
+        apiService.getAll('estados')
+      ]);
       
-      // Obtener también los eventos para tener acceso a las municipalidades
-      const eventosData = await apiService.getAll('eventos');
+      // Guardar los datos completos para usar con InteraccionDetails
+      setEventos(eventosData || []);
+      setContactos(contactosData || []);
+      setEstados(estadosData || []);
       
       // Filtrar solo los que tienen fecha_compromiso y compromiso
       const compromisosConFecha = (estadosSeguimientoData || []).filter(
@@ -41,9 +60,14 @@ const CalendarioCompromisos = () => {
         const eventoRelacionado = eventosData?.find(evento => 
           evento.id_evento === compromiso.id_evento
         );
+        // Añadir también el estado
+        const estadoRelacionado = estadosData?.find(estado => 
+          estado.id_estado === compromiso.id_estado_ref
+        );
         return {
           ...compromiso,
-          evento: eventoRelacionado || {}
+          evento: eventoRelacionado || {},
+          estado_desc: estadoRelacionado?.descripcion || 'N/A'
         };
       });
       
@@ -54,6 +78,53 @@ const CalendarioCompromisos = () => {
         icon: 'error',
         title: 'Error',
         text: 'No se pudieron cargar los compromisos',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Función para visualizar los detalles de la interacción
+  const handleViewState = async (compromiso) => {
+    if (!compromiso || !compromiso.id_evento) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Obtener los detalles del evento si es necesario
+      let evento = compromiso.evento;
+      if (!evento || !evento.id_evento) {
+        const response = await api.get(`eventos/${compromiso.id_evento}`);
+        evento = response.data;
+      }
+      
+      if (!evento) {
+        console.error('No se encontró el evento');
+        return;
+      }
+      
+      // Buscar la municipalidad asociada al evento
+      const municipalidad = evento.municipalidad || null;
+      
+      // Buscar el contacto asociado
+      const contacto = contactos.find(c => c.id_contacto === compromiso.id_contacto) || null;
+      
+      // Guardar los datos seleccionados
+      setSelectedInteraction({
+        ...compromiso,
+        evento,
+        municipalidad,
+        contacto
+      });
+      
+      // Mostrar el modal
+      setViewDialogVisible(true);
+    } catch (error) {
+      console.error('Error al obtener detalles de la interacción:', error);
+      MySwal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudieron cargar los detalles de la interacción',
       });
     } finally {
       setIsLoading(false);
@@ -213,9 +284,9 @@ const CalendarioCompromisos = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Columna del calendario */}
-        <div className="lg:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Columna del calendario - ocupa 4 de 12 columnas en pantallas grandes */}
+        <div className="lg:col-span-4">
           <div className="calendario-wrapper">
             <Calendar
               onChange={handleDateClick}
@@ -235,8 +306,8 @@ const CalendarioCompromisos = () => {
           </div>
         </div>
 
-        {/* Columna de compromisos del día */}
-        <div className="lg:col-span-1">
+        {/* Columna de compromisos del día - ocupa 8 de 12 columnas en pantallas grandes */}
+        <div className="lg:col-span-8">
           <div className="bg-gray-50 p-4 rounded-lg h-full">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">
               {showCompromisos ? (
@@ -271,6 +342,9 @@ const CalendarioCompromisos = () => {
                               </th>
                               <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Estado
+                              </th>
+                              <th scope="col" className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Acciones
                               </th>
                             </tr>
                           </thead>
@@ -314,6 +388,15 @@ const CalendarioCompromisos = () => {
                                       )}
                                     </span>
                                   </div>
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                  <button
+                                    onClick={() => handleViewState(compromiso)}
+                                    className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center mx-auto"
+                                    title="Ver historial completo"
+                                  >
+                                    <FiEye className="mr-1" /> Ver
+                                  </button>
                                 </td>
                               </tr>
                             ))}
@@ -390,6 +473,36 @@ const CalendarioCompromisos = () => {
           overflow: hidden;
         }
       `}</style>
+      
+      {/* Modal para ver detalles de la interacción */}
+      <Modal
+        isOpen={viewDialogVisible}
+        onClose={() => setViewDialogVisible(false)}
+        title="Detalle de Interacción"
+        size="xl"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              onClick={() => setViewDialogVisible(false)}
+            >
+              Cerrar
+            </button>
+          </div>
+        }
+      >
+        {selectedInteraction && (
+          <InteraccionDetails 
+            evento={selectedInteraction.evento || {}}
+            municipalidad={selectedInteraction.evento?.municipalidad || {}}
+            contacto={selectedInteraction.contacto || {}}
+            estadosSeguimiento={compromisos.filter(es => 
+              es.id_evento === selectedInteraction.id_evento
+            )}
+            estados={estados}
+          />
+        )}
+      </Modal>
     </div>
   );
 };
