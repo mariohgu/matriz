@@ -23,6 +23,7 @@ class Municipalidad extends Model
         'region_natural',
         'nivel',
         'X',
-        'Y'
+        'Y',
+        'RUC'
     ];
 }

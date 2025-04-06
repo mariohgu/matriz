@@ -102,6 +102,9 @@ const InteraccionDetails = ({ evento, municipalidad, contacto, estadosSeguimient
                     Compromiso
                   </th>
                   <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Estado Compromiso
+                  </th>
+                  <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Estado
                   </th>
                 </tr>
@@ -128,6 +131,23 @@ const InteraccionDetails = ({ evento, municipalidad, contacto, estadosSeguimient
                       </td>
                       <td className="px-3 py-4 text-sm text-gray-500 max-w-xs break-words">
                         {interaccion.compromiso || 'Sin compromiso'}
+                      </td>
+                      <td className="px-3 py-4 whitespace-nowrap text-sm text-center">
+                        {interaccion.compromiso_concluido === true ? (
+                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            Concluido
+                          </span>
+                        ) : interaccion.compromiso_concluido === false ? (
+                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            Pendiente
+                          </span>
+                        ) : interaccion.compromiso ? (
+                          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                            No especificado
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </td>
                       <td className="px-3 py-4 whitespace-nowrap text-sm">
                         <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 

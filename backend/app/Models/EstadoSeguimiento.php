@@ -23,13 +23,15 @@ class EstadoSeguimiento extends Model
         'descripcion',
         'compromiso',
         'fecha_compromiso',
+        'compromiso_concluido',
         'creado_por',
         'actualizado_por'
     ];
 
     protected $casts = [
         'fecha' => 'date',
-        'fecha_compromiso' => 'date'
+        'fecha_compromiso' => 'date',
+        'compromiso_concluido' => 'boolean'
     ];
 
     // Relación con Evento

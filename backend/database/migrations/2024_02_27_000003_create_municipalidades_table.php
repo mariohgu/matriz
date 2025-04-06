@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('region_natural', 50);
             $table->decimal('X', 10, 6)->nullable(); // Coordenada X (longitud)
             $table->decimal('Y', 10, 6)->nullable(); // Coordenada Y (latitud)
+            $table->string('RUC', 11)->nullable(); // Registro Único de Contribuyentes
             $table->timestamps();
             $table->softDeletes();
             

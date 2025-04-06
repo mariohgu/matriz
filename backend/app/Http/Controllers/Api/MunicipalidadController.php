@@ -28,6 +28,7 @@ class MunicipalidadController extends Controller
             'nivel' => 'nullable|string|max:30',
             'X' => 'nullable|numeric',
             'Y' => 'nullable|numeric',
+            'RUC' => 'nullable|string|max:11',
         ]);
 
         $municipalidad = Municipalidad::create($validated);
@@ -64,6 +65,7 @@ class MunicipalidadController extends Controller
             'nivel' => 'nullable|string|max:30',
             'X' => 'nullable|numeric',
             'Y' => 'nullable|numeric',
+            'RUC' => 'nullable|string|max:11',
         ]);
 
         $municipalidad->update($validated);

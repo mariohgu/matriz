@@ -38,7 +38,8 @@ export default function MunicipalidadesList() {
     provincia: '',
     distrito: '',
     ubigeo: '',
-    nivel: ''
+    nivel: '',
+    RUC: ''
   });
 
   // Paginación
@@ -68,7 +69,8 @@ export default function MunicipalidadesList() {
     ubigeo: '',
     nivel: '',
     X: '',
-    Y: ''
+    Y: '',
+    RUC: ''
   });
 
   // Diálogo para eliminar
@@ -117,7 +119,8 @@ export default function MunicipalidadesList() {
       ubigeo: '',
       nivel: '',
       X: '',
-      Y: ''
+      Y: '',
+      RUC: ''
     });
     setUpsertDialogVisible(true);
   };
@@ -136,7 +139,8 @@ export default function MunicipalidadesList() {
       ubigeo: rowData.ubigeo || '',
       nivel: rowData.nivel || '',
       X: rowData.X || '',
-      Y: rowData.Y || ''
+      Y: rowData.Y || '',
+      RUC: rowData.RUC || ''
     });
     setUpsertDialogVisible(true);
   };
@@ -227,7 +231,8 @@ export default function MunicipalidadesList() {
         m.provincia,
         m.distrito,
         m.ubigeo,
-        m.nivel
+        m.nivel,
+        m.RUC
       ].map((f) => f?.toLowerCase() || '');
 
       const matchesSearch =
@@ -256,6 +261,9 @@ export default function MunicipalidadesList() {
       const matchNivel =
         !columnFilters.nivel ||
         (m.nivel?.toLowerCase() || '').includes(columnFilters.nivel.toLowerCase());
+      const matchRUC =
+        !columnFilters.RUC ||
+        (m.RUC?.toLowerCase() || '').includes(columnFilters.RUC.toLowerCase());
 
       return (
         matchesSearch &&
@@ -265,7 +273,8 @@ export default function MunicipalidadesList() {
         matchProvincia &&
         matchDistrito &&
         matchUbigeo &&
-        matchNivel
+        matchNivel &&
+        matchRUC
       );
     });
 
@@ -308,12 +317,6 @@ export default function MunicipalidadesList() {
     {
       field: 'nombre',
       header: 'Nombre',
-      sortable: true,
-      filterable: true
-    },
-    {
-      field: 'region',
-      header: 'Región',
       sortable: true,
       filterable: true
     },
@@ -545,6 +548,10 @@ export default function MunicipalidadesList() {
                 <p className="text-sm font-medium text-gray-500">Nivel</p>
                 <p className="text-base">{selectedMunicipalidad.nivel || '-'}</p>
               </div>
+              <div>
+                <p className="text-sm font-medium text-gray-500">RUC</p>
+                <p className="text-base">{selectedMunicipalidad.RUC || '-'}</p>
+              </div>
               </div>
               <div className="space-y-3">
               <div>
@@ -630,6 +637,11 @@ export default function MunicipalidadesList() {
             (e) => setFormData((prev) => ({ ...prev, region_natural: e.target.value })),
             'text',
             nivelRegional
+          )}
+
+          {renderFormField('RUC', 'RUC', formData.RUC, (e) =>
+            setFormData((prev) => ({ ...prev, RUC: e.target.value })),
+            'text'
           )}
 
           <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">

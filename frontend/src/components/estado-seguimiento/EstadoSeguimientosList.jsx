@@ -45,7 +45,8 @@ export default function EstadoSeguimientoList() {
     id_estado_ref: '',
     descripcion: '',
     compromiso: '',
-    fecha_compromiso: null
+    fecha_compromiso: null,
+    compromiso_concluido: null
   });
 
   // Para ver detalles y eliminar
@@ -221,7 +222,8 @@ export default function EstadoSeguimientoList() {
       id_estado_ref: '',
       descripcion: '',
       compromiso: '',
-      fecha_compromiso: null
+      fecha_compromiso: null,
+      compromiso_concluido: null
     });
     setUpsertDialogVisible(true);
   };
@@ -241,7 +243,8 @@ export default function EstadoSeguimientoList() {
       compromiso: rowData.compromiso || '',
       fecha_compromiso: rowData.fecha_compromiso
         ? new Date(rowData.fecha_compromiso)
-        : null
+        : null,
+      compromiso_concluido: rowData.compromiso_concluido
     });
     setUpsertDialogVisible(true);
   };
@@ -928,6 +931,23 @@ export default function EstadoSeguimientoList() {
               id="fecha_compromiso"
               className="w-full"
             />
+          </div>
+          
+          {/* Compromiso Concluido (checkbox) */}
+          <div className="flex items-center">
+            <div className="flex items-center h-full">
+              <label className="flex items-center cursor-pointer">
+                <div className="mr-2">
+                  <input
+                    type="checkbox"
+                    className="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                    checked={formData.compromiso_concluido === true}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, compromiso_concluido: e.target.checked }))}
+                  />
+                </div>
+                <span className="text-sm font-medium text-gray-700">Compromiso Concluido</span>
+              </label>
+            </div>
           </div>
           {/* Compromiso */}
           <div className="md:col-span-2">

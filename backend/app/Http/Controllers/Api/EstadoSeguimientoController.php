@@ -32,12 +32,13 @@ class EstadoSeguimientoController extends Controller
                 'descripcion' => 'nullable',
                 'compromiso' => 'nullable',
                 'fecha_compromiso' => 'nullable|date',
+                'compromiso_concluido' => 'nullable|boolean',
             ]);
-
+    
             // Agregar usuario actual como creador y actualizador
             $validated['creado_por'] = Auth::id();
             $validated['actualizado_por'] = Auth::id();
-
+    
             $estado = EstadoSeguimiento::create($validated);
             
             return response()->json(
@@ -71,11 +72,11 @@ class EstadoSeguimientoController extends Controller
     {
         try {
             $estado = EstadoSeguimiento::find($id);
-
+    
             if (!$estado) {
                 return response()->json(['message' => 'Estado de seguimiento no encontrado'], 404);
             }
-
+    
             $validated = $request->validate([
                 'id_evento' => 'required|exists:eventos,id_evento',
                 'id_contacto' => 'required|exists:contactos,id_contacto',
@@ -85,11 +86,12 @@ class EstadoSeguimientoController extends Controller
                 'descripcion' => 'nullable',
                 'compromiso' => 'nullable',
                 'fecha_compromiso' => 'nullable|date',
+                'compromiso_concluido' => 'nullable|boolean',
             ]);
-
+    
             // Actualizar el usuario que modifica
             $validated['actualizado_por'] = Auth::id();
-
+    
             $estado->update($validated);
             
             return response()->json(
