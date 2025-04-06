@@ -10,7 +10,7 @@ import {
   FiCalendar
 } from 'react-icons/fi';
 import { api, apiService } from '../../services/authService';
-import { Table, Pagination, Modal, ConfirmDialog, useToast, TailwindCalendar } from '../ui';
+import { Table, Pagination, Modal, ConfirmDialog, useToast, TailwindCalendar, InteraccionDetails } from '../ui';
 
 export default function EstadoSeguimientoList() {
   // ========= Estados principales =========
@@ -52,6 +52,16 @@ export default function EstadoSeguimientoList() {
   const [selectedSeguimiento, setSelectedSeguimiento] = useState(null);
   const [viewDialogVisible, setViewDialogVisible] = useState(false);
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+
+  // Modal para crear nuevo contacto
+  const [newContactDialogVisible, setNewContactDialogVisible] = useState(false);
+  const [newContactData, setNewContactData] = useState({
+    nombre_completo: '',
+    cargo: '',
+    telefono: '',
+    correo: '',
+    id_municipalidad: ''
+  });
 
   // Dropdowns con búsqueda
   const [showEventoDropdown, setShowEventoDropdown] = useState(false);
@@ -140,6 +150,60 @@ export default function EstadoSeguimientoList() {
     } catch (error) {
       console.error('Error al cargar datos relacionados:', error);
       toast.showError('Error', 'No se pudieron cargar los datos relacionados');
+    }
+  };
+
+  // Crear nuevo contacto desde el formulario de estado de seguimiento
+  const handleCreateNewContact = () => {
+    if (!formData.id_evento) {
+      toast.showWarning('Advertencia', 'Primero seleccione un evento para crear un contacto asociado');
+      return;
+    }
+
+    // Obtener la municipalidad del evento seleccionado
+    const selectedEvento = eventos.find(ev => ev.id_evento.toString() === formData.id_evento.toString());
+    if (!selectedEvento || !selectedEvento.id_municipalidad) {
+      toast.showWarning('Advertencia', 'No se pudo determinar la municipalidad para este evento');
+      return;
+    }
+
+    // Inicializar datos del nuevo contacto
+    setNewContactData({
+      nombre_completo: '',
+      cargo: '',
+      telefono: '',
+      correo: '',
+      id_municipalidad: selectedEvento.id_municipalidad
+    });
+
+    setNewContactDialogVisible(true);
+  };
+
+  // Guardar el nuevo contacto
+  const handleSaveNewContact = async () => {
+    // Validar datos mínimos
+    if (!newContactData.nombre_completo || !newContactData.id_municipalidad) {
+      toast.showWarning('Advertencia', 'Por favor ingrese al menos el nombre del contacto');
+      return;
+    }
+
+    try {
+      const response = await apiService.create('contactos', newContactData);
+      toast.showSuccess('Éxito', 'Contacto creado correctamente');
+      
+      // Actualizar lista de contactos
+      const updatedContactos = await apiService.getAll('contactos');
+      setContactos(updatedContactos || []);
+      
+      // Seleccionar el nuevo contacto en el formulario
+      if (response && response.id_contacto) {
+        setFormData(prev => ({ ...prev, id_contacto: response.id_contacto }));
+      }
+      
+      setNewContactDialogVisible(false);
+    } catch (error) {
+      console.error('Error al crear contacto:', error);
+      toast.showError('Error', 'No se pudo crear el contacto');
     }
   };
 
@@ -374,7 +438,7 @@ export default function EstadoSeguimientoList() {
   const columns = [
     {
       field: 'evento.municipalidad.nombre',
-      header: 'EVENTO DE MUNICIPALIDAD',
+      header: 'ENTIDAD - FECHA 1 ACERC.',
       sortable: true,
       filterable: true,
       body: (rowData) => {
@@ -384,13 +448,13 @@ export default function EstadoSeguimientoList() {
       }
     },
     {
-      field: 'contacto.nombre',
-      header: 'CONTACTO',
+      field: 'evento.municipalidad.departamento',
+      header: 'DEPARTAMENTO',
       sortable: true,
       filterable: true,
       body: (rowData) => {
-        const cto = contactos.find((c) => c.id_contacto === rowData.id_contacto);
-        return cto?.nombre_completo || 'N/A';
+        const evt = eventos.find((e) => e.id_evento === rowData.id_evento);
+        return evt?.municipalidad?.departamento || 'N/A';
       }
     },
     {
@@ -633,9 +697,19 @@ export default function EstadoSeguimientoList() {
 
           {/* Contacto con búsqueda */}
           <div className="relative" ref={contactoDropdownRef}>
-            <label className="block text-sm font-medium text-gray-500 mb-1">
-              Contacto <span className="text-red-500">*</span>
-            </label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-sm font-medium text-gray-500">
+                Contacto <span className="text-red-500">*</span>
+              </label>
+              <button
+                type="button"
+                className={`text-xs px-2 py-1 rounded ${formData.id_evento ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                onClick={() => formData.id_evento && handleCreateNewContact()}
+                disabled={!formData.id_evento}
+              >
+                <FiPlus className="inline mr-1" /> Nuevo Contacto
+              </button>
+            </div>
             <div
               className={`w-full border border-gray-300 rounded-md p-2 flex justify-between items-center ${
                 formData.id_evento ? 'cursor-pointer' : 'cursor-not-allowed bg-gray-100'
@@ -872,12 +946,12 @@ export default function EstadoSeguimientoList() {
         </div>
       </Modal>
 
-      {/* Modal VER DETALLE */}
+      {/* Modal VER DETALLE con InteraccionDetails */}
       <Modal
         isOpen={viewDialogVisible}
         onClose={() => setViewDialogVisible(false)}
-        title="Detalle del Estado de Seguimiento"
-        size="md"
+        title="Detalle de Interacción"
+        size="xl"
         footer={
           <div className="flex justify-end gap-2">
             <button
@@ -890,52 +964,13 @@ export default function EstadoSeguimientoList() {
         }
       >
         {selectedSeguimiento && (
-          <div className="space-y-2">
-            <p>
-              <strong>Evento:</strong>{' '}
-              {
-                eventos.find((ev) => ev.id_evento === selectedSeguimiento.id_evento)
-                  ?.municipalidad?.nombre || 'N/A'
-              }
-            </p>
-            <p>
-              <strong>Contacto:</strong>{' '}
-              {
-                contactos.find((c) => c.id_contacto === selectedSeguimiento.id_contacto)
-                  ?.nombre_completo || 'N/A'
-              }
-            </p>
-            <p>
-              <strong>Tipo de Reunión:</strong>{' '}
-              {
-                tiposReunion.find((tr) => tr.id_tipo_reunion === selectedSeguimiento.id_tipo_reunion)
-                  ?.descripcion || 'N/A'
-              }
-            </p>
-            <p>
-              <strong>Fecha:</strong>{' '}
-              {formatDate(selectedSeguimiento.fecha) || 'N/A'}
-            </p>
-            <p>
-              <strong>Estado:</strong>{' '}
-              {
-                estados.find((es) => es.id_estado == selectedSeguimiento.id_estado_ref)
-                  ?.descripcion || 'N/A'
-              }
-            </p>
-            <p>
-              <strong>Fecha de Compromiso:</strong>{' '}
-              {formatDate(selectedSeguimiento.fecha_compromiso) || 'N/A'}
-            </p>
-            <p>
-              <strong>Compromiso:</strong>{' '}
-              {selectedSeguimiento.compromiso || 'N/A'}
-            </p>
-            <p>
-              <strong>Descripción:</strong>{' '}
-              {selectedSeguimiento.descripcion || 'N/A'}
-            </p>
-          </div>
+          <InteraccionDetails 
+            evento={eventos.find(ev => ev.id_evento === selectedSeguimiento.id_evento) || {}}
+            municipalidad={eventos.find(ev => ev.id_evento === selectedSeguimiento.id_evento)?.municipalidad || {}}
+            contacto={contactos.find(c => c.id_contacto === selectedSeguimiento.id_contacto) || {}}
+            estadosSeguimiento={estadosSeguimiento.filter(es => es.id_evento === selectedSeguimiento.id_evento)}
+            estados={estados}
+          />
         )}
       </Modal>
 
@@ -952,6 +987,77 @@ export default function EstadoSeguimientoList() {
         onConfirm={handleDelete}
         onReject={() => setDeleteDialogVisible(false)}
       />
+
+      {/* Modal para crear nuevo contacto */}
+      <Modal
+        isOpen={newContactDialogVisible}
+        onClose={() => setNewContactDialogVisible(false)}
+        title="Nuevo Contacto"
+        size="md"
+        footer={
+          <div className="flex justify-end gap-2">
+            <button
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              onClick={() => setNewContactDialogVisible(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              onClick={handleSaveNewContact}
+            >
+              Guardar Contacto
+            </button>
+          </div>
+        }
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Nombre Completo <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              className="w-full p-2 border border-gray-300 rounded-md"
+              value={newContactData.nombre_completo}
+              onChange={(e) => setNewContactData(prev => ({ ...prev, nombre_completo: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Cargo
+            </label>
+            <input
+              type="text"
+              className="w-full p-2 border border-gray-300 rounded-md"
+              value={newContactData.cargo}
+              onChange={(e) => setNewContactData(prev => ({ ...prev, cargo: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Teléfono
+            </label>
+            <input
+              type="text"
+              className="w-full p-2 border border-gray-300 rounded-md"
+              value={newContactData.telefono}
+              onChange={(e) => setNewContactData(prev => ({ ...prev, telefono: e.target.value }))}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-500 mb-1">
+              Correo Electrónico
+            </label>
+            <input
+              type="email"
+              className="w-full p-2 border border-gray-300 rounded-md"
+              value={newContactData.correo}
+              onChange={(e) => setNewContactData(prev => ({ ...prev, correo: e.target.value }))}
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
