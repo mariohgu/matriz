@@ -36,7 +36,8 @@ export default function Sidebar({ isOpen, onToggle }) {
           icon: <FaChartPie />,
           subItems: [
             { href: "/dashboard", title: "Vista General" },
-            { href: "/dashboard/departamentos", title: "Por Departamentos" },
+            // { href: "/dashboard/departamentos", title: "Por Departamentos" },
+            { href: "/dashboard/calendario-compromisos", title: "Calendario de Compromisos" },
           ],
         },
         {

@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import DashboardDepartamentos from './pages/DashboardDepartamentos';
+import CalendarioCompromisos from './pages/CalendarioCompromisos';
 import MunicipalidadesList from './components/municipalidades/MunicipalidadesList';
 import ContactosList from './components/contactos/ContactosList';
 import TipoReunionList from './components/tipos-reunion/TipoReunionList';
@@ -130,6 +131,14 @@ function AppRoutes() {
           element={
             <MainLayout>
               <DashboardDepartamentos />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/dashboard/calendario-compromisos"
+          element={
+            <MainLayout>
+              <CalendarioCompromisos />
             </MainLayout>
           }
         />
