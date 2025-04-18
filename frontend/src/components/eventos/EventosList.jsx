@@ -495,25 +495,11 @@ export default function EventosList() {
       body: (rowData) => rowData.municipalidad?.departamento || 'N/A'
     },
     {
-      field: 'contacto.nombre_completo',
-      header: 'CONTACTO',
+      field: 'modalidad',
+      header: 'MODALIDAD',
       sortable: true,
       filterable: true,
-      body: (rowData) => rowData.contacto?.nombre_completo || 'N/A'
-    },
-    {
-      field: 'tipo_acercamiento',
-      header: 'TIPO DE ACERCAMIENTO',
-      sortable: true,
-      filterable: true,
-      body: (rowData) => rowData.tipo_acercamiento || 'N/A'
-    },
-    {
-      field: 'lugar',
-      header: 'LUGAR',
-      sortable: true,
-      filterable: true,
-      body: (rowData) => rowData.lugar || 'N/A'
+      body: (rowData) => rowData.modalidad || 'N/A'
     },
     {
       field: 'fecha',

@@ -19,6 +19,7 @@ export default function EstadoSeguimientoList() {
   const [contactos, setContactos] = useState([]);
   const [tiposReunion, setTiposReunion] = useState([]);
   const [estados, setEstados] = useState([]); // Para id_estado_ref (p.ej. Pendiente, En Proceso, etc.)
+  const [convenios, setConvenios] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Búsqueda global, filtros por columna, orden
@@ -134,17 +135,18 @@ export default function EstadoSeguimientoList() {
 
   const loadRelatedData = async () => {
     try {
-      const [evt, mun, ctos, tr, est] = await Promise.all([
+      const [evt, ctos, tr, est, convs] = await Promise.all([
         apiService.getAll('eventos'),
-        apiService.getAll('municipalidades'),
         apiService.getAll('contactos'),
         apiService.getAll('tipos-reunion'),
-        apiService.getAll('estados') // la tabla "estados" para id_estado_ref
+        apiService.getAll('estados'), // la tabla "estados" para id_estado_ref
+        apiService.getAll('convenios') // Cargar convenios
       ]);
       setEventos(evt || []);
       setContactos(ctos || []);
       setTiposReunion(tr || []);
       setEstados(est || []);
+      setConvenios(convs || []); // Guardar convenios
       // Podrías guardar municipalidades si las necesitaras
       // en este caso, tal vez no las necesites directamente
       // si no hay ID de municipalidad en este modelo.
@@ -990,6 +992,8 @@ export default function EstadoSeguimientoList() {
             contacto={contactos.find(c => c.id_contacto === selectedSeguimiento.id_contacto) || {}}
             estadosSeguimiento={estadosSeguimiento.filter(es => es.id_evento === selectedSeguimiento.id_evento)}
             estados={estados}
+            convenios={convenios}
+
           />
         )}
       </Modal>
