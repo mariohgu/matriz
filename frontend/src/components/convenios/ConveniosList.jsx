@@ -6,10 +6,9 @@ import { Table, Pagination, Modal, ConfirmDialog, useToast, TailwindCalendar } f
 // Opciones de tipo de convenio
 const tipoConvenioOptions = [
   { value: '', label: 'Seleccione un tipo' },
-  { value: 'Cooperación', label: 'Cooperación' },
-  { value: 'Infraestructura', label: 'Infraestructura' },
-  { value: 'Servicios', label: 'Servicios' },
-  { value: 'Desarrollo social', label: 'Desarrollo social' },
+  { value: 'Colaboración', label: 'Colaboración' },
+  { value: 'Delegación', label: 'Delegación' },
+  { value: 'Asistencia Técnica', label: 'Asistencia Técnica' },
   { value: 'Otros', label: 'Otros' }
 ];
 
