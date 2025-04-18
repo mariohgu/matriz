@@ -987,13 +987,7 @@ export default function EstadoSeguimientoList() {
       >
         {selectedSeguimiento && (
           <InteraccionDetails 
-            evento={eventos.find(ev => ev.id_evento === selectedSeguimiento.id_evento) || {}}
-            municipalidad={eventos.find(ev => ev.id_evento === selectedSeguimiento.id_evento)?.municipalidad || {}}
-            contacto={contactos.find(c => c.id_contacto === selectedSeguimiento.id_contacto) || {}}
-            estadosSeguimiento={estadosSeguimiento.filter(es => es.id_evento === selectedSeguimiento.id_evento)}
-            estados={estados}
-            convenios={convenios}
-
+            id_evento={selectedSeguimiento.id_evento}
           />
         )}
       </Modal>

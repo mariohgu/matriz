@@ -299,42 +299,115 @@ const DashboardDepartamentos = () => {
   };
 
   // -----------------------------
-  // NUEVO GRÁFICO: MUNICIPALIDADES CONTACTADAS POR NIVEL
+  // NUEVO GRÁFICO: EVENTOS Y MUNICIPALIDADES PENDIENTES POR NIVEL
   // -----------------------------
-  // Asumiendo que municipalidades tengan un campo "nivel"
-  const contactedSet = new Set(
-    eventos.map(c => c.id_municipalidad).filter(Boolean)
-  );
-  
-  // Filtramos por departamento seleccionado si existe
-  const contactedMunicipalitiesData = municipalidades
-    .filter(m => contactedSet.has(m.id_municipalidad))
-    .filter(m => selectedDepartamento ? m.departamento === selectedDepartamento : true);
-  
-  // Agrupamos por nivel
-  const countsByNivel = {};
-  contactedMunicipalitiesData.forEach(m => {
-    const nivel = m.nivel || 'Sin Nivel';
-    if (!countsByNivel[nivel]) {
-      countsByNivel[nivel] = 0;
-    }
-    countsByNivel[nivel]++;
+  // Creamos un mapa para almacenar el nivel de cada municipalidad
+  const municipalidadNivelMap = {};
+  municipalidades.forEach(m => {
+    municipalidadNivelMap[m.id_municipalidad] = m.nivel || 'Sin Nivel';
   });
   
-  const nivelLabels = Object.keys(countsByNivel).sort();
-  const nivelCounts = nivelLabels.map(n => countsByNivel[n]);
+  // Filtramos eventos y municipalidades por departamento seleccionado
+  const municipalidadesPorNivel = selectedDepartamento
+    ? municipalidades.filter(m => m.departamento === selectedDepartamento)
+    : municipalidades;
+  
+  const filteredEventos = eventos.filter(evento => {
+    if (!evento.id_municipalidad) return false;
+    
+    // Si hay un departamento seleccionado, filtramos por él
+    if (selectedDepartamento) {
+      const municipalidad = municipalidades.find(m => m.id_municipalidad === evento.id_municipalidad);
+      return municipalidad && municipalidad.departamento === selectedDepartamento;
+    }
+    
+    return true;
+  });
+  
+  // Crear set de municipalidades contactadas (con al menos un evento)
+  const municipalidadesContactadasSet = new Set(
+    filteredEventos
+      .map(evento => evento.id_municipalidad)
+      .filter(Boolean)
+  );
+  
+  // Total de municipalidades por nivel
+  const totalByNivel = {};
+  municipalidadesPorNivel.forEach(m => {
+    const nivel = m.nivel || 'Sin Nivel';
+    if (!totalByNivel[nivel]) {
+      totalByNivel[nivel] = 0;
+    }
+    totalByNivel[nivel]++;
+  });
+  
+  // Municipalidades contactadas por nivel
+  const contactadasByNivel = {};
+  municipalidadesPorNivel.forEach(m => {
+    if (municipalidadesContactadasSet.has(m.id_municipalidad)) {
+      const nivel = m.nivel || 'Sin Nivel';
+      if (!contactadasByNivel[nivel]) {
+        contactadasByNivel[nivel] = 0;
+      }
+      contactadasByNivel[nivel]++;
+    }
+  });
+  
+  // Calcular municipalidades pendientes por nivel
+  const pendientesByNivel = {};
+  Object.keys(totalByNivel).forEach(nivel => {
+    pendientesByNivel[nivel] = totalByNivel[nivel] - (contactadasByNivel[nivel] || 0);
+  });
+  
+  // Preparar datos para el gráfico
+  const nivelLabels = Object.keys(totalByNivel).sort();
+  const contactadasData = nivelLabels.map(nivel => contactadasByNivel[nivel] || 0);
+  const pendientesData = nivelLabels.map(nivel => pendientesByNivel[nivel] || 0);
 
   const nivelChartData = {
     labels: nivelLabels,
     datasets: [
       {
-        label: 'Municipalidades Contactadas',
-        data: nivelCounts,
-        backgroundColor: 'rgba(255, 99, 132, 0.5)',
-        borderColor: 'rgba(255, 99, 132, 1)',
+        label: 'Entidades Contactadas',
+        data: contactadasData,
+        backgroundColor: 'rgba(75, 192, 75, 0.6)',
+        borderColor: 'rgba(75, 192, 75, 1)',
         borderWidth: 1,
       },
+      {
+        label: 'Entidades Pendientes',
+        data: pendientesData,
+        backgroundColor: 'rgba(255, 99, 132, 0.6)',
+        borderColor: 'rgba(255, 99, 132, 1)',
+        borderWidth: 1,
+      }
     ],
+  };
+
+  const barChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context) {
+            return context.parsed.y;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        stacked: false,
+      },
+      y: {
+        stacked: false,
+        beginAtZero: true
+      }
+    }
   };
 
   // -----------------------------
@@ -1045,18 +1118,18 @@ const DashboardDepartamentos = () => {
 
         {/* Gráficos adicionales */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-          {/* NUEVO: Municipalidades Contactadas por Nivel */}
+          {/* NUEVO: Eventos y Municipalidades Pendientes por Nivel */}
           <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-4">Municipalidades Contactadas por Nivel</h3>
+            <h3 className="text-lg font-semibold mb-4">Eventos y Municipalidades Pendientes por Nivel</h3>
             <div className="h-80">
               {loading ? (
                 <LoadingSpinner />
               ) : (
                 nivelLabels.length > 0 ? (
-                  <Bar data={nivelChartData} options={chartOptions} />
+                  <Bar data={nivelChartData} options={barChartOptions} />
                 ) : (
                   <div className="flex justify-center items-center h-full">
-                    <p className="text-gray-500">No hay municipalidades con nivel definido o no se han contactado</p>
+                    <p className="text-gray-500">No hay eventos por nivel de municipalidad</p>
                   </div>
                 )
               )}
@@ -1336,11 +1409,8 @@ const DashboardDepartamentos = () => {
         >
           {selectedInteraction && (
             <InteraccionDetails 
-              evento={selectedInteraction}
-              municipalidad={selectedInteraction.municipalidad}
-              contacto={selectedInteraction.contacto}
-              estadosSeguimiento={estadosSeguimiento.filter(es => es.id_evento === selectedInteraction.id_evento)}
-              estados={estados}
+              id_evento={selectedInteraction.id_evento}
+              
             />
           )}
         </Modal>
