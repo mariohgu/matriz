@@ -16,6 +16,7 @@ import OficiosList from './components/oficios/OficiosList';
 import ConveniosList from './components/convenios/ConveniosList';
 import EstadosList from './components/estados/EstadoList';
 import UnauthorizedPage from './pages/UnauthorizedPage';
+import DashboardLista from './pages/DashboardLista';
 
 // Componentes comunes
 import Sidebar from './components/common/Sidebar';
@@ -131,6 +132,14 @@ function AppRoutes() {
           element={
             <MainLayout>
               <DashboardDepartamentos />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/dashboard/lista"
+          element={
+            <MainLayout>
+              <DashboardLista />
             </MainLayout>
           }
         />

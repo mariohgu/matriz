@@ -37,6 +37,7 @@ export default function Sidebar({ isOpen, onToggle }) {
           subItems: [
             { href: "/dashboard", title: "Vista General" },
             // { href: "/dashboard/departamentos", title: "Por Departamentos" },
+            { href: "/dashboard/lista", title: "Por Lista" },
             { href: "/dashboard/calendario-compromisos", title: "Calendario de Compromisos" },
           ],
         },
