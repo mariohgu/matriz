@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Spatie\Permission\Models\Role;
 
 class AuthController extends Controller
 {
@@ -35,10 +36,7 @@ class AuthController extends Controller
         ]);
 
         // Asignar rol por defecto (usuario común)
-        $defaultRole = Rol::where('nombre_rol', 'usuario')->first();
-        if ($defaultRole) {
-            $user->roles()->attach($defaultRole->id_rol);
-        }
+        $user->assignRole('usuario');
 
         return response()->json([
             'message' => 'Usuario registrado exitosamente',
@@ -69,8 +67,8 @@ class AuthController extends Controller
 
         $user = User::where('username', $request->username)->firstOrFail();
         
-        // Cargar los roles y permisos del usuario
-        $user->load('roles.permisos');
+        // Cargar los roles y permisos del usuario usando Spatie
+        $user->load('roles', 'permissions');
         
         // Crear token con permisos basados en los roles del usuario
         $token = $user->createToken('auth_token', $this->getUserPermissions($user))->plainTextToken;
@@ -100,7 +98,7 @@ class AuthController extends Controller
      */
     public function user(Request $request)
     {
-        $user = $request->user()->load('roles.permisos');
+        $user = $request->user()->load('roles', 'permissions');
         
         return response()->json([
             'user' => $user,
@@ -115,7 +113,7 @@ class AuthController extends Controller
     public function refreshToken(Request $request)
     {
         $user = $request->user();
-        $user->load('roles.permisos');
+        $user->load('roles', 'permissions');
         
         // Revocar tokens actuales
         $user->tokens()->delete();
@@ -131,18 +129,11 @@ class AuthController extends Controller
     }
     
     /**
-     * Extraer todos los permisos únicos de un usuario basado en sus roles
+     * Extraer todos los permisos únicos de un usuario basado en sus roles usando Spatie
      */
     private function getUserPermissions(User $user)
     {
-        $permissions = [];
-        
-        foreach ($user->roles as $role) {
-            foreach ($role->permisos as $permission) {
-                $permissions[] = $permission->nombre_permiso;
-            }
-        }
-        
-        return array_unique($permissions);
+        // Spatie ofrece una forma directa de obtener los nombres de los permisos
+        return $user->getPermissionNames()->toArray();
     }
 }

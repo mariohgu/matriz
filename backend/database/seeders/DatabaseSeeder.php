@@ -19,5 +19,8 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+        
+        // Ejecutar el seeder para los roles y permisos de Spatie
+        $this->call(SpatieRolesPermissionsSeeder::class);
     }
 }
