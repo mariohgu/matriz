@@ -24,8 +24,12 @@ class UserSeeder extends Seeder
         Permission::create(['name' => 'crear-roles']);
         Permission::create(['name' => 'editar-roles']);
         Permission::create(['name' => 'eliminar-roles']);
+        Permission::create(['name' => 'ver-matriz']);
+        Permission::create(['name' => 'cargar-matriz']);
+        Permission::create(['name' => 'eliminar-matriz']);
+        Permission::create(['name' => 'ver-presupuesto']);
 
-        //Me gustaria que mi usuario  mario que ya existe en la base de datos tenga los permisos de admin
+        
         $user_mario = User::create([
             'name' => 'Mario',
             'username' => 'mario',
@@ -36,10 +40,6 @@ class UserSeeder extends Seeder
 
         $admin = Role::create(['name' => 'super-admin']);
         $user_mario->assignRole('super-admin');
-        // $user_mario->givePermissionTo('ver-usuarios');
-        // $user_mario->givePermissionTo('crear-usuarios');
-        // $user_mario->givePermissionTo('editar-usuarios');
-        // $user_mario->givePermissionTo('eliminar-usuarios');
         $permission_admin = Permission::query()->pluck('name');
         $admin->syncPermissions($permission_admin);
 
@@ -50,10 +50,24 @@ class UserSeeder extends Seeder
         $editor->syncPermissions(['ver-usuarios', 'crear-usuarios', 'editar-usuarios']);
 
         $admin = Role::create(['name' => 'admin']);
-        $admin->syncPermissions(['ver-usuarios', 'crear-usuarios', 'editar-usuarios', 'eliminar-usuarios']);
+        $admin->syncPermissions(['ver-usuarios', 'crear-usuarios', 'editar-usuarios', 'eliminar-usuarios', 'cargar-matriz', 'eliminar-matriz', 'ver-presupuesto', 'ver-matriz']);
 
         $visitas = Role::create(['name' => 'visitas']);
-        $visitas->syncPermissions(['ver-usuarios']);
+        $visitas->syncPermissions(['ver-reportes']);
+
+        $presupuesto = Role::create(['name' => 'analista']);
+        $presupuesto->syncPermissions(['ver-presupuesto', 'ver-matriz']);
+
+        $matriz_admin = Role::create(['name' => 'matriz-admin']);
+        $matriz_admin->syncPermissions(['ver-matriz', 'cargar-matriz', 'eliminar-matriz']);
+
+        $matriz_editor = Role::create(['name' => 'matriz-editor']);
+        $matriz_editor->syncPermissions(['ver-matriz', 'cargar-matriz']);
+
+        $matriz_usuario = Role::create(['name' => 'matriz-usuario']);
+        $matriz_usuario->syncPermissions(['ver-matriz']);
+        
+        
         
         
         

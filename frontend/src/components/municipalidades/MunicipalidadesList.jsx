@@ -23,6 +23,35 @@ const nivelRegional = [
   { value: 'Otros', label: 'Otros' }
 ];
 
+const DepartamentoOptions = [
+  { value: 'Amazonas', label: 'Amazonas' },
+  { value: 'Ancash', label: 'Ancash' },
+  { value: 'Apurimac', label: 'Apurimac' },
+  { value: 'Arequipa', label: 'Arequipa' },
+  { value: 'Ayacucho', label: 'Ayacucho' },
+  { value: 'Cajamarca', label: 'Cajamarca' },
+  { value: 'Callao', label: 'Callao' },
+  { value: 'Cusco', label: 'Cusco' },
+  { value: 'Huancavelica', label: 'Huancavelica' },
+  { value: 'Huanuco', label: 'Huanuco' },
+  { value: 'Ica', label: 'Ica' },
+  { value: 'Junin', label: 'Junin' },
+  { value: 'La Libertad', label: 'La Libertad' },
+  { value: 'Lambayeque', label: 'Lambayeque' },
+  { value: 'Lima', label: 'Lima' },
+  { value: 'Lima Región', label: 'Lima Región' },
+  { value: 'Loreto', label: 'Loreto' },
+  { value: 'Madre De Dios', label: 'Madre De Dios' },
+  { value: 'Moquegua', label: 'Moquegua' },
+  { value: 'Pasco', label: 'Pasco' },
+  { value: 'Piura', label: 'Piura' },
+  { value: 'Puno', label: 'Puno' },
+  { value: 'San Martin', label: 'San Martin' },
+  { value: 'Tacna', label: 'Tacna' },
+  { value: 'Tumbes', label: 'Tumbes' },
+  { value: 'Ucayali', label: 'Ucayali' }
+];
+
 export default function MunicipalidadesList() {
   const [municipalidades, setMunicipalidades] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -49,7 +78,7 @@ export default function MunicipalidadesList() {
   // Vista móvil
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  // Diálogo para “ver detalles”
+  // Diálogo para "ver detalles"
   const [viewDialogVisible, setViewDialogVisible] = useState(false);
   const [selectedMunicipalidad, setSelectedMunicipalidad] = useState(null);
 
@@ -89,6 +118,26 @@ export default function MunicipalidadesList() {
 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (isEditMode && selectedMunicipalidad) {
+      // Asegurarse de que los valores del formulario estén actualizados con los datos seleccionados
+      setFormData({
+        id_municipalidad: selectedMunicipalidad.id_municipalidad,
+        nombre: selectedMunicipalidad.nombre || '',
+        departamento: selectedMunicipalidad.departamento || '',
+        region: selectedMunicipalidad.region || '',
+        region_natural: selectedMunicipalidad.region_natural || 'No especificada',
+        provincia: selectedMunicipalidad.provincia || '',
+        distrito: selectedMunicipalidad.distrito || '',
+        ubigeo: selectedMunicipalidad.ubigeo || '',
+        nivel: selectedMunicipalidad.nivel || '',
+        X: selectedMunicipalidad.X || '',
+        Y: selectedMunicipalidad.Y || '',
+        RUC: selectedMunicipalidad.RUC || ''
+      });
+    }
+  }, [isEditMode, selectedMunicipalidad]);
 
   const loadMunicipalidades = async () => {
     setLoading(true);
@@ -153,8 +202,18 @@ export default function MunicipalidadesList() {
         return;
       }
 
+      // Validar que el departamento esté seleccionado
+      if (!formData.departamento) {
+        toast.showWarning('Advertencia', 'Debe seleccionar un departamento');
+        return;
+      }
+
       // Procesar coordenadas
       const dataToSend = { ...formData };
+      
+      // Depuración - mostrar en consola lo que se enviará
+      console.log('Datos a enviar:', dataToSend);
+      
       if (dataToSend.X) {
         dataToSend.X = parseFloat(dataToSend.X);
         if (isNaN(dataToSend.X)) {
@@ -184,6 +243,22 @@ export default function MunicipalidadesList() {
       loadMunicipalidades();
     } catch (error) {
       console.error('Error al guardar entidad:', error);
+      
+      // Mostrar detalles del error para depuración
+      if (error.response && error.response.data) {
+        console.error('Detalles del error:', error.response.data);
+        
+        // Mostrar mensajes de error específicos si están disponibles
+        if (error.response.data.errors) {
+          const errorMessages = Object.values(error.response.data.errors).flat().join('\n');
+          toast.showError('Error de validación', errorMessages);
+          return;
+        } else if (error.response.data.message) {
+          toast.showError('Error', error.response.data.message);
+          return;
+        }
+      }
+      
       toast.showError('Error', 'No se pudo guardar la entidad');
     }
   };
@@ -392,11 +467,15 @@ export default function MunicipalidadesList() {
       {options ? (
         <select
           id={id}
-          value={value}
-          onChange={onChange}
+          value={value || ''}
+          onChange={(e) => {
+            console.log(`Seleccionado ${id}:`, e.target.value);
+            onChange(e);
+          }}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm 
                      focus:outline-none focus:ring-blue-500 focus:border-blue-500"
         >
+          <option value="">Seleccione {label}</option>
           {options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -407,7 +486,7 @@ export default function MunicipalidadesList() {
         <input
           id={id}
           type={type}
-          value={value}
+          value={value || ''}
           onChange={onChange}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm 
                      focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -610,8 +689,13 @@ export default function MunicipalidadesList() {
             setFormData((prev) => ({ ...prev, region: e.target.value }))
           )}         
 
-          {renderFormField('departamento', 'Departamento', formData.departamento, (e) =>
-            setFormData((prev) => ({ ...prev, departamento: e.target.value }))
+          {renderFormField(
+            'departamento',
+            'Departamento',
+            formData.departamento,
+            (e) => setFormData((prev) => ({ ...prev, departamento: e.target.value })),
+            'text',
+            DepartamentoOptions
           )}
           {renderFormField('provincia', 'Provincia', formData.provincia, (e) =>
             setFormData((prev) => ({ ...prev, provincia: e.target.value }))
