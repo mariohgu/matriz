@@ -5,8 +5,8 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use App\Models\User;
+use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
@@ -42,6 +42,20 @@ class UserSeeder extends Seeder
         // $user_mario->givePermissionTo('eliminar-usuarios');
         $permission_admin = Permission::query()->pluck('name');
         $admin->syncPermissions($permission_admin);
+
+        $usuario = Role::create(['name' => 'usuario']);
+        $usuario->syncPermissions(['ver-usuarios']);
+
+        $editor = Role::create(['name' => 'editor']);
+        $editor->syncPermissions(['ver-usuarios', 'crear-usuarios', 'editar-usuarios']);
+
+        $admin = Role::create(['name' => 'admin']);
+        $admin->syncPermissions(['ver-usuarios', 'crear-usuarios', 'editar-usuarios', 'eliminar-usuarios']);
+
+        $visitas = Role::create(['name' => 'visitas']);
+        $visitas->syncPermissions(['ver-usuarios']);
+        
+        
         
         
     }
