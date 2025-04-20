@@ -151,7 +151,7 @@ const authService = {
     const user = authService.getCurrentUser();
     if (!user || !user.roles) return false;
     
-    return user.roles.some(role => role.nombre_rol === roleName);
+    return user.roles.some(role => role.name === roleName || role.nombre_rol === roleName);
   },
 
   // Verificar si el usuario tiene un permiso específico
@@ -163,6 +163,18 @@ const authService = {
       if (role.permisos && role.permisos.some(perm => perm.nombre_permiso === permissionName)) {
         return true;
       }
+      // También verificar en la propiedad permissions si existe
+      if (role.permissions && role.permissions.some(perm => perm === permissionName || perm.name === permissionName)) {
+        return true;
+      }
+    }
+    
+    // Verificar también si hay permisos directos en el usuario
+    if (user.permissions && Array.isArray(user.permissions)) {
+      return user.permissions.some(perm => 
+        perm === permissionName || 
+        (typeof perm === 'object' && perm.name === permissionName)
+      );
     }
     
     return false;

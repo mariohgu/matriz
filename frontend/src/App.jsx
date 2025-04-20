@@ -15,6 +15,8 @@ import EstadoSeguimientosList from './components/estado-seguimiento/EstadoSeguim
 import OficiosList from './components/oficios/OficiosList';
 import ConveniosList from './components/convenios/ConveniosList';
 import EstadosList from './components/estados/EstadoList';
+import UserList from './components/usuarios/UserList';
+import ProfileView from './components/usuarios/ProfileView';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import DashboardLista from './pages/DashboardLista';
 
@@ -221,6 +223,30 @@ function AppRoutes() {
             </MainLayout>
           }
         />
+
+        {/* Configuración - Perfil (accesible para todos los usuarios) */}
+        <Route
+          path="/perfil"
+          element={
+            <MainLayout>
+              <ProfileView />
+            </MainLayout>
+          }
+        />
+
+        {/* Rutas protegidas solo para administradores */}
+        <Route element={<ProtectedRoute requiredRole="super-admin" />}>
+          {/* Configuración - Usuarios (solo administradores) */}
+          <Route
+            path="/usuarios"
+            element={
+              <MainLayout>
+                <UserList />
+              </MainLayout>
+            }
+          />
+        </Route>
+
       </Route>
 
       {/* Ruta raíz => Redirección según estado auth */}

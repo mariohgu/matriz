@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\EstadoSeguimientoController;
 use App\Http\Controllers\Api\OficioController;
 use App\Http\Controllers\Api\ConvenioController;
 use App\Http\Controllers\Api\EstadoController;
+use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\AuthController;
 
 // Rutas de autenticación (públicas)
@@ -24,6 +25,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh-token', [AuthController::class, 'refreshToken']);
+    
+    // Rutas para la gestión del perfil del usuario
+    Route::get('/profile', [UserController::class, 'getProfile']);
+    Route::put('/profile', [UserController::class, 'updateProfile']);
+    Route::post('/change-password', [UserController::class, 'changePassword']);
     
     // Ruta del controlador Hello
     Route::get('/hello', [HelloController::class, 'index']);
@@ -68,8 +74,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('convenios/por-fecha', [ConvenioController::class, 'porFecha']);
     Route::post('convenios/por-monto', [ConvenioController::class, 'porMonto']);
     
+    // Rutas para el CRUD de Usuarios (solo accesible para administradores)
+    Route::middleware('role:super-admin')->group(function () {
+        Route::apiResource('users', UserController::class);
+        Route::get('roles', [UserController::class, 'getRoles']);
+        Route::post('users/{id}/roles', [UserController::class, 'assignRoles']);
+    });
+    
     // Rutas solo para administradores (ejemplo)
-    Route::middleware('role:admin')->group(function () {
+    Route::middleware('role:admin,super-admin')->group(function () {
         // Rutas exclusivas para administradores
         Route::get('/admin/dashboard', function () {
             return response()->json(['message' => 'Panel de administrador']);
