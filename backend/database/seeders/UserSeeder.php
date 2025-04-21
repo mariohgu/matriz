@@ -53,7 +53,7 @@ class UserSeeder extends Seeder
         $admin->syncPermissions(['ver-usuarios', 'crear-usuarios', 'editar-usuarios', 'eliminar-usuarios', 'cargar-matriz', 'eliminar-matriz', 'ver-presupuesto', 'ver-matriz']);
 
         $visitas = Role::create(['name' => 'visitas']);
-        $visitas->syncPermissions(['ver-reportes']);
+        $visitas->syncPermissions(['ver-presupuesto']);
 
         $presupuesto = Role::create(['name' => 'analista']);
         $presupuesto->syncPermissions(['ver-presupuesto', 'ver-matriz']);

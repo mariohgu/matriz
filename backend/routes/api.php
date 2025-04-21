@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\ConvenioController;
 use App\Http\Controllers\Api\EstadoController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Budget\AreaEjecutoraController;
 
 // Rutas de autenticación (públicas)
 Route::post('/register', [AuthController::class, 'register']);
@@ -73,6 +74,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('municipalidades/{id}/convenios', [ConvenioController::class, 'porMunicipalidad']);
     Route::post('convenios/por-fecha', [ConvenioController::class, 'porFecha']);
     Route::post('convenios/por-monto', [ConvenioController::class, 'porMonto']);
+    
+    // Rutas para el CRUD de Áreas Ejecutoras (Presupuesto)
+    Route::prefix('presupuesto')->group(function () {
+        Route::apiResource('areas-ejecutoras', AreaEjecutoraController::class);
+    });
     
     // Rutas para el CRUD de Usuarios (solo accesible para administradores)
     Route::middleware('role:super-admin')->group(function () {

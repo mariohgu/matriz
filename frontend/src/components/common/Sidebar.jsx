@@ -66,7 +66,7 @@ export default function Sidebar({ isOpen, onToggle }) {
           icon: <FaHandsHelping />,
           subItems: [
             { href: "/estado-seguimiento", title: "Estado de Seguimiento" },
-            { href: "/oficios", title: "Oficios" },
+            // { href: "/oficios", title: "Oficios" },
             { href: "/convenios", title: "Convenios" },
           ],
         },
