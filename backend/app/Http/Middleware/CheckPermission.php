@@ -21,18 +21,27 @@ class CheckPermission
             ], 401);
         }
 
-        // Verificar si el token tiene alguno de los permisos requeridos
+        // Verificar tanto los permisos del token como los permisos de Spatie
         $tokenPermissions = $request->user()->currentAccessToken()->abilities ?? [];
         
-        $hasPermission = false;
+        $hasTokenPermission = false;
         foreach ($permissions as $permission) {
             if (in_array($permission, $tokenPermissions)) {
-                $hasPermission = true;
+                $hasTokenPermission = true;
                 break;
             }
         }
 
-        if (!$hasPermission) {
+        // Verificar si el usuario tiene alguno de los permisos requeridos usando Spatie
+        $hasSpatiePerm = false;
+        foreach ($permissions as $permission) {
+            if ($request->user()->hasPermissionTo($permission)) {
+                $hasSpatiePerm = true;
+                break;
+            }
+        }
+
+        if (!$hasTokenPermission && !$hasSpatiePerm) {
             return response()->json([
                 'message' => 'No tienes permisos suficientes para realizar esta acción'
             ], 403);

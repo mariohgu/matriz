@@ -9,3 +9,4 @@ export { ToastProvider, useToast } from './ToastContext';
 export { default as TailwindCalendar } from './TailwindCalendar';
 export { default as MunicipalidadesDetails } from './MunicipalidadesDetails';
 export { default as InteraccionDetails } from './InteraccionDetails';
+export { default as TableUsers } from './TableUsers';

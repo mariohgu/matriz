@@ -91,33 +91,14 @@ export default function EventosList() {
   // Notificaciones
   const toast = useToast();
 
-  // ======== Efectos iniciales ========
+  // ======== Efectos para cargar datos iniciales ========
   useEffect(() => {
     loadEventos();
     loadMunicipalidades();
-
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    window.addEventListener('resize', handleResize);
-
-    // Cerrar dropdowns al hacer clic fuera
-    function handleClickOutside(e) {
-      if (municipalidadDropdownRef.current && !municipalidadDropdownRef.current.contains(e.target)) {
-        setShowMunicipalidadDropdown(false);
-      }
-      if (contactoDropdownRef.current && !contactoDropdownRef.current.contains(e.target)) {
-        setShowContactoDropdown(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    loadContactos(); // Cargar todos los contactos al inicio
   }, []);
 
+  // ======== Funciones para cargar datos ========
   const loadEventos = async () => {
     try {
       setLoading(true);
@@ -132,16 +113,7 @@ export default function EventosList() {
               const muni = await apiService.getById('municipalidades', evento.id_municipalidad);
               evento.municipalidad = muni;
             } catch (err) {
-              console.error(`Error cargando municipalidad ${evento.id_municipalidad}:`, err);
-            }
-          }
-          // Cargar contacto
-          if (!evento.contacto && evento.id_contacto) {
-            try {
-              const cont = await apiService.getById('contactos', evento.id_contacto);
-              evento.contacto = cont;
-            } catch (err) {
-              console.error(`Error cargando contacto ${evento.id_contacto}:`, err);
+              console.warn(`No se pudo cargar municipalidad ${evento.id_municipalidad}`);
             }
           }
           return evento;
@@ -160,11 +132,27 @@ export default function EventosList() {
   const loadMunicipalidades = async () => {
     try {
       const data = await apiService.getAll('municipalidades');
-      setMunicipalidades(data);
+      setMunicipalidades(data || []);
     } catch (error) {
       console.error('Error al cargar municipalidades:', error);
       toast.showError('Error', 'No se pudieron cargar las municipalidades');
     }
+  };
+
+  const loadContactos = async () => {
+    try {
+      const data = await apiService.getAll('contactos');
+      setContactos(data || []);
+    } catch (error) {
+      console.error('Error al cargar contactos:', error);
+      toast.showError('Error', 'No se pudieron cargar los contactos');
+    }
+  };
+
+  // Función para obtener los datos del contacto a partir del ID
+  const getContactoById = (idContacto) => {
+    if (!idContacto) return null;
+    return contactos.find(c => c.id_contacto === idContacto);
   };
 
   // Cargar contactos para la municipalidad seleccionada
@@ -402,7 +390,7 @@ export default function EventosList() {
         return (
           (ev.municipalidad?.nombre?.toLowerCase() || '').includes(q) ||
           (ev.municipalidad?.departamento?.toLowerCase() || '').includes(q) ||
-          (ev.contacto?.nombre_completo?.toLowerCase() || '').includes(q) ||
+          (getContactoById(ev.id_contacto)?.nombre_completo?.toLowerCase() || '').includes(q) ||
           (ev.tipo_acercamiento || '').toLowerCase().includes(q) ||
           (ev.lugar || '').toLowerCase().includes(q) ||
           (ev.modalidad || '').toLowerCase().includes(q) ||
@@ -422,7 +410,7 @@ export default function EventosList() {
             } else if (key === 'municipalidad.departamento') {
               return ev.municipalidad?.departamento?.toLowerCase().includes(lowVal);
             } else if (key === 'contacto.nombre_completo') {
-              return ev.contacto?.nombre_completo?.toLowerCase().includes(lowVal);
+              return getContactoById(ev.id_contacto)?.nombre_completo?.toLowerCase().includes(lowVal);
             } else if (key === 'fecha') {
               return formatDate(ev.fecha).includes(lowVal);
             } else {
@@ -442,8 +430,8 @@ export default function EventosList() {
           valA = a.municipalidad?.nombre?.toLowerCase() || '';
           valB = b.municipalidad?.nombre?.toLowerCase() || '';
         } else if (sortField === 'contacto.nombre_completo') {
-          valA = a.contacto?.nombre_completo?.toLowerCase() || '';
-          valB = b.contacto?.nombre_completo?.toLowerCase() || '';
+          valA = getContactoById(a.id_contacto)?.nombre_completo?.toLowerCase() || '';
+          valB = getContactoById(b.id_contacto)?.nombre_completo?.toLowerCase() || '';
         } else if (sortField === 'fecha') {
           valA = a.fecha ? new Date(a.fecha) : new Date(0);
           valB = b.fecha ? new Date(b.fecha) : new Date(0);
@@ -495,25 +483,11 @@ export default function EventosList() {
       body: (rowData) => rowData.municipalidad?.departamento || 'N/A'
     },
     {
-      field: 'contacto.nombre_completo',
-      header: 'CONTACTO',
+      field: 'modalidad',
+      header: 'MODALIDAD',
       sortable: true,
       filterable: true,
-      body: (rowData) => rowData.contacto?.nombre_completo || 'N/A'
-    },
-    {
-      field: 'tipo_acercamiento',
-      header: 'TIPO DE ACERCAMIENTO',
-      sortable: true,
-      filterable: true,
-      body: (rowData) => rowData.tipo_acercamiento || 'N/A'
-    },
-    {
-      field: 'lugar',
-      header: 'LUGAR',
-      sortable: true,
-      filterable: true,
-      body: (rowData) => rowData.lugar || 'N/A'
+      body: (rowData) => rowData.modalidad || 'N/A'
     },
     {
       field: 'fecha',
@@ -778,9 +752,7 @@ export default function EventosList() {
                 >
                   <span>
                     {formData.id_contacto
-                      ? contactos.find(
-                          (c) => c.id_contacto.toString() === formData.id_contacto.toString()
-                        )?.nombre_completo || 'Seleccione un contacto'
+                      ? getContactoById(formData.id_contacto)?.nombre_completo || 'Seleccione un contacto'
                       : 'Seleccione un contacto'}
                   </span>
                   {showContactoDropdown ? <FiChevronUp /> : <FiChevronDown />}
@@ -1010,7 +982,7 @@ export default function EventosList() {
             </p>
             <p>
               <strong>Contacto:</strong>{' '}
-              {selectedEvento.contacto?.nombre_completo || 'N/A'}
+              {getContactoById(selectedEvento.id_contacto)?.nombre_completo || 'N/A'}
             </p>
             <p>
               <strong>Tipo de Acercamiento:</strong>{' '}

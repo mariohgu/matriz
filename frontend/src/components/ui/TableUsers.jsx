@@ -11,7 +11,14 @@ const getNestedValue = (obj, field) => {
   return value;
 };
 
-const Table = ({
+// Función para manejar seguramente valores de objetos
+const safeRenderValue = (value) => {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+};
+
+const TableUsers = ({
   data = [],
   columns = [],
   sortField,
@@ -221,7 +228,8 @@ const Table = ({
                   <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                     {visibleColumns.map((column, colIndex) => (
                       <td key={`${rowIndex}-${colIndex}`} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {column.body ? column.body(row) : getNestedValue(row, column.field) || 'N/A'}
+                        {column.render ? column.render(row) : 
+                          safeRenderValue(getNestedValue(row, column.field)) || 'N/A'}
                       </td>
                     ))}
                     {actions && (
@@ -255,7 +263,8 @@ const Table = ({
                       {column.header}
                     </div>
                     <div className="text-sm text-gray-900">
-                      {column.body ? column.body(row) : getNestedValue(row, column.field) || 'N/A'}
+                      {column.render ? column.render(row) : 
+                        safeRenderValue(getNestedValue(row, column.field)) || 'N/A'}
                     </div>
                   </div>
                 ))}
@@ -273,4 +282,4 @@ const Table = ({
   );
 };
 
-export default Table;
+export default TableUsers; 

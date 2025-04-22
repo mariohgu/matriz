@@ -6,7 +6,10 @@ import {
   FaChartPie,
   FaBoxes,
   FaCalendarAlt,
-  FaHandsHelping
+  FaHandsHelping,
+  FaCog,
+  FaUsersCog,
+  FaUserCircle
 } from "react-icons/fa";
 import { MdExpandMore } from "react-icons/md";
 
@@ -23,8 +26,8 @@ export default function Sidebar({ isOpen, onToggle }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Menú principal con "Matriz"
-  // Se anidan submenús (Dashboard, Items, Eventos, Seguimiento)
+  // Menú principal con "Matriz" y "Configuración"
+  // Se anidan submenús
   const links = [
     {
       href: "#",
@@ -37,6 +40,7 @@ export default function Sidebar({ isOpen, onToggle }) {
           subItems: [
             { href: "/dashboard", title: "Vista General" },
             // { href: "/dashboard/departamentos", title: "Por Departamentos" },
+            { href: "/dashboard/lista", title: "Por Lista" },
             { href: "/dashboard/calendario-compromisos", title: "Calendario de Compromisos" },
           ],
         },
@@ -62,8 +66,29 @@ export default function Sidebar({ isOpen, onToggle }) {
           icon: <FaHandsHelping />,
           subItems: [
             { href: "/estado-seguimiento", title: "Estado de Seguimiento" },
-            { href: "/oficios", title: "Oficios" },
+            // { href: "/oficios", title: "Oficios" },
             { href: "/convenios", title: "Convenios" },
+          ],
+        },
+      ],
+    },
+    {
+      href: "#",
+      title: "Configuración",
+      icon: <FaCog />,
+      subItems: [
+        {
+          title: "Usuarios",
+          icon: <FaUsersCog />,
+          subItems: [
+            { href: "/usuarios", title: "Gestión de Usuarios" },
+          ],
+        },
+        {
+          title: "Perfil",
+          icon: <FaUserCircle />,
+          subItems: [
+            { href: "/perfil", title: "Mi Perfil" },
           ],
         },
       ],
