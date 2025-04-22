@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class AreaEjecutora extends Model
+class Categoria extends Model
 {
     use HasFactory, SoftDeletes;
 
@@ -16,14 +16,14 @@ class AreaEjecutora extends Model
      *
      * @var string
      */
-    protected $table = 'areas_ejecutoras';
+    protected $table = 'categorias';
 
     /**
      * The primary key for the model.
      *
      * @var string
      */
-    protected $primaryKey = 'id_ae';
+    protected $primaryKey = 'id_categoria';
 
     /**
      * The database connection that should be used by the model.
@@ -38,23 +38,14 @@ class AreaEjecutora extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'codigo',
         'descripcion',
     ];
     
     /**
-     * Get the presupuestos for the area ejecutora.
+     * Get the clasificadores for the categoria.
      */
-    public function presupuestos(): HasMany
+    public function clasificadores(): HasMany
     {
-        return $this->hasMany(PresupuestoResumen::class, 'id_ae', 'id_ae');
-    }
-    
-    /**
-     * Get the ejecuciones mensuales for the area ejecutora.
-     */
-    public function ejecucionesMensuales(): HasMany
-    {
-        return $this->hasMany(EjecucionMensual::class, 'id_ae', 'id_ae');
+        return $this->hasMany(Clasificador::class, 'id_categoria', 'id_categoria');
     }
 } 

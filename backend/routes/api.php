@@ -15,6 +15,10 @@ use App\Http\Controllers\Api\EstadoController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Budget\AreaEjecutoraController;
+use App\Http\Controllers\Budget\CategoriaController;
+use App\Http\Controllers\Budget\ClasificadorController;
+use App\Http\Controllers\Budget\PresupuestoResumenController;
+use App\Http\Controllers\Budget\EjecucionMensualController;
 
 // Rutas de autenticación (públicas)
 Route::post('/register', [AuthController::class, 'register']);
@@ -75,9 +79,28 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('convenios/por-fecha', [ConvenioController::class, 'porFecha']);
     Route::post('convenios/por-monto', [ConvenioController::class, 'porMonto']);
     
-    // Rutas para el CRUD de Áreas Ejecutoras (Presupuesto)
+    // Rutas para el módulo de Presupuesto
     Route::prefix('presupuesto')->group(function () {
         Route::apiResource('areas-ejecutoras', AreaEjecutoraController::class);
+        Route::apiResource('categorias', CategoriaController::class);
+        Route::apiResource('clasificadores', ClasificadorController::class);
+        Route::apiResource('presupuestos', PresupuestoResumenController::class);
+        Route::apiResource('ejecuciones', EjecucionMensualController::class);
+        
+        // Rutas adicionales para obtener clasificadores por categoría
+        Route::get('categorias/{id}/clasificadores', [ClasificadorController::class, 'porCategoria']);
+        
+        // Rutas adicionales para presupuestos
+        Route::get('areas-ejecutoras/{id}/presupuestos', [PresupuestoResumenController::class, 'porAreaEjecutora']);
+        Route::get('clasificadores/{id}/presupuestos', [PresupuestoResumenController::class, 'porClasificador']);
+        Route::get('presupuestos/anio/{anio}', [PresupuestoResumenController::class, 'porAnio']);
+        Route::get('presupuestos/resumen/{anio}', [PresupuestoResumenController::class, 'resumenPorAnio']);
+        
+        // Rutas adicionales para ejecuciones mensuales
+        Route::get('areas-ejecutoras/{id}/ejecuciones', [EjecucionMensualController::class, 'porAreaEjecutora']);
+        Route::get('clasificadores/{id}/ejecuciones', [EjecucionMensualController::class, 'porClasificador']);
+        Route::get('ejecuciones/anio/{anio}/mes/{mes}', [EjecucionMensualController::class, 'porAnioMes']);
+        Route::get('ejecuciones/resumen/{anio}', [EjecucionMensualController::class, 'resumenPorAnio']);
     });
     
     // Rutas para el CRUD de Usuarios (solo accesible para administradores)

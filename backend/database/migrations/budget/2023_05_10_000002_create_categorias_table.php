@@ -19,12 +19,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::connection($this->connection)->create('areas_ejecutoras', function (Blueprint $table) {
-            $table->id('id_ae');
-            $table->integer('codigo')->unsigned()->unique();
-            $table->string('descripcion', 30);
-            $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
-            $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
+        Schema::connection($this->connection)->create('categorias', function (Blueprint $table) {
+            $table->id('id_categoria');
+            //$table->integer('codigo')->unsigned()->unique();
+            $table->string('descripcion', 50)->nullable(false);
+            $table->timestamps();
             $table->softDeletes();
         });
     }
@@ -34,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::connection($this->connection)->dropIfExists('areas_ejecutoras');
+        Schema::connection($this->connection)->dropIfExists('categorias');
     }
 }; 
