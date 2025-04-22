@@ -1,14 +1,8 @@
 import axios from 'axios';
 
-<<<<<<< HEAD
 //const API_URL = "https://matriz.ddev.site";
-//const API_URL = "https://backendmatriz.pasaloaproduccion.com";
-const API_URL = "http://127.0.0.1:8000";
-=======
-const API_URL = "https://matriz.ddev.site";
-//const API_URL = "https://backendmatriz.pasaloaproduccion.com";
+const API_URL = "https://backendmatriz.pasaloaproduccion.com";
 //const API_URL = "http://127.0.0.1:8000";
->>>>>>> bfeaa54696476c10c6f0203198c6c5a2cbd3903d
 
 // Crear instancia de axios con configuración base
 const api = axios.create({

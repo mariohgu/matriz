@@ -22,7 +22,7 @@ return new class extends Migration
         Schema::connection($this->connection)->create('areas_ejecutoras', function (Blueprint $table) {
             $table->id('id_ae');
             $table->integer('codigo')->unsigned()->unique();
-            $table->string('descripcion', 30);
+            $table->string('descripcion', 200);
             $table->timestamp('created_at')->default(DB::raw('CURRENT_TIMESTAMP'));
             $table->timestamp('updated_at')->default(DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'));
             $table->softDeletes();
