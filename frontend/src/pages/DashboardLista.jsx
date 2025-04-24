@@ -1,14 +1,18 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { apiService } from '../services/authService';
-import { FiChevronDown, FiChevronUp, FiSearch, FiRefreshCw, FiFilter, FiEye, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiChevronDown, FiChevronUp, FiSearch, FiRefreshCw, FiFilter, FiEye, FiChevronLeft, FiChevronRight, FiPrinter } from 'react-icons/fi';
+import { PiFilePdfLight } from "react-icons/pi";
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { Modal } from '../components/ui';
 import InteraccionDetails from '../components/ui/InteraccionDetails';
+import ExcelExport from '../components/ui/ExcelExport';
+import { generateInteraccionesPDF } from '../utils/printUtils';
 
 const DashboardLista = () => {
   // Estados para datos
   const [departamentos, setDepartamentos] = useState([]);
   const [selectedDepartamento, setSelectedDepartamento] = useState('');
+  const [selectedProvincia, setSelectedProvincia] = useState('');
   const [municipalidades, setMunicipalidades] = useState([]);
   const [eventos, setEventos] = useState([]);
   const [estadosSeguimiento, setEstadosSeguimiento] = useState([]);
@@ -102,6 +106,11 @@ const DashboardLista = () => {
       ? municipalidades.filter(m => m.departamento === selectedDepartamento)
       : municipalidades;
     
+    // Filtrar por provincia si está seleccionada
+    if (selectedProvincia) {
+      filteredMunis = filteredMunis.filter(m => m.provincia === selectedProvincia);
+    }
+    
     // Aplicar filtro de búsqueda general
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
@@ -147,7 +156,7 @@ const DashboardLista = () => {
           tipoDetalle: 'Convenio',
           isConvenio: true
         })),
-      ].sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0));
+      ].sort((a, b) => new Date(a.fecha || 0) - new Date(b.fecha || 0));
       
       return {
         id: muni.id_municipalidad,
@@ -161,7 +170,7 @@ const DashboardLista = () => {
         ultimaInteraccion: interacciones.length > 0 ? interacciones[0] : null
       };
     }).filter(Boolean).sort((a, b) => b.total - a.total);
-  }, [municipalidades, eventos, estadosSeguimientoConMuni, convenios, selectedDepartamento, searchQuery, loading]);
+  }, [municipalidades, eventos, estadosSeguimientoConMuni, convenios, selectedDepartamento, selectedProvincia, searchQuery, loading]);
 
   // Calcular entidades paginadas
   const paginatedEntidades = useMemo(() => {
@@ -280,6 +289,61 @@ const DashboardLista = () => {
     );
   };
 
+  // Encontrar el número máximo de interacciones
+  const maxInteracciones = useMemo(() => {
+    return Math.max(...entidadesConInteracciones.map(entidad => entidad.interacciones.length));
+  }, [entidadesConInteracciones]);
+
+  // Definir columnas para exportación a Excel
+  const excelColumns = useMemo(() => {
+    // Columnas base
+    const baseColumns = [
+      { header: 'Entidad', field: 'nombre' },
+      { header: 'Departamento', field: 'departamento' },
+      { header: 'Provincia', field: 'provincia' },
+      { header: 'Total Interacciones', field: 'total' }
+    ];
+
+    // Generar columnas dinámicamente para cada interacción
+    const interactionColumns = Array.from({ length: maxInteracciones }, (_, index) => [
+      { 
+        header: `${index + 1} Interaccion Fecha`, 
+        body: (row) => row.interacciones[index] ? formatDate(row.interacciones[index].fecha) : '' 
+      },
+      { 
+        header: `${index + 1} Interaccion Tipo`, 
+        body: (row) => row.interacciones[index] ? row.interacciones[index].tipoDetalle : '' 
+      }
+    ]).flat();
+
+    return [...baseColumns, ...interactionColumns];
+  }, [maxInteracciones, entidadesConInteracciones]);
+
+  // Obtener provincias del departamento seleccionado
+  const provinciasDelDepartamento = useMemo(() => {
+    if (!selectedDepartamento) return [];
+    return Array.from(new Set(
+      municipalidades
+        .filter(m => m.departamento === selectedDepartamento && m.provincia)
+        .map(m => m.provincia)
+    )).sort();
+  }, [selectedDepartamento, municipalidades]);
+
+  // Función para manejar la impresión del PDF
+  const handlePrintInteracciones = async () => {
+    generateInteraccionesPDF({
+      municipalidades,
+      eventos,
+      estadosSeguimiento,
+      contactos: [], // Asumiendo que no necesitamos contactos para este reporte
+      estados,
+      selectedDepartamento,
+      onComplete: () => {
+        console.log('PDF generado correctamente');
+      }
+    });
+  };
+
   return (
     <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
       {/* Cabecera y controles */}
@@ -287,34 +351,69 @@ const DashboardLista = () => {
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <h1 className="text-xl md:text-2xl font-bold">Dashboard Lista de Entidades</h1>
           
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             <span className="text-sm bg-blue-100 text-blue-800 py-1 px-3 rounded-full">
               {entidadesConInteracciones.length} entidades
             </span>
-            
-            <button 
-              onClick={loadData} 
+
+            <button
+              onClick={loadData}
               className="flex items-center gap-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 py-1 px-3 rounded transition-colors"
               title="Actualizar datos"
             >
               <FiRefreshCw className="h-4 w-4" />
               <span className="hidden md:inline">Actualizar</span>
             </button>
+
+            <button
+              onClick={handlePrintInteracciones}
+              className="flex items-center gap-1 text-sm bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded transition-colors"
+            >
+              <PiFilePdfLight className="h-4 w-4" />
+              <span className="hidden md:inline">Imprimir PDF</span>
+            </button>
+
+            <ExcelExport 
+              data={entidadesConInteracciones}
+              columns={excelColumns}
+              filename="entidades_e_interacciones.xlsx"
+              buttonText="Exportar Excel"
+              buttonClass="flex items-center gap-1 text-sm bg-green-600 hover:bg-green-700 text-white py-1 px-3 rounded transition-colors"
+            />
           </div>
         </div>
-        
+         
         <div className="flex flex-col md:flex-row gap-3 md:items-center mb-4">
           {/* Filtro por departamento */}
           <div className="flex items-center gap-2">
             <FiFilter className="text-gray-500" />
             <select
               value={selectedDepartamento}
-              onChange={e => setSelectedDepartamento(e.target.value)}
+              onChange={e => {
+                setSelectedDepartamento(e.target.value);
+                setSelectedProvincia(''); // Resetear provincia al cambiar departamento
+              }}
               className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
             >
               <option value="">Todos los departamentos</option>
               {departamentos.map(dep => (
                 <option key={dep} value={dep}>{dep}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtro por provincia */}
+          <div className="flex items-center gap-2">
+            <FiFilter className="text-gray-500" />
+            <select
+              value={selectedProvincia}
+              onChange={e => setSelectedProvincia(e.target.value)}
+              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+              disabled={!selectedDepartamento}
+            >
+              <option value="">Todas las provincias</option>
+              {provinciasDelDepartamento.map(prov => (
+                <option key={prov} value={prov}>{prov}</option>
               ))}
             </select>
           </div>
@@ -333,7 +432,7 @@ const DashboardLista = () => {
             </div>
           </div>
         </div>
-        
+         
         {lastUpdateDate && (
           <div className="text-xs text-gray-500 mt-2">
             Última actualización: {new Date(lastUpdateDate).toLocaleString()}
