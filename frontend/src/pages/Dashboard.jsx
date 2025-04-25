@@ -70,26 +70,6 @@ const DashboardDepartamentos = () => {
     });
   };
 
-  // Función para imprimir las interacciones manualmente
-  const imprimirInteraccionesSinLibreria = () => {
-    // Guardar el contenido original del body
-    const originalContents = document.body.innerHTML;
-    
-    // Obtener el contenido del componente a imprimir
-    const printContents = document.getElementById('print-section').innerHTML;
-    
-    // Reemplazar todo el contenido del body con el contenido a imprimir
-    document.body.innerHTML = printContents;
-    
-    // Llamar al diálogo de impresión del navegador
-    window.print();
-    
-    // Restaurar el contenido original
-    document.body.innerHTML = originalContents;
-    
-    // Recargar los scripts que pudieron ser eliminados (como eventos)
-    window.location.reload();
-  };
 
   // Modal o diálogo para visualizar detalles
   const [viewDialogVisible, setViewDialogVisible] = useState(false);
@@ -899,18 +879,7 @@ const DashboardDepartamentos = () => {
   return (
     <>
       {/* Componente para Imprimir */}
-      <div id="print-section" style={{ position: 'absolute', left: '-9999px' }}>
-        <PrintableInteraccionesReport 
-          ref={printComponentRef}
-          interacciones={filteredInteracciones}
-          municipalidades={municipalidades}
-          eventos={eventos}
-          contactos={contactos}
-          estados={estados}
-          selectedDepartamento={selectedDepartamento}
-        />
-      </div>
-
+  
       {/* Contenido del Dashboard (lo que se va a imprimir) */}
       <div id="print-area" className="p-6 max-w-full">
         {/* Encabezado y filtros */}
@@ -1339,13 +1308,7 @@ const DashboardDepartamentos = () => {
                 <FiPrinter className="mr-2" />
                 ReactToPrint
               </button>
-              <button
-                onClick={imprimirInteraccionesSinLibreria}
-                className="flex items-center bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition duration-150 ease-in-out"
-              >
-                <FiPrinter className="mr-2" />
-                Imprimir Tradicional
-              </button>
+              
             </div>
           </div>
           <div className="overflow-x-auto">
