@@ -28,6 +28,8 @@ const DashboardLista = () => {
   const [viewEventoDialogVisible, setViewEventoDialogVisible] = useState(false);
   const [selectedInteraccionId, setSelectedInteraccionId] = useState(null);
   const [selectedEventoId, setSelectedEventoId] = useState(null);
+  const [fechaInicio, setFechaInicio] = useState('');
+  const [fechaFin, setFechaFin] = useState('');
 
   // Paginación
   const [currentPage, setCurrentPage] = useState(1);
@@ -128,28 +130,53 @@ const DashboardLista = () => {
       const estadosMuni = estadosSeguimientoConMuni.filter(es => es.id_municipalidad === muni.id_municipalidad);
       const conveniosMuni = convenios.filter(c => c.id_municipalidad === muni.id_municipalidad);
       
-      const total = eventosMuni.length + estadosMuni.length + conveniosMuni.length;
+      // Filtrar interacciones por rango de fechas
+      const eventosFiltrados = eventosMuni.filter(e => {
+        if (!fechaInicio && !fechaFin) return true;
+        const fechaEvento = new Date(e.fecha);
+        const inicio = fechaInicio ? new Date(fechaInicio) : new Date(0);
+        const fin = fechaFin ? new Date(fechaFin) : new Date();
+        return fechaEvento >= inicio && fechaEvento <= fin;
+      });
+
+      const estadosFiltrados = estadosMuni.filter(e => {
+        if (!fechaInicio && !fechaFin) return true;
+        const fechaEstado = new Date(e.fecha);
+        const inicio = fechaInicio ? new Date(fechaInicio) : new Date(0);
+        const fin = fechaFin ? new Date(fechaFin) : new Date();
+        return fechaEstado >= inicio && fechaEstado <= fin;
+      });
+
+      const conveniosFiltrados = conveniosMuni.filter(c => {
+        if (!fechaInicio && !fechaFin) return true;
+        const fechaConvenio = new Date(c.fecha_firma);
+        const inicio = fechaInicio ? new Date(fechaInicio) : new Date(0);
+        const fin = fechaFin ? new Date(fechaFin) : new Date();
+        return fechaConvenio >= inicio && fechaConvenio <= fin;
+      });
+      
+      const total = eventosFiltrados.length + estadosFiltrados.length + conveniosFiltrados.length;
       
       // Solo incluir si tiene al menos una interacción
       if (total === 0) return null;
       
       // Unificar todas las interacciones y agregar tipo
       const interacciones = [
-        ...eventosMuni.map(ev => ({
+        ...eventosFiltrados.map(ev => ({
           ...ev,
           tipo: 'Evento',
           fecha: ev.fecha,
           tipoDetalle: ev.tipo_acercamiento || 'Evento',
           isEvento: true
         })),
-        ...estadosMuni.map(es => ({
+        ...estadosFiltrados.map(es => ({
           ...es,
           tipo: 'Seguimiento',
           fecha: es.fecha,
           tipoDetalle: es.id_tipo_reunion_nombre || 'Sin tipo asignado',
           isEstado: true
         })),
-        ...conveniosMuni.map(cv => ({
+        ...conveniosFiltrados.map(cv => ({
           ...cv,
           tipo: 'Convenio',
           fecha: cv.fecha_firma,
@@ -170,7 +197,7 @@ const DashboardLista = () => {
         ultimaInteraccion: interacciones.length > 0 ? interacciones[0] : null
       };
     }).filter(Boolean).sort((a, b) => b.total - a.total);
-  }, [municipalidades, eventos, estadosSeguimientoConMuni, convenios, selectedDepartamento, selectedProvincia, searchQuery, loading]);
+  }, [municipalidades, eventos, estadosSeguimientoConMuni, convenios, selectedDepartamento, selectedProvincia, searchQuery, loading, fechaInicio, fechaFin]);
 
   // Calcular entidades paginadas
   const paginatedEntidades = useMemo(() => {
@@ -344,6 +371,28 @@ const DashboardLista = () => {
     });
   };
 
+  // Calcular estadísticas filtradas
+  const estadisticas = useMemo(() => {
+    let totalEventos = 0;
+    let totalEstados = 0;
+    let totalConvenios = 0;
+
+    entidadesConInteracciones.forEach(entidad => {
+      entidad.interacciones.forEach(interaccion => {
+        if (interaccion.isEvento) totalEventos++;
+        if (interaccion.isEstado) totalEstados++;
+        if (interaccion.isConvenio) totalConvenios++;
+      });
+    });
+
+    return {
+      totalEntidades: entidadesConInteracciones.length,
+      totalEventos,
+      totalEstados,
+      totalConvenios
+    };
+  }, [entidadesConInteracciones]);
+
   return (
     <div className="p-4 md:p-6 bg-gray-50 min-h-screen">
       {/* Cabecera y controles */}
@@ -382,6 +431,57 @@ const DashboardLista = () => {
             />
           </div>
         </div>
+
+        {/* Cards de estadísticas */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Total Entidades</p>
+                <p className="text-2xl font-bold text-gray-900">{estadisticas.totalEntidades}</p>
+              </div>
+              <div className="bg-blue-100 p-3 rounded-full">
+                <FiEye className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Total Primer Acercamiento</p>
+                <p className="text-2xl font-bold text-gray-900">{estadisticas.totalEventos}</p>
+              </div>
+              <div className="bg-green-100 p-3 rounded-full">
+                <FiEye className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Total Seguimientos</p>
+                <p className="text-2xl font-bold text-gray-900">{estadisticas.totalEstados}</p>
+              </div>
+              <div className="bg-purple-100 p-3 rounded-full">
+                <FiEye className="h-6 w-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">Total Convenios</p>
+                <p className="text-2xl font-bold text-gray-900">{estadisticas.totalConvenios}</p>
+              </div>
+              <div className="bg-yellow-100 p-3 rounded-full">
+                <FiEye className="h-6 w-6 text-yellow-600" />
+              </div>
+            </div>
+          </div>
+        </div>
          
         <div className="flex flex-col md:flex-row gap-3 md:items-center mb-4">
           {/* Filtro por departamento */}
@@ -416,6 +516,26 @@ const DashboardLista = () => {
                 <option key={prov} value={prov}>{prov}</option>
               ))}
             </select>
+          </div>
+
+          {/* Filtro por fechas */}
+          <div className="flex items-center gap-2">
+            <FiFilter className="text-gray-500" />
+            <input
+              type="date"
+              value={fechaInicio}
+              onChange={e => setFechaInicio(e.target.value)}
+              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+              placeholder="Fecha inicio"
+            />
+            <span className="text-gray-500">a</span>
+            <input
+              type="date"
+              value={fechaFin}
+              onChange={e => setFechaFin(e.target.value)}
+              className="border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+              placeholder="Fecha fin"
+            />
           </div>
           
           {/* Búsqueda general */}
