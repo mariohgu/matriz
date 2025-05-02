@@ -19,6 +19,7 @@ use App\Http\Controllers\Budget\CategoriaController;
 use App\Http\Controllers\Budget\ClasificadorController;
 use App\Http\Controllers\Budget\PresupuestoResumenController;
 use App\Http\Controllers\Budget\EjecucionMensualController;
+use App\Http\Controllers\Api\DireccionLineaController;
 
 // Rutas de autenticación (públicas)
 Route::post('/register', [AuthController::class, 'register']);
@@ -117,4 +118,7 @@ Route::middleware('auth:sanctum')->group(function () {
             return response()->json(['message' => 'Panel de administrador']);
         });
     });
+
+    // Rutas para el CRUD de Direcciones de Línea
+    Route::apiResource('direccion-linea', DireccionLineaController::class);
 });
