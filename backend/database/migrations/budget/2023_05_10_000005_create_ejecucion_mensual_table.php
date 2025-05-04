@@ -42,6 +42,8 @@ return new class extends Migration
                   ->references('id_clasificador')
                   ->on('clasificadores')
                   ->onDelete('cascade');
+                  
+            $table->unique(['id_ae', 'id_clasificador', 'anio', 'mes'], 'ejecucion_unico');
         });
     }
 

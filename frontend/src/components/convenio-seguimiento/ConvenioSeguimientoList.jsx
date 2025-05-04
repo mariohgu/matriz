@@ -208,26 +208,35 @@ export default function ConvenioSeguimientoList() {
       }
     }
     
-    // Ajustar las fechas para corregir el problema de zona horaria
-    let fechaObj = null;
-    if (rowData.fecha) {
-      const fechaStr = typeof rowData.fecha === 'string'
-        ? rowData.fecha
-        : rowData.fecha.toISOString().split('T')[0];
-      const [year, month, day] = fechaStr.split('-').map(n => parseInt(n, 10));
-      fechaObj = new Date(Date.UTC(year, month - 1, day));
-    } else {
-      fechaObj = new Date();
-    }
-    
-    let fechaSeguimientoObj = null;
-  if (rowData.fecha_seguimiento) {
-    const fs = typeof rowData.fecha_seguimiento === 'string'
-      ? rowData.fecha_seguimiento
-      : rowData.fecha_seguimiento.toISOString().split('T')[0];
-    const [y, m, d] = fs.split('-').map(n => parseInt(n, 10));
-    fechaSeguimientoObj = new Date(Date.UTC(y, m - 1, d));
-  }
+        // === fecha ===
+        let fechaObj = null;
+        if (rowData.fecha) {
+          // 1) Extraemos solo la parte YYYY-MM-DD
+          const fechaStr = typeof rowData.fecha === 'string'
+            ? rowData.fecha.split('T')[0]
+            : rowData.fecha.toISOString().split('T')[0];
+
+          // 2) Parseamos año, mes y día
+          const [year, month, day] = fechaStr.split('-').map(n => parseInt(n, 10));
+
+          // 3) Construimos la fecha en hora local (00:00)
+          fechaObj = new Date(year, month - 1, day);
+        } else {
+          fechaObj = new Date();
+        }
+
+        // === fecha_seguimiento ===
+        let fechaSeguimientoObj = null;
+        if (rowData.fecha_seguimiento) {
+          // Igual: extraemos YYYY-MM-DD de la cadena o del Date
+          const fsStr = typeof rowData.fecha_seguimiento === 'string'
+            ? rowData.fecha_seguimiento.split('T')[0]
+            : rowData.fecha_seguimiento.toISOString().split('T')[0];
+
+          const [y, m, d] = fsStr.split('-').map(n => parseInt(n, 10));
+          fechaSeguimientoObj = new Date(y, m - 1, d);
+        }
+        
     setFormData({
       id_convenio_seguimiento: seguimientoId,
       id: seguimientoId,
@@ -329,22 +338,21 @@ export default function ConvenioSeguimientoList() {
   // =====================
   const formatDate = (value) => {
     if (!value) return '';
-    // Si viene como string "YYYY-MM-DD", lo convierte a Date UTC
-    const d = typeof value === 'string'
-      ? new Date(value)
-      : value;
-    if (isNaN(d)) return '';
-    
-    // Reconstruye la fecha usando componentes UTC para evitar corrimientos
-    const utcDate = new Date(Date.UTC(
-      d.getFullYear(),
-      d.getMonth(),
-      d.getDate()
-    ));
-    const dd = String(utcDate.getUTCDate()).padStart(2, '0');
-    const mm = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
-    const yyyy = utcDate.getUTCFullYear();
-    return `${dd}/${mm}/${yyyy}`;
+  
+    // Obtener la parte YYYY-MM-DD (si llega con T...)
+    let dateStr = '';
+    if (typeof value === 'string') {
+      dateStr = value.split('T')[0];
+    } else if (value instanceof Date) {
+      // si es Date, convertir a ISO y extraer YYYY-MM-DD
+      dateStr = value.toISOString().split('T')[0];
+    } else {
+      return '';
+    }
+  
+    const [year, month, day] = dateStr.split('-');
+    // Devolver DD/MM/YYYY
+    return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
   };
 
   // =====================
