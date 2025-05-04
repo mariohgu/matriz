@@ -171,6 +171,24 @@ const apiService = {
       console.error(`Error al eliminar ${entity} con ID ${id}:`, error);
       throw error;
     }
+  },
+  
+  // Método para cargar archivos
+  uploadFile: async (endpoint, formData) => {
+    try {
+      const response = await api.post(`/${endpoint}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error al cargar archivo en ${endpoint}:`, error);
+      if (error.response && error.response.data) {
+        console.error('Detalles del error:', error.response.data);
+      }
+      throw error;
+    }
   }
 };
 

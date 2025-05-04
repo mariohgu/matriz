@@ -9,7 +9,8 @@ import {
   FaHandsHelping,
   FaCog,
   FaUsersCog,
-  FaUserCircle
+  FaUserCircle,
+  FaMoneyBillWave
 } from "react-icons/fa";
 import { MdExpandMore } from "react-icons/md";
 
@@ -72,6 +73,13 @@ export default function Sidebar({ isOpen, onToggle }) {
             { href: "/convenio-seguimiento", title: "Convenio de Seguimiento" },
             { href: "/sectores", title: "Sectores" },
             { href: "/direcciones-linea", title: "Direcciones de Línea" },
+          ],
+        },
+        {
+          title: "Presupuesto",
+          icon: <FaMoneyBillWave />,
+          subItems: [
+            { href: "/presupuesto/importar", title: "Importar Presupuesto" },
           ],
         },
       ],

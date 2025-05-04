@@ -99,6 +99,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('clasificadores/{id}/presupuestos', [PresupuestoResumenController::class, 'porClasificador']);
         Route::get('presupuestos/anio/{anio}', [PresupuestoResumenController::class, 'porAnio']);
         Route::get('presupuestos/resumen/{anio}', [PresupuestoResumenController::class, 'resumenPorAnio']);
+        Route::post('importar', [PresupuestoResumenController::class, 'importarCompleto']);
         
         // Rutas adicionales para ejecuciones mensuales
         Route::get('areas-ejecutoras/{id}/ejecuciones', [EjecucionMensualController::class, 'porAreaEjecutora']);

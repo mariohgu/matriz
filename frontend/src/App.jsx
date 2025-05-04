@@ -23,6 +23,7 @@ import UserList from './components/usuarios/UserList';
 import ProfileView from './components/usuarios/ProfileView';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import DashboardLista from './pages/DashboardLista';
+import ImportarPresupuestoPage from './pages/presupuesto/ImportarPresupuestoPage';
 
 // Componentes comunes
 import Sidebar from './components/common/Sidebar';
@@ -251,6 +252,16 @@ function AppRoutes() {
           element={
             <MainLayout>
               <SectorList />
+            </MainLayout>
+          }
+        />
+
+        {/* Presupuesto */}
+        <Route
+          path="/presupuesto/importar"
+          element={
+            <MainLayout>
+              <ImportarPresupuestoPage />
             </MainLayout>
           }
         />

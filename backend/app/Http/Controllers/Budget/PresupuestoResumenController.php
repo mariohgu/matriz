@@ -10,8 +10,36 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 
+use App\Imports\PresupuestoYMensualImport;
+use Maatwebsite\Excel\Facades\Excel;
+
 class PresupuestoResumenController extends Controller
 {
+
+    /**
+     * The database connection that should be used by the controller.
+     *
+     * @var string
+     */
+    protected $connection = 'mysql_budget';
+
+    /**
+     * Importar el archivo completo de presupuesto y mensual.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function importarCompleto(Request $request)
+    {
+    $request->validate([
+        'archivo' => 'required|file|mimes:xlsx,xls'
+    ]);
+
+    Excel::import(new PresupuestoYMensualImport, $request->file('archivo'));
+
+    return response()->json(['mensaje' => 'Archivo importado correctamente']);
+    }
+
     /**
      * The database connection that should be used by the controller.
      *

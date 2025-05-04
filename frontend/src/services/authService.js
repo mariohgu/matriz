@@ -10,6 +10,10 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Importante para CORS con credenciales
+  // Configuración adicional para CORS
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN',
 });
 
 // Interceptor para agregar token a todas las solicitudes
@@ -241,6 +245,38 @@ const apiService = {
       return response.data;
     } catch (error) {
       console.error(`Error querying ${resource}:`, error);
+      throw error;
+    }
+  },
+
+  // Método para carga de archivos
+  uploadFile: async (endpoint, formData, customOptions = {}) => {
+    try {
+      // Opciones predeterminadas
+      const defaultOptions = {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        withCredentials: true, // Asegurar que se envían cookies/credenciales
+      };
+      
+      // Combinar opciones predeterminadas con personalizadas
+      const options = {
+        ...defaultOptions,
+        ...customOptions,
+        headers: {
+          ...defaultOptions.headers,
+          ...customOptions.headers,
+        },
+      };
+      
+      const response = await api.post(`/${endpoint}`, formData, options);
+      return response.data;
+    } catch (error) {
+      console.error(`Error al cargar archivo en ${endpoint}:`, error);
+      if (error.response && error.response.data) {
+        console.error('Detalles del error:', error.response.data);
+      }
       throw error;
     }
   }
