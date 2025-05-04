@@ -4,178 +4,82 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Convenio;
-use App\Models\Municipalidad;
+use App\Models\EstadoConvenio;
+use App\Models\Sector;
+use App\Models\DireccionLinea;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class ConvenioController extends Controller
 {
     public function index()
     {
-        try {
-            $convenios = Convenio::with(['municipalidad', 'creadoPor:id,name', 'actualizadoPor:id,name'])
-                ->orderBy('fecha_firma', 'desc')
-                ->get();
-            return response()->json($convenios);
-        } catch (\Exception $e) {
-            Log::error('Error al obtener convenios: ' . $e->getMessage());
-            return response()->json(['message' => 'Error al obtener los convenios', 'error' => $e->getMessage()], 500);
-        }
+        $convenios = Convenio::with(['municipalidad', 'estadoConvenio', 'sector', 'direccionLinea'])->get();
+        return response()->json($convenios);
     }
 
     public function store(Request $request)
     {
-        try {
-            $validated = $request->validate([
-                'id_municipalidad' => 'required|exists:municipalidades,id_municipalidad',
-                'tipo_convenio' => 'required|string|max:100',
-                'monto' => 'required|numeric|min:0',
-                'fecha_firma' => 'required|date',
-                'estado' => 'sometimes|string|max:50',
-                'descripcion' => 'nullable|string'
-            ]);
+        $request->validate([
+            'id_municipalidad' => 'required|exists:municipalidades,id_municipalidad',
+            'tipo_convenio' => 'required|string|max:100',
+            'monto' => 'required|numeric|min:0',
+            'fecha_firma' => 'required|date',
+            'id_estado_convenio' => 'required|exists:estados_convenios,id_estado_convenio',
+            'descripcion' => 'nullable|string',
+            'codigo_convenio' => 'nullable|string|max:20',
+            'codigo_idea_cui' => 'nullable|integer|digits:7',
+            'descripcion_idea_cui' => 'nullable|string|max:250',
+            'beneficiarios' => 'nullable|integer|min:0',
+            'codigo_interno' => 'required|string|max:20',
+            'id_sector' => 'required|exists:sector,id_sector',
+            'id_direccion_linea' => 'required|exists:direccion_linea,id_direccion_linea'
+        ]);
 
-            // Agregar usuario actual como creador y actualizador
-            $validated['creado_por'] = Auth::id();
-            $validated['actualizado_por'] = Auth::id();
+        $data = $request->all();
+        $data['creado_por'] = Auth::id();
+        $data['actualizado_por'] = Auth::id();
 
-            $convenio = Convenio::create($validated);
-            
-            return response()->json(
-                $convenio->load(['municipalidad', 'creadoPor:id,name', 'actualizadoPor:id,name']), 
-                201
-            );
-        } catch (\Exception $e) {
-            Log::error('Error al crear convenio: ' . $e->getMessage());
-            return response()->json(['message' => 'Error al crear el convenio', 'error' => $e->getMessage()], 500);
-        }
+        $convenio = Convenio::create($data);
+        return response()->json($convenio->load(['municipalidad', 'estadoConvenio', 'sector', 'direccionLinea']), 201);
     }
 
     public function show($id)
     {
-        try {
-            $convenio = Convenio::with(['municipalidad', 'creadoPor:id,name', 'actualizadoPor:id,name'])
-                ->find($id);
-
-            if (!$convenio) {
-                return response()->json(['message' => 'Convenio no encontrado'], 404);
-            }
-
-            return response()->json($convenio);
-        } catch (\Exception $e) {
-            Log::error('Error al obtener convenio: ' . $e->getMessage());
-            return response()->json(['message' => 'Error al obtener el convenio', 'error' => $e->getMessage()], 500);
-        }
+        $convenio = Convenio::with(['municipalidad', 'estadoConvenio', 'sector', 'direccionLinea'])->findOrFail($id);
+        return response()->json($convenio);
     }
 
     public function update(Request $request, $id)
     {
-        try {
-            $convenio = Convenio::find($id);
+        $request->validate([
+            'id_municipalidad' => 'exists:municipalidades,id_municipalidad',
+            'tipo_convenio' => 'string|max:100',
+            'monto' => 'numeric|min:0',
+            'fecha_firma' => 'date',
+            'id_estado_convenio' => 'exists:estados_convenios,id_estado_convenio',
+            'descripcion' => 'nullable|string',
+            'codigo_convenio' => 'nullable|string|max:20',
+            'codigo_idea_cui' => 'nullable|integer|digits:7',
+            'descripcion_idea_cui' => 'nullable|string|max:250',
+            'beneficiarios' => 'nullable|integer|min:0',
+            'codigo_interno' => 'string|max:20',
+            'id_sector' => 'exists:sector,id_sector',
+            'id_direccion_linea' => 'exists:direccion_linea,id_direccion_linea'
+        ]);
 
-            if (!$convenio) {
-                return response()->json(['message' => 'Convenio no encontrado'], 404);
-            }
+        $convenio = Convenio::findOrFail($id);
+        $data = $request->all();
+        $data['actualizado_por'] = Auth::id();
 
-            $validated = $request->validate([
-                'id_municipalidad' => 'required|exists:municipalidades,id_municipalidad',
-                'tipo_convenio' => 'required|string|max:100',
-                'monto' => 'required|numeric|min:0',
-                'fecha_firma' => 'required|date',
-                'estado' => 'sometimes|string|max:50',
-                'descripcion' => 'nullable|string'
-            ]);
-
-            // Actualizar el usuario que modifica
-            $validated['actualizado_por'] = Auth::id();
-
-            $convenio->update($validated);
-            
-            return response()->json(
-                $convenio->load(['municipalidad', 'creadoPor:id,name', 'actualizadoPor:id,name'])
-            );
-        } catch (\Exception $e) {
-            Log::error('Error al actualizar convenio: ' . $e->getMessage());
-            return response()->json(['message' => 'Error al actualizar el convenio', 'error' => $e->getMessage()], 500);
-        }
+        $convenio->update($data);
+        return response()->json($convenio->load(['municipalidad', 'estadoConvenio', 'sector', 'direccionLinea']));
     }
 
     public function destroy($id)
     {
-        try {
-            $convenio = Convenio::find($id);
-
-            if (!$convenio) {
-                return response()->json(['message' => 'Convenio no encontrado'], 404);
-            }
-
-            $convenio->delete();
-            return response()->json(null, 204);
-        } catch (\Exception $e) {
-            Log::error('Error al eliminar convenio: ' . $e->getMessage());
-            return response()->json(['message' => 'Error al eliminar el convenio', 'error' => $e->getMessage()], 500);
-        }
+        $convenio = Convenio::findOrFail($id);
+        $convenio->delete();
+        return response()->json(null, 204);
     }
-
-    public function porMunicipalidad($id_municipalidad)
-    {
-        try {
-            $municipalidad = Municipalidad::find($id_municipalidad);
-
-            if (!$municipalidad) {
-                return response()->json(['message' => 'Municipalidad no encontrada'], 404);
-            }
-
-            $convenios = Convenio::with(['municipalidad', 'creadoPor:id,name', 'actualizadoPor:id,name'])
-                ->where('id_municipalidad', $id_municipalidad)
-                ->orderBy('fecha_firma', 'desc')
-                ->get();
-
-            return response()->json($convenios);
-        } catch (\Exception $e) {
-            Log::error('Error al obtener convenios por municipalidad: ' . $e->getMessage());
-            return response()->json(['message' => 'Error al obtener los convenios', 'error' => $e->getMessage()], 500);
-        }
-    }
-
-    public function porFecha(Request $request)
-    {
-        try {
-            $validated = $request->validate([
-                'fecha_inicio' => 'required|date',
-                'fecha_fin' => 'required|date|after_or_equal:fecha_inicio'
-            ]);
-
-            $convenios = Convenio::with(['municipalidad', 'creadoPor:id,name', 'actualizadoPor:id,name'])
-                ->whereBetween('fecha_firma', [$validated['fecha_inicio'], $validated['fecha_fin']])
-                ->orderBy('fecha_firma', 'desc')
-                ->get();
-
-            return response()->json($convenios);
-        } catch (\Exception $e) {
-            Log::error('Error al obtener convenios por fecha: ' . $e->getMessage());
-            return response()->json(['message' => 'Error al obtener los convenios', 'error' => $e->getMessage()], 500);
-        }
-    }
-
-    public function porMonto(Request $request)
-    {
-        try {
-            $validated = $request->validate([
-                'monto_minimo' => 'required|numeric|min:0',
-                'monto_maximo' => 'required|numeric|gte:monto_minimo'
-            ]);
-
-            $convenios = Convenio::with(['municipalidad', 'creadoPor:id,name', 'actualizadoPor:id,name'])
-                ->whereBetween('monto', [$validated['monto_minimo'], $validated['monto_maximo']])
-                ->orderBy('monto', 'desc')
-                ->get();
-
-            return response()->json($convenios);
-        } catch (\Exception $e) {
-            Log::error('Error al obtener convenios por monto: ' . $e->getMessage());
-            return response()->json(['message' => 'Error al obtener los convenios', 'error' => $e->getMessage()], 500);
-        }
-    }
-}
+} 

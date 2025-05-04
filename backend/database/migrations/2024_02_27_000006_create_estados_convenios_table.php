@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('estados_convenios', function (Blueprint $table) {
             $table->id('id_estado_convenio');
             $table->string('descripcion', 100);
+            $table->string('nombre', 100)->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

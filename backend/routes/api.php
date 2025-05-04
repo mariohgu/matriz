@@ -20,8 +20,9 @@ use App\Http\Controllers\Budget\ClasificadorController;
 use App\Http\Controllers\Budget\PresupuestoResumenController;
 use App\Http\Controllers\Budget\EjecucionMensualController;
 use App\Http\Controllers\Api\DireccionLineaController;
-use App\Http\Controllers\EstadoConvenioController;
-use App\Http\Controllers\SectorController;
+use App\Http\Controllers\Api\EstadoConvenioController;
+use App\Http\Controllers\Api\SectorController;
+use App\Http\Controllers\Api\ConvenioSeguimientoController;
 
 // Rutas de autenticación (públicas)
 Route::post('/register', [AuthController::class, 'register']);
@@ -129,4 +130,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Rutas para el CRUD de Sectores
     Route::apiResource('sectores', SectorController::class);
+
+    // Rutas para el CRUD de Seguimiento de Convenios
+    Route::apiResource('convenio-seguimiento', ConvenioSeguimientoController::class);
+    Route::get('convenios/{id}/seguimientos', [ConvenioSeguimientoController::class, 'porConvenio']);
 });

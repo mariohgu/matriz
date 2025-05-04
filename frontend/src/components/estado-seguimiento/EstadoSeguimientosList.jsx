@@ -215,12 +215,16 @@ export default function EstadoSeguimientoList() {
   // =====================
   const handleCreate = () => {
     setIsEditMode(false);
+    // Crear fecha actual usando UTC para evitar problemas de zona horaria
+    const today = new Date();
+    const fechaUtc = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+    
     setFormData({
       id_estado: '',
       id_evento: '',
       id_contacto: '',
       id_tipo_reunion: '',
-      fecha: new Date(),
+      fecha: fechaUtc,
       id_estado_ref: '',
       descripcion: '',
       compromiso: '',
@@ -234,18 +238,33 @@ export default function EstadoSeguimientoList() {
     setIsEditMode(true);
     setSelectedSeguimiento(rowData);
 
+    // Ajustar las fechas para corregir el problema de zona horaria
+    let fechaObj = null;
+    if (rowData.fecha) {
+      const fechaStr = typeof rowData.fecha === 'string' ? rowData.fecha : rowData.fecha.toISOString().split('T')[0];
+      const [year, month, day] = fechaStr.split('-').map(num => parseInt(num, 10));
+      fechaObj = new Date(Date.UTC(year, month - 1, day));
+    } else {
+      fechaObj = new Date();
+    }
+    
+    let fechaCompromisoObj = null;
+    if (rowData.fecha_compromiso) {
+      const fechaStr = typeof rowData.fecha_compromiso === 'string' ? rowData.fecha_compromiso : rowData.fecha_compromiso.toISOString().split('T')[0];
+      const [year, month, day] = fechaStr.split('-').map(num => parseInt(num, 10));
+      fechaCompromisoObj = new Date(Date.UTC(year, month - 1, day));
+    }
+
     setFormData({
       id_estado: rowData.id_estado,
       id_evento: rowData.id_evento,
       id_contacto: rowData.id_contacto,
       id_tipo_reunion: rowData.id_tipo_reunion,
-      fecha: rowData.fecha ? new Date(rowData.fecha) : new Date(),
+      fecha: fechaObj,
       id_estado_ref: rowData.id_estado_ref || '',
       descripcion: rowData.descripcion || '',
       compromiso: rowData.compromiso || '',
-      fecha_compromiso: rowData.fecha_compromiso
-        ? new Date(rowData.fecha_compromiso)
-        : null,
+      fecha_compromiso: fechaCompromisoObj,
       compromiso_concluido: rowData.compromiso_concluido
     });
     setUpsertDialogVisible(true);
@@ -260,9 +279,9 @@ export default function EstadoSeguimientoList() {
 
     const payload = {
       ...formData,
-      fecha: formData.fecha ? formData.fecha.toISOString().split('T')[0] : null,
+      fecha: formData.fecha ? new Date(formData.fecha.getFullYear(), formData.fecha.getMonth(), formData.fecha.getDate()).toISOString().split('T')[0] : null,
       fecha_compromiso: formData.fecha_compromiso
-        ? formData.fecha_compromiso.toISOString().split('T')[0]
+        ? new Date(formData.fecha_compromiso.getFullYear(), formData.fecha_compromiso.getMonth(), formData.fecha_compromiso.getDate()).toISOString().split('T')[0]
         : null
     };
 
@@ -318,11 +337,15 @@ export default function EstadoSeguimientoList() {
   // =====================
   const formatDate = (value) => {
     if (!value) return '';
-    const d = new Date(value);
+    // Primero convertir a objeto Date si es string
+    const d = typeof value === 'string' ? new Date(value) : value;
     if (isNaN(d)) return '';
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yyyy = d.getFullYear();
+    
+    // Crear una nueva fecha usando UTC para evitar problemas de zona horaria
+    const utcDate = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dd = String(utcDate.getUTCDate()).padStart(2, '0');
+    const mm = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
+    const yyyy = utcDate.getUTCFullYear();
     return `${dd}/${mm}/${yyyy}`;
   };
 

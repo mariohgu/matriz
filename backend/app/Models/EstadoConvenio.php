@@ -15,7 +15,8 @@ class EstadoConvenio extends Model
     public $timestamps = true;
 
     protected $fillable = [
-        'descripcion'
+        'descripcion',
+        'nombre'
     ];
 
     protected $dates = ['deleted_at'];

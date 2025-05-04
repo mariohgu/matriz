@@ -15,6 +15,10 @@ import EstadoSeguimientosList from './components/estado-seguimiento/EstadoSeguim
 import OficiosList from './components/oficios/OficiosList';
 import ConveniosList from './components/convenios/ConveniosList';
 import EstadosList from './components/estados/EstadoList';
+import EstadoConvenioList from './components/estados-convenios/EstadoConvenioList';
+import ConvenioSeguimientoList from './components/convenio-seguimiento/ConvenioSeguimientoList';
+import SectorList from './components/sectores/SectorList';
+import DireccionLineaList from './components/direcciones-linea/DireccionLineaList';
 import UserList from './components/usuarios/UserList';
 import ProfileView from './components/usuarios/ProfileView';
 import UnauthorizedPage from './pages/UnauthorizedPage';
@@ -220,6 +224,42 @@ function AppRoutes() {
           element={
             <MainLayout>
               <ConveniosList />
+            </MainLayout>
+          }
+        />
+        
+        <Route
+          path="/estados-convenios"
+          element={
+            <MainLayout>
+              <EstadoConvenioList />
+            </MainLayout>
+          }
+        />
+
+        <Route
+          path="/convenio-seguimiento"
+          element={
+            <MainLayout>
+              <ConvenioSeguimientoList />
+            </MainLayout>
+          }
+        />
+
+        <Route
+          path="/sectores"
+          element={
+            <MainLayout>
+              <SectorList />
+            </MainLayout>
+          }
+        />
+
+        <Route
+          path="/direcciones-linea"
+          element={
+            <MainLayout>
+              <DireccionLineaList />
             </MainLayout>
           }
         />

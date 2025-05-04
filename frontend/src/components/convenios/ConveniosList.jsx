@@ -12,19 +12,13 @@ const tipoConvenioOptions = [
   { value: 'Otros', label: 'Otros' }
 ];
 
-// Opciones de estado
-const estadoOptions = [
-  { value: '', label: 'Seleccione un estado' },
-  { value: 'Pendiente', label: 'Pendiente' },
-  { value: 'En proceso', label: 'En proceso' },
-  { value: 'Firmado', label: 'Firmado' },
-  { value: 'Cancelado', label: 'Cancelado' },
-  { value: 'Finalizado', label: 'Finalizado' }
-];
 
 export default function ConveniosList() {
   const [convenios, setConvenios] = useState([]);
   const [municipalidades, setMunicipalidades] = useState([]);
+  const [sectores, setSectores] = useState([]);
+  const [direccionesLinea, setDireccionesLinea] = useState([]);
+  const [estadosConvenio, setEstadosConvenio] = useState([]);
 
   const [loading, setLoading] = useState(false);
 
@@ -37,7 +31,9 @@ export default function ConveniosList() {
     municipalidad: '',
     monto: '',
     fecha_firma: '',
-    estado: ''
+    estado: '',
+    sector: '',
+    direccion_linea: ''
   });
 
   // Paginación
@@ -62,8 +58,15 @@ export default function ConveniosList() {
     tipo_convenio: '',
     monto: '',
     fecha_firma: '',
-    estado: '',
-    descripcion: ''
+    id_estado_convenio: '',
+    descripcion: '',
+    codigo_convenio: '',
+    codigo_idea_cui: '',
+    descripcion_idea_cui: '',
+    beneficiarios: '',
+    codigo_interno: '',
+    id_sector: '',
+    id_direccion_linea: ''
   });
 
   // Modal de eliminar
@@ -72,14 +75,26 @@ export default function ConveniosList() {
   // Notificaciones
   const toast = useToast();
 
-  // ============== Estados y refs para replicar el SELECTBOX con búsqueda (Municipalidad) ===========
+  // ============== Estados y refs para los dropdowns con búsqueda ===========
   const [showMunicipalidadDropdown, setShowMunicipalidadDropdown] = useState(false);
   const [municipalidadSearchQuery, setMunicipalidadSearchQuery] = useState('');
   const municipalidadDropdownRef = useRef(null);
 
+  const [showSectorDropdown, setShowSectorDropdown] = useState(false);
+  const [sectorSearchQuery, setSectorSearchQuery] = useState('');
+  const sectorDropdownRef = useRef(null);
+
+  const [showDireccionLineaDropdown, setShowDireccionLineaDropdown] = useState(false);
+  const [direccionLineaSearchQuery, setDireccionLineaSearchQuery] = useState('');
+  const direccionLineaDropdownRef = useRef(null);
+
+  const [showEstadoConvenioDropdown, setShowEstadoConvenioDropdown] = useState(false);
+  const [estadoConvenioSearchQuery, setEstadoConvenioSearchQuery] = useState('');
+  const estadoConvenioDropdownRef = useRef(null);
+
   useEffect(() => {
     loadConvenios();
-    loadMunicipalidades();
+    loadRelatedData();
 
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
@@ -91,6 +106,24 @@ export default function ConveniosList() {
         !municipalidadDropdownRef.current.contains(e.target)
       ) {
         setShowMunicipalidadDropdown(false);
+      }
+      if (
+        sectorDropdownRef.current &&
+        !sectorDropdownRef.current.contains(e.target)
+      ) {
+        setShowSectorDropdown(false);
+      }
+      if (
+        direccionLineaDropdownRef.current &&
+        !direccionLineaDropdownRef.current.contains(e.target)
+      ) {
+        setShowDireccionLineaDropdown(false);
+      }
+      if (
+        estadoConvenioDropdownRef.current &&
+        !estadoConvenioDropdownRef.current.contains(e.target)
+      ) {
+        setShowEstadoConvenioDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -114,13 +147,44 @@ export default function ConveniosList() {
     }
   };
 
-  const loadMunicipalidades = async () => {
+  const loadRelatedData = async () => {
     try {
-      const data = await apiService.getAll('municipalidades');
-      setMunicipalidades(data || []);
+      console.log('Intentando cargar datos relacionados...');
+      
+      // Cargar municipalidades, sectores y direcciones
+      const [muniData, sectoresData, direccionesData] = await Promise.all([
+        apiService.getAll('municipalidades'),
+        apiService.getAll('sectores'),
+        apiService.getAll('direccion-linea')
+      ]);
+      
+      setMunicipalidades(muniData || []);
+      setSectores(sectoresData || []);
+      setDireccionesLinea(direccionesData || []);
+      
+      // Cargar estados de convenio
+      try {
+        console.log('Cargando estados de convenio desde estados-convenios...');
+        const estadosData = await apiService.getAll('estados-convenios');
+        console.log('Estados de convenio cargados:', estadosData);
+        
+        if (Array.isArray(estadosData) && estadosData.length > 0) {
+          setEstadosConvenio(estadosData);
+        } else {
+          console.warn('La respuesta de estados-convenios no contiene datos:', estadosData);
+          setEstadosConvenio([]);
+          toast.showWarning('Advertencia', 'No se encontraron estados de convenio');
+        }
+      } catch (estadosError) {
+        console.error('Error al cargar estados-convenios:', estadosError);
+        console.error('Detalle del error:', estadosError.response?.data || estadosError.message);
+        setEstadosConvenio([]);
+        toast.showError('Error', 'No se pudieron cargar los estados de convenio');
+      }
     } catch (error) {
-      console.error('Error al cargar municipalidades:', error);
-      toast.showError('Error', 'No se pudieron cargar las municipalidades');
+      console.error('Error al cargar datos relacionados:', error);
+      console.error('Detalle del error:', error.response?.data || error.message);
+      toast.showError('Error', 'No se pudieron cargar los datos relacionados');
     }
   };
 
@@ -133,8 +197,15 @@ export default function ConveniosList() {
       tipo_convenio: '',
       monto: '',
       fecha_firma: '',
-      estado: '',
-      descripcion: ''
+      id_estado_convenio: '',
+      descripcion: '',
+      codigo_convenio: '',
+      codigo_idea_cui: '',
+      descripcion_idea_cui: '',
+      beneficiarios: '',
+      codigo_interno: '',
+      id_sector: '',
+      id_direccion_linea: ''
     });
     setUpsertDialogVisible(true);
   };
@@ -153,14 +224,22 @@ export default function ConveniosList() {
       tipo_convenio: rowData.tipo_convenio || '',
       monto: rowData.monto?.toString() || '',
       fecha_firma: fechaString,
-      estado: rowData.estado || '',
-      descripcion: rowData.descripcion || ''
+      id_estado_convenio: rowData.id_estado_convenio || '',
+      descripcion: rowData.descripcion || '',
+      codigo_convenio: rowData.codigo_convenio || '',
+      codigo_idea_cui: rowData.codigo_idea_cui?.toString() || '',
+      descripcion_idea_cui: rowData.descripcion_idea_cui || '',
+      beneficiarios: rowData.beneficiarios?.toString() || '',
+      codigo_interno: rowData.codigo_interno || '',
+      id_sector: rowData.id_sector || '',
+      id_direccion_linea: rowData.id_direccion_linea || ''
     });
     setUpsertDialogVisible(true);
   };
 
   const handleSave = async () => {
-    if (!formData.id_municipalidad || !formData.tipo_convenio) {
+    if (!formData.id_municipalidad || !formData.tipo_convenio || !formData.id_sector || 
+        !formData.id_direccion_linea || !formData.codigo_interno) {
       toast.showWarning('Advertencia', 'Complete los campos obligatorios');
       return;
     }
@@ -230,8 +309,28 @@ export default function ConveniosList() {
   };
 
   const getMunicipalidadName = (id) => {
-    const muni = municipalidades.find((m) => m.id_municipalidad === id);
+    if (!id) return 'N/A';
+    const muni = municipalidades.find((m) => m.id_municipalidad === Number(id));
     return muni?.nombre || 'N/A';
+  };
+
+  const getSectorName = (id) => {
+    if (!id) return 'N/A';
+    const sector = sectores.find((s) => s.id_sector === Number(id));
+    return sector?.descripcion || 'N/A';
+  };
+
+  const getDireccionLineaName = (id) => {
+    if (!id) return 'N/A';
+    const direccion = direccionesLinea.find((d) => d.id_direccion_linea === Number(id));
+    return direccion?.descripcion || 'N/A';
+  };
+
+  const getEstadoConvenioName = (id) => {
+    if (!id) return 'N/A';
+    const estado = estadosConvenio.find((e) => e.id_estado_convenio === Number(id));
+    // Intentar obtener el nombre, si no existe usar descripción
+    return estado?.nombre || estado?.descripcion || 'N/A';
   };
 
   const getEstadoClass = (estado) => {
@@ -251,27 +350,46 @@ export default function ConveniosList() {
       // Búsqueda global
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        const muniName = getMunicipalidadName(c.id_municipalidad).toLowerCase();
+        const muniName = getMunicipalidadName(c.id_municipalidad).toLowerCase() || '';
+        const sectorName = getSectorName(c.id_sector).toLowerCase() || '';
+        const direccionName = getDireccionLineaName(c.id_direccion_linea).toLowerCase() || '';
+        const estadoConvenioName = getEstadoConvenioName(c.id_estado_convenio).toLowerCase() || '';
+        
         const fields = [
-          c.tipo_convenio,
+          c.tipo_convenio?.toLowerCase() || '',
           muniName,
+          sectorName,
+          direccionName,
+          estadoConvenioName,
           c.monto?.toString() || '',
-          c.estado,
-          c.descripcion || ''
-        ].map((x) => x?.toLowerCase() || '');
+          c.codigo_convenio?.toLowerCase() || '',
+          c.codigo_idea_cui?.toString() || '',
+          c.codigo_interno?.toLowerCase() || '',
+          c.descripcion_idea_cui?.toLowerCase() || '',
+          c.beneficiarios?.toString() || '',
+          c.descripcion?.toLowerCase() || ''
+        ];
+        
         if (!fields.some((f) => f.includes(q))) {
           return false;
         }
       }
 
       // Filtros por columna
-      if (columnFilters.tipo_convenio) {
-        if (!c.tipo_convenio.toLowerCase().includes(columnFilters.tipo_convenio.toLowerCase()))
-          return false;
+      if (columnFilters.tipo_convenio && !c.tipo_convenio?.toLowerCase().includes(columnFilters.tipo_convenio.toLowerCase())) {
+        return false;
       }
       if (columnFilters.municipalidad) {
         const muni = getMunicipalidadName(c.id_municipalidad).toLowerCase();
         if (!muni.includes(columnFilters.municipalidad.toLowerCase())) return false;
+      }
+      if (columnFilters.sector) {
+        const sector = getSectorName(c.id_sector).toLowerCase();
+        if (!sector || !sector.includes(columnFilters.sector.toLowerCase())) return false;
+      }
+      if (columnFilters.direccion_linea) {
+        const direccion = getDireccionLineaName(c.id_direccion_linea).toLowerCase();
+        if (!direccion || !direccion.includes(columnFilters.direccion_linea.toLowerCase())) return false;
       }
       if (columnFilters.monto) {
         if (!c.monto?.toString().includes(columnFilters.monto)) return false;
@@ -281,7 +399,8 @@ export default function ConveniosList() {
         if (!fdate.includes(columnFilters.fecha_firma)) return false;
       }
       if (columnFilters.estado) {
-        if (!c.estado.toLowerCase().includes(columnFilters.estado.toLowerCase())) return false;
+        const estado = getEstadoConvenioName(c.id_estado_convenio).toLowerCase();
+        if (!estado || !estado.includes(columnFilters.estado.toLowerCase())) return false;
       }
 
       return true;
@@ -300,6 +419,18 @@ export default function ConveniosList() {
       if (sortField === 'monto') {
         valA = valA ? parseFloat(valA) : 0;
         valB = valB ? parseFloat(valB) : 0;
+      }
+      if (sortField === 'sector.descripcion') {
+        valA = getSectorName(a.id_sector).toLowerCase();
+        valB = getSectorName(b.id_sector).toLowerCase();
+      }
+      if (sortField === 'direccion_linea.descripcion') {
+        valA = getDireccionLineaName(a.id_direccion_linea).toLowerCase();
+        valB = getDireccionLineaName(b.id_direccion_linea).toLowerCase();
+      }
+      if (sortField === 'estadoConvenio.nombre') {
+        valA = getEstadoConvenioName(a.id_estado_convenio).toLowerCase();
+        valB = getEstadoConvenioName(b.id_estado_convenio).toLowerCase();
       }
 
       if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
@@ -343,10 +474,16 @@ export default function ConveniosList() {
     {
       field: 'municipalidad',
       header: 'Municipalidad',
-      // Realmente es "id_municipalidad" en la data
       sortable: true,
       filterable: true,
       body: (rowData) => getMunicipalidadName(rowData.id_municipalidad) || 'N/A'
+    },
+    {
+      field: 'sector.descripcion',
+      header: 'Sector',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => getSectorName(rowData.id_sector) || 'N/A'
     },
     {
       field: 'monto',
@@ -363,15 +500,22 @@ export default function ConveniosList() {
       body: (rowData) => formatDate(rowData.fecha_firma)
     },
     {
-      field: 'estado',
+      field: 'estadoConvenio.nombre',
       header: 'Estado',
       sortable: true,
       filterable: true,
-      body: (rowData) => getEstadoClass(rowData.estado)
+      body: (rowData) => getEstadoConvenioName(rowData.id_estado_convenio)
+    },
+    {
+      field: 'codigo_interno',
+      header: 'Código Interno',
+      sortable: true,
+      filterable: true,
+      body: (rowData) => rowData.codigo_interno || 'N/A'
     }
   ];
 
-  const mobileColumns = ['tipo_convenio', 'municipalidad'];
+  const mobileColumns = ['tipo_convenio', 'municipalidad', 'codigo_interno'];
 
   // ================== RENDER ACCIONES ==================
   const renderActions = (rowData) => (
@@ -487,36 +631,55 @@ export default function ConveniosList() {
       >
         {selectedConvenio && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Tipo de Convenio</p>
-                <p className="text-base">{selectedConvenio.tipo_convenio || '-'}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">Municipalidad</p>
-                <p className="text-base">{getMunicipalidadName(selectedConvenio.id_municipalidad)}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">Monto</p>
-                <p className="text-base">{formatCurrency(selectedConvenio.monto)}</p>
-              </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Tipo de Convenio</p>
+              <p className="text-base">{selectedConvenio.tipo_convenio || '-'}</p>
             </div>
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Fecha de Firma</p>
-                <p className="text-base">{formatDate(selectedConvenio.fecha_firma)}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">Estado</p>
-                <p className="text-base">
-                  <span
-                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                ${getEstadoClass(selectedConvenio.estado)}`}
-                  >
-                    {selectedConvenio.estado}
-                  </span>
-                </p>
-              </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Municipalidad</p>
+              <p className="text-base">{getMunicipalidadName(selectedConvenio.id_municipalidad)}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Sector</p>
+              <p className="text-base">{getSectorName(selectedConvenio.id_sector)}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Dirección de Línea</p>
+              <p className="text-base">{getDireccionLineaName(selectedConvenio.id_direccion_linea)}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Monto</p>
+              <p className="text-base">{formatCurrency(selectedConvenio.monto)}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Fecha de Firma</p>
+              <p className="text-base">{formatDate(selectedConvenio.fecha_firma)}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Estado</p>
+              <p className="text-base">{getEstadoConvenioName(selectedConvenio.id_estado_convenio)}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Código Interno</p>
+              <p className="text-base">{selectedConvenio.codigo_interno || '-'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Código de Convenio</p>
+              <p className="text-base">{selectedConvenio.codigo_convenio || '-'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Código IDEA/CUI</p>
+              <p className="text-base">{selectedConvenio.codigo_idea_cui || '-'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Beneficiarios</p>
+              <p className="text-base">{selectedConvenio.beneficiarios || '-'}</p>
+            </div>
+            <div className="md:col-span-2">
+              <p className="text-sm font-medium text-gray-500">Descripción IDEA/CUI</p>
+              <p className="text-base whitespace-pre-wrap">
+                {selectedConvenio.descripcion_idea_cui || 'Sin descripción'}
+              </p>
             </div>
             <div className="md:col-span-2">
               <p className="text-sm font-medium text-gray-500">Descripción</p>
@@ -558,7 +721,7 @@ export default function ConveniosList() {
         }
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/** ======== MUNICIPALIDAD con SELECTBOX de búsqueda como en EventosList ======== */}
+          {/** ======== MUNICIPALIDAD con SELECTBOX de búsqueda ======== */}
           <div className="relative" ref={municipalidadDropdownRef}>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Municipalidad <span className="text-red-500">*</span>
@@ -597,7 +760,7 @@ export default function ConveniosList() {
                     .filter((m) => {
                       const q = municipalidadSearchQuery.toLowerCase();
                       return (
-                        m.nombre.toLowerCase().includes(q) ||
+                        m.nombre?.toLowerCase().includes(q) ||
                         (m.ubigeo || '').toLowerCase().includes(q) ||
                         (m.departamento || '').toLowerCase().includes(q)
                       );
@@ -614,9 +777,9 @@ export default function ConveniosList() {
                           setShowMunicipalidadDropdown(false);
                         }}
                       >
-                        <div className="font-medium">{m.nombre}</div>
+                        <div className="font-medium">{m.nombre || 'Municipalidad sin nombre'}</div>
                         <div className="text-xs text-gray-500">
-                          [{m.ubigeo}, {m.departamento}]
+                          [{m.ubigeo || 'Sin ubigeo'}, {m.departamento || 'Sin departamento'}]
                         </div>
                       </div>
                     ))}
@@ -641,6 +804,126 @@ export default function ConveniosList() {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/** ======== SECTOR con SELECTBOX de búsqueda ======== */}
+          <div className="relative" ref={sectorDropdownRef}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Sector <span className="text-red-500">*</span>
+            </label>
+            <div
+              className="w-full border border-gray-300 rounded-md p-2 flex justify-between items-center cursor-pointer"
+              onClick={() => setShowSectorDropdown(!showSectorDropdown)}
+            >
+              <span>
+                {formData.id_sector
+                  ? sectores.find(
+                      (s) => s.id_sector === Number(formData.id_sector)
+                    )?.descripcion || 'Seleccione un sector'
+                  : 'Seleccione un sector'}
+              </span>
+              {showSectorDropdown ? <FiChevronUp /> : <FiChevronDown />}
+            </div>
+            {showSectorDropdown && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 
+                              rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+                  <div className="relative">
+                    <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      className="w-full pl-10 pr-4 py-2 border rounded-md"
+                      placeholder="Buscar sector..."
+                      value={sectorSearchQuery}
+                      onChange={(e) => setSectorSearchQuery(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                </div>
+                <div className="py-1">
+                  {sectores
+                    .filter((s) => {
+                      const q = sectorSearchQuery.toLowerCase();
+                      return s.descripcion?.toLowerCase().includes(q);
+                    })
+                    .map((s) => (
+                      <div
+                        key={s.id_sector}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            id_sector: s.id_sector
+                          }));
+                          setShowSectorDropdown(false);
+                        }}
+                      >
+                        <div className="font-medium">{s.descripcion || 'Sector sin descripción'}</div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/** ======== DIRECCION LINEA con SELECTBOX de búsqueda ======== */}
+          <div className="relative" ref={direccionLineaDropdownRef}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Dirección de Línea <span className="text-red-500">*</span>
+            </label>
+            <div
+              className="w-full border border-gray-300 rounded-md p-2 flex justify-between items-center cursor-pointer"
+              onClick={() => setShowDireccionLineaDropdown(!showDireccionLineaDropdown)}
+            >
+              <span>
+                {formData.id_direccion_linea
+                  ? direccionesLinea.find(
+                      (d) => d.id_direccion_linea === Number(formData.id_direccion_linea)
+                    )?.descripcion || 'Seleccione una dirección'
+                  : 'Seleccione una dirección'}
+              </span>
+              {showDireccionLineaDropdown ? <FiChevronUp /> : <FiChevronDown />}
+            </div>
+            {showDireccionLineaDropdown && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 
+                              rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+                  <div className="relative">
+                    <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      className="w-full pl-10 pr-4 py-2 border rounded-md"
+                      placeholder="Buscar dirección..."
+                      value={direccionLineaSearchQuery}
+                      onChange={(e) => setDireccionLineaSearchQuery(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                </div>
+                <div className="py-1">
+                  {direccionesLinea
+                    .filter((d) => {
+                      const q = direccionLineaSearchQuery.toLowerCase();
+                      return d.descripcion?.toLowerCase().includes(q);
+                    })
+                    .map((d) => (
+                      <div
+                        key={d.id_direccion_linea}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            id_direccion_linea: d.id_direccion_linea
+                          }));
+                          setShowDireccionLineaDropdown(false);
+                        }}
+                      >
+                        <div className="font-medium">{d.descripcion || 'Dirección sin descripción'}</div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* MONTO */}
@@ -681,22 +964,149 @@ export default function ConveniosList() {
             />
           </div>
 
-          {/* ESTADO */}
-          <div>
+          {/** ======== ESTADO CONVENIO con SELECTBOX de búsqueda ======== */}
+          <div className="relative" ref={estadoConvenioDropdownRef}>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Estado <span className="text-red-500">*</span>
             </label>
-            <select
-              className="w-full border border-gray-300 rounded-md p-2"
-              value={formData.estado || ''}
-              onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
+            <div
+              className="w-full border border-gray-300 rounded-md p-2 flex justify-between items-center cursor-pointer"
+              onClick={() => setShowEstadoConvenioDropdown(!showEstadoConvenioDropdown)}
             >
-              {estadoOptions.map((op) => (
-                <option key={op.value} value={op.value}>
-                  {op.label}
-                </option>
-              ))}
-            </select>
+              <span>
+                {formData.id_estado_convenio
+                  ? estadosConvenio.find(
+                      (e) => e.id_estado_convenio === Number(formData.id_estado_convenio)
+                    )?.nombre || 'Seleccione un estado'
+                  : 'Seleccione un estado'}
+              </span>
+              {showEstadoConvenioDropdown ? <FiChevronUp /> : <FiChevronDown />}
+            </div>
+            {showEstadoConvenioDropdown && (
+              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 
+                              rounded-md shadow-lg max-h-60 overflow-y-auto">
+                <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+                  <div className="relative">
+                    <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      className="w-full pl-10 pr-4 py-2 border rounded-md"
+                      placeholder="Buscar estado..."
+                      value={estadoConvenioSearchQuery}
+                      onChange={(e) => setEstadoConvenioSearchQuery(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                </div>
+                <div className="py-1">
+                  {estadosConvenio
+                    .filter((e) => {
+                      const q = estadoConvenioSearchQuery.toLowerCase();
+                      return e.nombre?.toLowerCase().includes(q);
+                    })
+                    .map((e) => (
+                      <div
+                        key={e.id_estado_convenio}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            id_estado_convenio: e.id_estado_convenio
+                          }));
+                          setShowEstadoConvenioDropdown(false);
+                        }}
+                      >
+                        <div className="font-medium">{e.nombre || 'Estado sin nombre'}</div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* CÓDIGO INTERNO */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Código Interno <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded-md p-2"
+              placeholder="Ingrese el código interno"
+              value={formData.codigo_interno || ''}
+              onChange={(e) => setFormData({ ...formData, codigo_interno: e.target.value })}
+              maxLength={20}
+            />
+          </div>
+
+          {/* CÓDIGO CONVENIO */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Código Convenio
+            </label>
+            <input
+              type="text"
+              className="w-full border border-gray-300 rounded-md p-2"
+              placeholder="Ingrese el código del convenio"
+              value={formData.codigo_convenio || ''}
+              onChange={(e) => setFormData({ ...formData, codigo_convenio: e.target.value })}
+              maxLength={20}
+            />
+          </div>
+
+          {/* CÓDIGO IDEA/CUI */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Código IDEA/CUI
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"       // muestra teclado numérico en móviles
+              pattern="\d*"             // opcional: obliga a que solo haya dígitos
+              maxLength={7}             // ahora sí funciona
+              className="w-full border border-gray-300 rounded-md p-2"
+              placeholder="Ingrese el código IDEA/CUI"
+              value={formData.codigo_idea_cui || ''}
+              onChange={(e) => {
+                // filtramos cualquier carácter no numérico
+                const onlyNums = e.target.value.replace(/\D/g, '');
+                setFormData({
+                  ...formData,
+                  codigo_idea_cui: onlyNums
+                });
+              }}
+            />
+          </div>
+
+
+          {/* BENEFICIARIOS */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Beneficiarios
+            </label>
+            <input
+              type="number"
+              className="w-full border border-gray-300 rounded-md p-2"
+              placeholder="Número de beneficiarios"
+              value={formData.beneficiarios || ''}
+              onChange={(e) => setFormData({ ...formData, beneficiarios: e.target.value })}
+              min="0"
+            />
+          </div>
+
+          {/* DESCRIPCIÓN IDEA/CUI */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Descripción IDEA/CUI
+            </label>
+            <textarea
+              className="w-full border border-gray-300 rounded-md p-2"
+              rows={2}
+              placeholder="Descripción del proyecto IDEA/CUI"
+              value={formData.descripcion_idea_cui || ''}
+              onChange={(e) => setFormData({ ...formData, descripcion_idea_cui: e.target.value })}
+              maxLength={250}
+            />
           </div>
 
           {/* DESCRIPCIÓN */}
@@ -707,6 +1117,7 @@ export default function ConveniosList() {
             <textarea
               className="w-full border border-gray-300 rounded-md p-2"
               rows={3}
+              placeholder="Descripción general del convenio"
               value={formData.descripcion || ''}
               onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
             />
@@ -722,7 +1133,7 @@ export default function ConveniosList() {
         title="Confirmar Eliminación"
         message={
           selectedConvenio
-            ? `¿Está seguro de eliminar el convenio "${selectedConvenio.tipo_convenio}"?`
+            ? `¿Está seguro de eliminar el convenio "${selectedConvenio.tipo_convenio}" con código "${selectedConvenio.codigo_interno}"?`
             : '¿Está seguro de eliminar este convenio?'
         }
         confirmLabel="Eliminar"
