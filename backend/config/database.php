@@ -67,7 +67,7 @@ return [
             'url' => env('DB_URL'),
             'host' => env('DB_HOST_BUDGET', '127.0.0.1'),
             'port' => env('DB_PORT_BUDGET', '3306'),
-            'database' => env('DB_DATABASE_BUDGET', 'laravel'),
+            'database' => env('DB_DATABASE_BUDGET', 'budget'),
             'username' => env('DB_USERNAME_BUDGET', 'root'),
             'password' => env('DB_PASSWORD_BUDGET', 'root'),
             'unix_socket' => env('DB_SOCKET', ''),

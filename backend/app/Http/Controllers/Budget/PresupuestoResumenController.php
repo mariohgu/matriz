@@ -41,13 +41,6 @@ class PresupuestoResumenController extends Controller
     }
 
     /**
-     * The database connection that should be used by the controller.
-     *
-     * @var string
-     */
-    protected $connection = 'mysql_budget';
-    
-    /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response

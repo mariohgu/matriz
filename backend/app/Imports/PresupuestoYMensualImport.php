@@ -10,6 +10,8 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
 class PresupuestoYMensualImport implements ToCollection, WithHeadingRow
 {
+    protected $connectionName = 'mysql_budget';
+
     public function collection(Collection $rows)
     {
         $mesActual = now()->month;
@@ -17,13 +19,13 @@ class PresupuestoYMensualImport implements ToCollection, WithHeadingRow
         foreach ($rows as $row) {
             $codigoClasificador = $this->armarCodigoClasificador($row);
 
-            $idClasificador = DB::table('clasificadores')
+            $idClasificador = DB::connection($this->connectionName)->table('clasificadores')
                 ->where('codigo_clasificador', $codigoClasificador)
                 ->value('id_clasificador');
 
             if (!$idClasificador) continue;
 
-            DB::table('presupuesto_resumen')->updateOrInsert(
+            DB::connection($this->connectionName)->table('presupuesto_resumen')->updateOrInsert(
                 [
                     'id_ae' => $row['sec_func'],
                     'id_clasificador' => $idClasificador,
@@ -41,7 +43,7 @@ class PresupuestoYMensualImport implements ToCollection, WithHeadingRow
             for ($mes = 1; $mes <= $mesActual; $mes++) {
                 $sufijo = str_pad($mes, 2, '0', STR_PAD_LEFT);
 
-                DB::table('ejecucion_mensual')->updateOrInsert(
+                DB::connection($this->connectionName)->table('ejecucion_mensual')->updateOrInsert(
                     [
                         'id_ae' => $row['sec_func'],
                         'id_clasificador' => $idClasificador,

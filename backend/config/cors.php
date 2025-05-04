@@ -22,11 +22,11 @@ return [
 
     'allowed_origins_patterns' => [],
 
-    'allowed_headers' => ['X-Requested-With', 'Content-Type', 'X-Token-Auth', 'Authorization', 'Origin', 'Accept', 'X-CSRF-TOKEN', 'Content-Disposition'],
+    'allowed_headers' => ['*'],
 
-    'exposed_headers' => ['Content-Disposition'],
+    'exposed_headers' => [],
 
-    'max_age' => 86400, // 24 horas
+    'max_age' => 0,
 
     'supports_credentials' => true,
 ];
