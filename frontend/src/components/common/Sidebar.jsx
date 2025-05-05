@@ -12,7 +12,7 @@ import {
   FaUserCircle,
   FaMoneyBillWave
 } from "react-icons/fa";
-import { MdExpandMore } from "react-icons/md";
+import { MdFollowTheSigns, MdExpandMore } from "react-icons/md";
 
 // Importa tu componente Accordion (tu implementación)
 import Accordion from "./Accordion";
@@ -53,6 +53,9 @@ export default function Sidebar({ isOpen, onToggle }) {
             { href: "/contactos", title: "Contactos" },
             { href: "/tipos-reunion", title: "Tipos de Reunión" },
             { href: "/estados", title: "Estados" },
+            { href: "/sectores", title: "Sectores" },
+            { href: "/direcciones-linea", title: "Direcciones de Línea" },
+            { href: "/estados-convenios", title: "Estados de Convenio" },
           ],
         },
         {
@@ -64,19 +67,36 @@ export default function Sidebar({ isOpen, onToggle }) {
         },
         {
           title: "Seguimiento",
-          icon: <FaHandsHelping />,
+          icon: <MdFollowTheSigns />,
           subItems: [
             { href: "/estado-seguimiento", title: "Estado de Seguimiento" },
             // { href: "/oficios", title: "Oficios" },
-            { href: "/convenios", title: "Convenios" },
-            { href: "/estados-convenios", title: "Estados de Convenio" },
-            { href: "/convenio-seguimiento", title: "Convenio de Seguimiento" },
-            { href: "/sectores", title: "Sectores" },
-            { href: "/direcciones-linea", title: "Direcciones de Línea" },
           ],
         },
         {
-          title: "Presupuesto",
+          title: "Convenios",
+          icon: <FaHandsHelping />,
+          subItems: [
+            { href: "/convenios", title: "Convenios" },            
+            { href: "/convenio-seguimiento", title: "Convenio de Seguimiento" },            
+          ],
+        },
+      ],
+    },
+    {
+      href: "#",
+      title: "Presupuesto",
+      icon: <FaMoneyBillWave />,
+      subItems: [
+        {
+          title: "Dashboard",
+          icon: <FaChartPie />,
+          subItems: [
+            { href: "/presupuesto/importar", title: "Importar Presupuesto" },
+          ],
+        },
+        {
+          title: "Importar",
           icon: <FaMoneyBillWave />,
           subItems: [
             { href: "/presupuesto/importar", title: "Importar Presupuesto" },

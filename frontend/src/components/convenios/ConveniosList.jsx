@@ -770,11 +770,58 @@ export default function ConveniosList() {
                         key={m.id_municipalidad}
                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                         onClick={() => {
+                          const selectedMuniId = m.id_municipalidad;
+                          // Primero actualiza el ID de municipalidad
                           setFormData((prev) => ({
                             ...prev,
-                            id_municipalidad: m.id_municipalidad
+                            id_municipalidad: selectedMuniId
                           }));
                           setShowMunicipalidadDropdown(false);
+
+                          // Solo generar código si estamos en modo CREAR (!isEditMode)
+                          if (!isEditMode) {
+                            const selectedMuni = municipalidades.find(muni => muni.id_municipalidad === Number(selectedMuniId));
+                            const ubigeo = selectedMuni?.ubigeo;
+
+                            if (ubigeo) {
+                              // Filtrar convenios existentes para esta municipalidad y con el formato esperado
+                              const existingCodes = convenios
+                                .filter(c =>
+                                  c.id_municipalidad === Number(selectedMuniId) &&
+                                  c.codigo_interno?.startsWith(`OEDI-${ubigeo}-`)
+                                )
+                                .map(c => {
+                                  const parts = c.codigo_interno.split('-');
+                                  // Extraer el número secuencial (XXX) si el formato es correcto
+                                  return parts.length === 3 ? parseInt(parts[2], 10) : null;
+                                })
+                                .filter(num => num !== null && !isNaN(num)); // Filtrar nulos y NaN
+
+                              // Encontrar el máximo número secuencial existente
+                              const maxSeq = existingCodes.length > 0 ? Math.max(...existingCodes) : 0;
+                              const nextSeq = maxSeq + 1;
+
+                              // Formatear el siguiente número a 3 dígitos (ej: 1 -> 001)
+                              const formattedSeq = String(nextSeq).padStart(3, '0');
+
+                              // Construir el nuevo código interno
+                              const newCodigoInterno = `OEDI-${ubigeo}-${formattedSeq}`;
+
+                              // Actualizar el estado del formulario con el nuevo código interno
+                              // Usamos una función para asegurar que partimos del estado más reciente
+                              // (incluyendo el id_municipalidad recién seteado)
+                              setFormData((prev) => ({
+                                ...prev,
+                                codigo_interno: newCodigoInterno
+                              }));
+                            } else {
+                              // Opcional: Limpiar el código si no hay ubigeo o manejar el error
+                              console.warn(`La municipalidad seleccionada (ID: ${selectedMuniId}) no tiene código UBIGEO.`);
+                              // Podrías limpiar el campo si prefieres:
+                              // setFormData((prev) => ({ ...prev, codigo_interno: '' }));
+                            }
+                          }
+                          // No cerramos el dropdown aquí, ya se cerró antes del if
                         }}
                       >
                         <div className="font-medium">{m.nombre || 'Municipalidad sin nombre'}</div>

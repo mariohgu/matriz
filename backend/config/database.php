@@ -63,7 +63,7 @@ return [
         ],
 
         'mysql_budget' => [
-            'driver' => 'mysql',
+            'driver' => 'mariadb',
             'url' => env('DB_URL'),
             'host' => env('DB_HOST_BUDGET', '127.0.0.1'),
             'port' => env('DB_PORT_BUDGET', '3306'),
