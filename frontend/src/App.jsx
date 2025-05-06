@@ -23,12 +23,14 @@ import UserList from './components/usuarios/UserList';
 import ProfileView from './components/usuarios/ProfileView';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import DashboardLista from './pages/DashboardLista';
+import DashboardPresupuesto from './pages/DashboardPresupuesto';
 import ImportarPresupuestoPage from './pages/presupuesto/ImportarPresupuestoPage';
 import AreasEjecutorasList from './components/presupuesto/AreasEjecutorasList';
 import CategoriasList from './components/presupuesto/CategoriasList';
 import ClasificadoresList from './components/presupuesto/ClasificadoresList';
 import EjecucionMensualList from './components/presupuesto/EjecucionMensualList';
 import ResumenPresupuestoList from './components/presupuesto/PresupuestosList';
+import DashboardPresupuestoAreas from './pages/DashboardPresupuestoAreas';
 
 // Componentes comunes
 import Sidebar from './components/common/Sidebar';
@@ -163,6 +165,25 @@ function AppRoutes() {
             </MainLayout>
           }
         />
+
+          <Route
+            path="/dashboard/presupuesto"
+            element={
+              <MainLayout>
+                <DashboardPresupuesto />
+              </MainLayout>
+            }
+          />
+
+       
+          <Route
+            path="/dashboard/presupuesto-areas"
+            element={
+              <MainLayout>
+                <DashboardPresupuestoAreas />
+              </MainLayout>
+            }
+          />
 
         {/* Ejemplos de Items */}
         <Route

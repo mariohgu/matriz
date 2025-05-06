@@ -337,7 +337,7 @@ class EjecucionMensualController extends Controller
                 ->table('ejecucion_mensual as em')
                 ->join('areas_ejecutoras as ae', 'em.id_ae', '=', 'ae.id_ae')
                 ->where('em.anio', $anio)
-                ->groupBy('em.id_ae', 'ae.codigo', 'ae.descripcion', 'em.mes')
+                ->groupBy('ae.id_ae', 'ae.codigo', 'ae.descripcion', 'em.mes')
                 ->select(
                     'ae.id_ae',
                     'ae.codigo',

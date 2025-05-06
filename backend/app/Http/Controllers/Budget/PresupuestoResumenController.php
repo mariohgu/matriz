@@ -345,7 +345,7 @@ class PresupuestoResumenController extends Controller
                 ->table('presupuesto_resumen as pr')
                 ->join('areas_ejecutoras as ae', 'pr.id_ae', '=', 'ae.id_ae')
                 ->where('pr.anio', $anio)
-                ->groupBy('pr.id_ae', 'ae.codigo', 'ae.descripcion')
+                ->groupBy('ae.id_ae', 'ae.codigo', 'ae.descripcion')
                 ->select(
                     'ae.id_ae',
                     'ae.codigo',

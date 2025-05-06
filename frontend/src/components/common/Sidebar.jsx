@@ -94,7 +94,8 @@ export default function Sidebar({ isOpen, onToggle }) {
           title: "Dashboard",
           icon: <FaChartPie />,
           subItems: [
-            { href: "/presupuesto/importar", title: "Importar Presupuesto" },
+            { href: "/dashboard/presupuesto", title: "Dashboard Presupuestal" },
+            { href: "/dashboard/presupuesto-areas", title: "Dashboard Presupuestal por Áreas" },
           ],
         },
         {
