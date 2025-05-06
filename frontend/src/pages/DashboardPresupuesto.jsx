@@ -43,6 +43,9 @@ const DashboardPresupuesto = () => {
   // Porcentaje calculado
   const [porcentajeEjecucion, setPorcentajeEjecucion] = useState(0);
   
+  // Agregar estos estados justo después de los otros estados
+  const [cacheExpiry] = useState(5 * 60 * 1000); // 5 minutos en milisegundos
+
   // Obtener valores numéricos seguros
   const getTotalPIM = () => {
     const val = safeGetNumber(presupuestoData, 'totales_generales.total_pim', 0);
@@ -83,29 +86,58 @@ const DashboardPresupuesto = () => {
     }
   };
   
+  // Función para verificar si hay datos en caché
+  const getCachedData = (key) => {
+    try {
+      const cached = localStorage.getItem(key);
+      if (!cached) return null;
+      
+      const { data, timestamp } = JSON.parse(cached);
+      const isExpired = Date.now() - timestamp > cacheExpiry;
+      
+      return isExpired ? null : data;
+    } catch (error) {
+      console.warn('Error al recuperar datos de caché:', error);
+      return null;
+    }
+  };
+
+  // Función para guardar datos en caché
+  const setCachedData = (key, data) => {
+    try {
+      const cacheData = {
+        data,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(key, JSON.stringify(cacheData));
+    } catch (error) {
+      console.warn('Error al guardar datos en caché:', error);
+    }
+  };
+  
   // Función para cargar los datos
-  const loadData = async () => {
+  const loadData = async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
     
     try {
-      // Determinar endpoint según filtros
-      let presupuestoEndpoint = `presupuesto/presupuestos/resumen/${selectedYear}`;
-      let ejecucionEndpoint = `presupuesto/ejecuciones/resumen/${selectedYear}`;
-      
-      // Si hay un área seleccionada, usar los endpoints específicos de área
-      if (selectedArea) {
-        presupuestoEndpoint = `presupuesto/areas-ejecutoras/${selectedArea}/presupuestos`;
-        ejecucionEndpoint = `presupuesto/areas-ejecutoras/${selectedArea}/ejecuciones`;
+      // Cargar áreas ejecutoras si es necesario
+      if (areasEjecutoras.length === 0) {
+        await loadAreasEjecutoras();
       }
       
-      // Cargar datos de presupuesto (PIM)
-      const presupuestoResponse = await apiService.getAll(presupuestoEndpoint);
-      
-      // La respuesta puede venir directamente como datos o dentro de un objeto data
-      let presupuestoData;
-      
+      // Determinar endpoint según filtros
       if (selectedArea) {
+        // Si hay un área seleccionada, usar los endpoints específicos de área
+        const presupuestoEndpoint = `presupuesto/areas-ejecutoras/${selectedArea}/presupuestos`;
+        const ejecucionEndpoint = `presupuesto/areas-ejecutoras/${selectedArea}/ejecuciones`;
+        
+        // Usar el código existente para cargar datos de área específica
+        const presupuestoResponse = await apiService.getAll(presupuestoEndpoint);
+        
+        // La respuesta puede venir directamente como datos o dentro de un objeto data
+        let presupuestoData;
+        
         // La respuesta para un área específica tiene estructura diferente
         presupuestoData = presupuestoResponse?.data || presupuestoResponse;
         
@@ -131,22 +163,16 @@ const DashboardPresupuesto = () => {
             }
           };
         }
-      } else {
-        // Para el endpoint general, la estructura es más directa
-        presupuestoData = presupuestoResponse?.data || presupuestoResponse;
-      }
-      
-      console.log('Datos de presupuesto recibidos COMPLETOS:', presupuestoResponse);
-      console.log('Datos de presupuesto procesados:', presupuestoData);
-      setPresupuestoData(presupuestoData);
-      
-      // Cargar datos de ejecución (Devengado)
-      const ejecucionResponse = await apiService.getAll(ejecucionEndpoint);
-      
-      // La respuesta puede venir directamente como datos o dentro de un objeto data
-      let ejecucionData;
-      
-      if (selectedArea) {
+        
+        console.log('Datos de presupuesto procesados:', presupuestoData);
+        setPresupuestoData(presupuestoData);
+        
+        // Cargar datos de ejecución (Devengado)
+        const ejecucionResponse = await apiService.getAll(ejecucionEndpoint);
+        
+        // La respuesta puede venir directamente como datos o dentro de un objeto data
+        let ejecucionData;
+        
         // La respuesta para un área específica tiene estructura diferente
         ejecucionData = ejecucionResponse?.data || ejecucionResponse;
         
@@ -196,43 +222,81 @@ const DashboardPresupuesto = () => {
             }
           };
         }
+        
+        console.log('Datos de ejecución procesados:', ejecucionData);
+        setEjecucionData(ejecucionData);
+        
+        // Actualizar timestamp
+        setLastUpdateDate(new Date());
+        
+        // Calcular porcentaje
+        setTimeout(() => {
+          const totalPIM = getTotalPIM();
+          const totalDevengado = getTotalDevengado();
+          
+          let porcentaje = 0;
+          
+          if (totalPIM > 0) {
+            porcentaje = (totalDevengado / totalPIM) * 100;
+          }
+          
+          console.log('Porcentaje calculado:', porcentaje);
+          setPorcentajeEjecucion(porcentaje > 0 ? porcentaje : 0);
+        }, 0);
       } else {
-        // Para el endpoint general, la estructura es más directa
-        ejecucionData = ejecucionResponse?.data || ejecucionResponse;
-      }
-      
-      console.log('Datos de ejecución recibidos COMPLETOS:', ejecucionResponse);
-      console.log('Datos de ejecución procesados:', ejecucionData);
-      setEjecucionData(ejecucionData);
-      
-      // Actualizar timestamp
-      const now = new Date();
-      setLastUpdateDate(now);
-      
-      // Calcular porcentaje con los datos actualizados
-      setTimeout(() => {
-        const totalPIM = getTotalPIM();
-        const totalDevengado = getTotalDevengado();
+        // Para vista general, verificar caché primero si no se fuerza refresco
+        const cacheKey = `resumen-global-${selectedYear}`;
         
-        console.log('Cálculo de porcentaje:',
-          `PIM: ${totalPIM}`,
-          `Devengado: ${totalDevengado}`
-        );
-        
-        let porcentaje = 0;
-        
-        if (totalPIM > 0) {
-          porcentaje = (totalDevengado / totalPIM) * 100;
+        if (!forceRefresh) {
+          const cachedData = getCachedData(cacheKey);
+          if (cachedData) {
+            console.log('Usando datos en caché para resumen global');
+            
+            setPresupuestoData({
+              anio: cachedData.anio,
+              totales_generales: cachedData.totales_generales
+            });
+            
+            setEjecucionData({
+              anio: cachedData.anio,
+              resumen_por_mes: cachedData.resumen_por_mes,
+              totales_generales: cachedData.totales_generales
+            });
+            
+            setLastUpdateDate(new Date(cachedData.timestamp || Date.now()));
+            setPorcentajeEjecucion(cachedData.totales_generales.porcentaje_ejecucion || 0);
+            
+            setLoading(false);
+            return;
+          }
         }
         
-        console.log('Porcentaje calculado:', porcentaje);
+        // Usar el nuevo endpoint optimizado
+        const response = await apiService.getAll(`presupuesto/dashboard/resumen-global/${selectedYear}`);
+        const data = response?.data || response;
         
-        // Asegurarse de que el porcentaje sea al menos 1% para propósitos de visualización durante pruebas
-        // Eliminar este mínimo en producción
-        setPorcentajeEjecucion(porcentaje > 0 ? porcentaje : 17.65);
-        
-      }, 0);
-      
+        if (data) {
+          // Guardar en caché
+          setCachedData(cacheKey, data);
+          
+          setPresupuestoData({
+            anio: data.anio,
+            totales_generales: data.totales_generales
+          });
+          
+          setEjecucionData({
+            anio: data.anio,
+            resumen_por_mes: data.resumen_por_mes,
+            totales_generales: data.totales_generales
+          });
+          
+          // Actualizar timestamp
+          setLastUpdateDate(new Date(data.timestamp || Date.now()));
+          
+          // Usar el porcentaje calculado en el backend
+          setPorcentajeEjecucion(data.totales_generales.porcentaje_ejecucion || 0);
+        }
+      }
     } catch (error) {
       console.error('Error completo al cargar datos:', error);
       setError('No se pudieron cargar los datos. Por favor, intente nuevamente.');
@@ -363,26 +427,17 @@ const DashboardPresupuesto = () => {
   
   return (
     <div className="container mx-auto p-6">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Dashboard de Ejecución Presupuestal</h1>
+      {/* Header reorganizado */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-800 text-center mb-6">Dashboard de Ejecución Presupuestal</h1>
         
-        <div className="flex flex-wrap items-center gap-3 mt-4 md:mt-0">
-          {/* Enlace al Dashboard por Áreas */}
-          <Link 
-            to="/dashboard/presupuesto-areas" 
-            className="px-4 py-1.5 bg-gray-600 text-white text-sm rounded-md flex items-center 
-                    hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
-          >
-            <FiGrid className="mr-2" />
-            Ver por Áreas
-          </Link>
-          
+        <div className="flex flex-wrap justify-center items-center gap-4">
           {/* Filtro por área */}
-          <div className="inline-block min-w-[180px] relative">
+          <div className="min-w-[220px] relative">
             <select
               value={selectedArea}
               onChange={(e) => setSelectedArea(e.target.value)}
-              className="appearance-none w-full px-3 py-1.5 pr-8 bg-white rounded-md text-gray-800
+              className="appearance-none w-full px-3 py-2 pr-8 bg-white rounded-md text-gray-800
                         focus:outline-none text-sm border border-gray-200"
               title="Filtrar por área ejecutora"
             >
@@ -400,11 +455,11 @@ const DashboardPresupuesto = () => {
           </div>
           
           {/* Filtro por año */}
-          <div className="inline-block min-w-[100px] relative">
+          <div className="min-w-[120px] relative">
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="appearance-none w-full px-3 py-1.5 pr-8 bg-white rounded-md text-gray-800
+              className="appearance-none w-full px-3 py-2 pr-8 bg-white rounded-md text-gray-800
                         focus:outline-none text-sm border border-gray-200"
             >
               {getAniosOptions().map(option => (
@@ -421,8 +476,8 @@ const DashboardPresupuesto = () => {
           </div>
           
           <button
-            onClick={loadData}
-            className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded-md flex items-center 
+            onClick={() => loadData(true)}
+            className="px-5 py-2 bg-blue-600 text-white text-sm rounded-md flex items-center 
                     hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
           >
             <FiRefreshCw className="mr-2" />
@@ -432,7 +487,7 @@ const DashboardPresupuesto = () => {
       </div>
       
       {lastUpdateDate && (
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-gray-500 mb-4 text-center">
           Última actualización: {lastUpdateDate.toLocaleString('es-ES')}
           {selectedArea && ` • Área: ${areasEjecutoras.find(a => a.id_ae == selectedArea)?.descripcion || 'Desconocida'}`}
         </p>

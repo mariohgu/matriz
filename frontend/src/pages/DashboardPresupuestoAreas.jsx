@@ -32,6 +32,37 @@ const DashboardPresupuestoAreas = () => {
   const [lastUpdateDate, setLastUpdateDate] = useState(null);
   const [detalleArea, setDetalleArea] = useState(null);
   const [showDetalle, setShowDetalle] = useState(false);
+  const [cargandoArea, setCargandoArea] = useState({});
+  const [cacheExpiry] = useState(5 * 60 * 1000); // 5 minutos en milisegundos
+
+  // Función para verificar si hay datos en caché
+  const getCachedData = (key) => {
+    try {
+      const cached = localStorage.getItem(key);
+      if (!cached) return null;
+      
+      const { data, timestamp } = JSON.parse(cached);
+      const isExpired = Date.now() - timestamp > cacheExpiry;
+      
+      return isExpired ? null : data;
+    } catch (error) {
+      console.warn('Error al recuperar datos de caché:', error);
+      return null;
+    }
+  };
+
+  // Función para guardar datos en caché
+  const setCachedData = (key, data) => {
+    try {
+      const cacheData = {
+        data,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(key, JSON.stringify(cacheData));
+    } catch (error) {
+      console.warn('Error al guardar datos en caché:', error);
+    }
+  };
 
   // Cargar datos de áreas ejecutoras
   const loadAreasEjecutoras = async () => {
@@ -54,62 +85,40 @@ const DashboardPresupuestoAreas = () => {
     }
   };
 
-  // Cargar datos de presupuesto y ejecución para cada área
-  const loadAreasDatos = async (areas) => {
+  // Cargar datos optimizados de presupuesto y ejecución para todas las áreas
+  const loadAreasDatos = async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
     
+    const cacheKey = `areas-resumen-${selectedYear}`;
+    
+    // Verificar caché si no se fuerza refresco
+    if (!forceRefresh) {
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        console.log('Usando datos en caché para áreas');
+        setAreasDatos(cachedData.areas || []);
+        setLastUpdateDate(new Date(cachedData.timestamp || Date.now()));
+        setLoading(false);
+        return;
+      }
+    }
+    
     try {
-      const datosPromises = areas.map(async (area) => {
-        // Cargar datos de presupuesto para el área
-        const presupuestoEndpoint = `presupuesto/areas-ejecutoras/${area.id_ae}/presupuestos`;
-        const presupuestoResponse = await apiService.getAll(presupuestoEndpoint);
-        const presupuestoData = presupuestoResponse?.data || presupuestoResponse;
-        
-        // Cargar datos de ejecución para el área
-        const ejecucionEndpoint = `presupuesto/areas-ejecutoras/${area.id_ae}/ejecuciones`;
-        const ejecucionResponse = await apiService.getAll(ejecucionEndpoint);
-        const ejecucionData = ejecucionResponse?.data || ejecucionResponse;
-        
-        // Calcular totales
-        let totalPIM = 0;
-        let totalDevengado = 0;
-        
-        // Procesar datos de presupuesto
-        if (presupuestoData && presupuestoData.presupuestos) {
-          const presupuestos = presupuestoData.presupuestos || [];
-          totalPIM = presupuestos.reduce((sum, p) => sum + parseFloat(p.mto_pim || 0), 0);
-        }
-        
-        // Procesar datos de ejecución
-        if (ejecucionData && ejecucionData.ejecuciones) {
-          const ejecuciones = ejecucionData.ejecuciones || [];
-          totalDevengado = ejecuciones.reduce((sum, e) => sum + parseFloat(e.mto_devengado || 0), 0);
-        }
-        
-        // Calcular porcentaje de ejecución
-        const porcentajeEjecucion = totalPIM > 0 ? (totalDevengado / totalPIM) * 100 : 0;
-        
-        // Retornar datos del área con sus totales y porcentaje
-        return {
-          ...area,
-          totalPIM,
-          totalDevengado,
-          porEjecutar: Math.max(0, totalPIM - totalDevengado),
-          porcentajeEjecucion
-        };
-      });
+      // Usar el nuevo endpoint optimizado
+      const response = await apiService.getAll(`presupuesto/dashboard/areas-resumen/${selectedYear}`);
+      const data = response?.data || response;
       
-      // Esperar a que todas las promesas se resuelvan
-      const resultados = await Promise.all(datosPromises);
-      
-      // Ordenar áreas por porcentaje de ejecución (descendente)
-      const areasOrdenadas = resultados.sort((a, b) => b.porcentajeEjecucion - a.porcentajeEjecucion);
-      
-      setAreasDatos(areasOrdenadas);
-      
-      // Actualizar timestamp
-      setLastUpdateDate(new Date());
+      if (data && Array.isArray(data.areas)) {
+        // Guardar en caché
+        setCachedData(cacheKey, data);
+        
+        setAreasDatos(data.areas);
+        setLastUpdateDate(new Date(data.timestamp || Date.now()));
+      } else {
+        console.warn('La respuesta no tiene el formato esperado:', data);
+        setAreasDatos([]);
+      }
     } catch (error) {
       console.error('Error al cargar datos de áreas:', error);
       setError('No se pudieron cargar los datos de las áreas. Por favor, intente nuevamente.');
@@ -120,14 +129,7 @@ const DashboardPresupuestoAreas = () => {
 
   // Cargar datos iniciales
   useEffect(() => {
-    const loadData = async () => {
-      const areas = await loadAreasEjecutoras();
-      if (areas.length > 0) {
-        await loadAreasDatos(areas);
-      }
-    };
-    
-    loadData();
+    loadAreasDatos();
   }, [selectedYear]);
 
   // Formatear montos como moneda
@@ -171,17 +173,8 @@ const DashboardPresupuestoAreas = () => {
 
   // Componente para termómetro de área
   const AreaTermometro = ({ area }) => {
-    const porcentaje = area.porcentajeEjecucion;
+    const porcentaje = area.porcentaje_ejecucion;
     const color = getEjecucionColor(porcentaje);
-    
-    // Determinar la categoría de avance (pronóstico, avance, por cumplir)
-    const getAvanceCategoria = () => {
-      if (porcentaje >= 75) return 'avance';
-      if (porcentaje >= 25) return 'pronostico';
-      return 'por-cumplir';
-    };
-    
-    const categoriaAvance = getAvanceCategoria();
     
     return (
       <div 
@@ -243,23 +236,10 @@ const DashboardPresupuestoAreas = () => {
               </div>
             </div>
             
-            {/* Etiqueta de categoría */}
+            {/* Porcentaje grande */}
             <div className="absolute top-1 right-1">
-              <div className="flex flex-col items-end">
-                <span className={`text-xs font-bold px-1.5 py-0.5 rounded mb-1 ${
-                  categoriaAvance === 'avance' ? 'bg-green-600 text-white' : 
-                  categoriaAvance === 'pronostico' ? 'bg-yellow-500 text-white' : 
-                  'bg-orange-500 text-white'
-                }`}>
-                  {categoriaAvance === 'avance' ? 'AVANCE' : 
-                   categoriaAvance === 'pronostico' ? 'PRONÓSTICO' : 
-                   'POR CUMPLIR'}
-                </span>
-                
-                {/* Porcentaje grande */}
-                <div className="text-lg font-bold mr-1" style={{ color }}>
-                  {porcentaje.toFixed(1)}%
-                </div>
+              <div className="text-lg font-bold mr-1" style={{ color }}>
+                {porcentaje.toFixed(1)}%
               </div>
             </div>
           </div>
@@ -275,6 +255,12 @@ const DashboardPresupuestoAreas = () => {
   // Modal de detalles del área
   const DetalleAreaModal = ({ area, onClose }) => {
     if (!area) return null;
+    
+    // Extraer valores optimizados
+    const totalPIM = area.presupuesto?.total_pim || 0;
+    const totalDevengado = area.ejecucion?.total_devengado || 0;
+    const porEjecutar = area.por_ejecutar || 0;
+    const porcentaje = area.porcentaje_ejecucion || 0;
     
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -297,17 +283,17 @@ const DashboardPresupuestoAreas = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-blue-50 p-4 rounded-lg">
                 <h3 className="text-sm font-medium text-blue-800 mb-1">PIM Total</h3>
-                <p className="text-xl font-bold text-blue-700">{formatCurrency(area.totalPIM)}</p>
+                <p className="text-xl font-bold text-blue-700">{formatCurrency(totalPIM)}</p>
               </div>
               
               <div className="bg-green-50 p-4 rounded-lg">
                 <h3 className="text-sm font-medium text-green-800 mb-1">Devengado Total</h3>
-                <p className="text-xl font-bold text-green-700">{formatCurrency(area.totalDevengado)}</p>
+                <p className="text-xl font-bold text-green-700">{formatCurrency(totalDevengado)}</p>
               </div>
               
               <div className="bg-orange-50 p-4 rounded-lg">
                 <h3 className="text-sm font-medium text-orange-800 mb-1">Por Ejecutar</h3>
-                <p className="text-xl font-bold text-orange-700">{formatCurrency(area.porEjecutar)}</p>
+                <p className="text-xl font-bold text-orange-700">{formatCurrency(porEjecutar)}</p>
               </div>
             </div>
             
@@ -316,9 +302,9 @@ const DashboardPresupuestoAreas = () => {
                 <h3 className="text-md font-medium text-gray-800">Porcentaje de Ejecución</h3>
                 <p 
                   className="text-2xl font-bold"
-                  style={{ color: getEjecucionColor(area.porcentajeEjecucion) }}
+                  style={{ color: getEjecucionColor(porcentaje) }}
                 >
-                  {area.porcentajeEjecucion.toFixed(2)}%
+                  {porcentaje.toFixed(2)}%
                 </p>
               </div>
               
@@ -326,8 +312,8 @@ const DashboardPresupuestoAreas = () => {
                 <div 
                   className="h-full"
                   style={{ 
-                    width: `${Math.min(area.porcentajeEjecucion, 100)}%`,
-                    backgroundColor: getEjecucionColor(area.porcentajeEjecucion)
+                    width: `${Math.min(porcentaje, 100)}%`,
+                    backgroundColor: getEjecucionColor(porcentaje)
                   }}
                 ></div>
               </div>
@@ -385,7 +371,7 @@ const DashboardPresupuestoAreas = () => {
           </div>
           
           <button
-            onClick={() => loadAreasDatos(areasEjecutoras)}
+            onClick={() => loadAreasDatos(true)} // Forzar refresco
             className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded-md flex items-center 
                     hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
           >
@@ -401,20 +387,8 @@ const DashboardPresupuestoAreas = () => {
         </p>
       )}
       
-      {/* Leyenda */}
+      {/* Leyenda de colores */}
       <div className="flex items-center gap-6 mb-6 flex-wrap">
-        <div className="flex items-center gap-1">
-          <span className="h-4 w-4 inline-block bg-green-600 rounded-sm"></span>
-          <span className="text-xs text-gray-700">AVANCE</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="h-4 w-4 inline-block bg-yellow-500 rounded-sm"></span>
-          <span className="text-xs text-gray-700">PRONÓSTICO</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="h-4 w-4 inline-block bg-orange-500 rounded-sm"></span>
-          <span className="text-xs text-gray-700">POR CUMPLIR</span>
-        </div>
         <div className="flex items-center text-xs text-gray-600">
           <FiInfo className="mr-1" />
           <span>Haga clic en un área para ver detalles</span>
@@ -432,7 +406,14 @@ const DashboardPresupuestoAreas = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {areasDatos.map(area => (
-            <AreaTermometro key={area.id_ae} area={area} />
+            <div key={area.id_ae} className="relative">
+              {cargandoArea[area.id_ae] && (
+                <div className="absolute inset-0 bg-white bg-opacity-70 flex items-center justify-center z-10">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                </div>
+              )}
+              <AreaTermometro area={area} />
+            </div>
           ))}
           
           {areasDatos.length === 0 && (

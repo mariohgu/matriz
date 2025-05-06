@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\DireccionLineaController;
 use App\Http\Controllers\Api\EstadoConvenioController;
 use App\Http\Controllers\Api\SectorController;
 use App\Http\Controllers\Api\ConvenioSeguimientoController;
+use App\Http\Controllers\Budget\DashboardController;
 
 // Rutas de autenticación (públicas)
 Route::post('/register', [AuthController::class, 'register']);
@@ -106,6 +107,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('clasificadores/{id}/ejecuciones', [EjecucionMensualController::class, 'porClasificador']);
         Route::get('ejecuciones/anio/{anio}/mes/{mes}', [EjecucionMensualController::class, 'porAnioMes']);
         Route::get('ejecuciones/resumen/{anio}', [EjecucionMensualController::class, 'resumenPorAnio']);
+        
+        // Nuevos endpoints optimizados para dashboard
+        Route::get('dashboard/areas-resumen/{year}', [DashboardController::class, 'getAreasResumen']);
+        Route::get('dashboard/resumen-global/{year}', [DashboardController::class, 'getResumenGlobal']);
     });
     
     // Rutas para el CRUD de Usuarios (solo accesible para administradores)
