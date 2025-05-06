@@ -143,8 +143,14 @@ const authService = {
     try {
       const response = await api.get('/user');
       // Actualizar usuario en localStorage
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      return response.data;
+      const user = {
+        ...response.data.user,
+        roles: response.data.roles || [], // ahora será ['super-admin']
+        permissions: response.data.permissions || [], // ahora será ['gestionar-proyectos']
+      };
+    
+      localStorage.setItem('user', JSON.stringify(user));
+      return { user };
     } catch (error) {
       throw error.response ? error.response.data : error;
     }

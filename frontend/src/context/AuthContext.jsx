@@ -112,9 +112,20 @@ export function AuthProvider({ children }) {
   };
 
   // Verificar si el usuario tiene un rol específico
-  const hasRole = (roleName) => {
-    return authService.hasRole(roleName);
-  };
+    const hasRole = (requiredRole) => {
+      if (!user || !user.roles) return false;
+      
+      // Si requiredRole es un array, verificar si el usuario tiene al menos uno de esos roles
+      if (Array.isArray(requiredRole)) {
+        return requiredRole.some(role => {
+          // Verificar si el usuario tiene ese rol (como string)
+          return user.roles.includes(role);
+        });
+      }
+      
+      // Si requiredRole es un string, verificar directamente
+      return user.roles.includes(requiredRole);
+    };
 
   // Verificar si el usuario tiene un permiso específico
   const hasPermission = (permissionName) => {

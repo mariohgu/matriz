@@ -24,6 +24,11 @@ import ProfileView from './components/usuarios/ProfileView';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import DashboardLista from './pages/DashboardLista';
 import ImportarPresupuestoPage from './pages/presupuesto/ImportarPresupuestoPage';
+import AreasEjecutorasList from './components/presupuesto/AreasEjecutorasList';
+import CategoriasList from './components/presupuesto/CategoriasList';
+import ClasificadoresList from './components/presupuesto/ClasificadoresList';
+import EjecucionMensualList from './components/presupuesto/EjecucionMensualList';
+import ResumenPresupuestoList from './components/presupuesto/PresupuestosList';
 
 // Componentes comunes
 import Sidebar from './components/common/Sidebar';
@@ -257,6 +262,7 @@ function AppRoutes() {
         />
 
         {/* Presupuesto */}
+        <Route element={<ProtectedRoute requiredRole={['super-admin', 'analista']} />}>
         <Route
           path="/presupuesto/importar"
           element={
@@ -265,7 +271,63 @@ function AppRoutes() {
             </MainLayout>
           }
         />
+        </Route>
+        
+        <Route element={<ProtectedRoute requiredRole={['super-admin', 'analista']} />}>
+        <Route
+          path="/presupuesto/areas-ejecutoras"
+          element={
+            <MainLayout>              
+                <AreasEjecutorasList />             
+            </MainLayout>
+          }
+        />
+        </Route>
+        
+        <Route element={<ProtectedRoute requiredRole={['super-admin', 'analista']} />}>
+        <Route
+          path="/presupuesto/categorias"
+          element={
+            <MainLayout>            
+                <CategoriasList />           
+            </MainLayout>
+          }
+        />
+        </Route>
+        
+        <Route element={<ProtectedRoute requiredRole={['super-admin', 'analista']} />}>
+        <Route
+          path="/presupuesto/clasificadores"
+          element={
+            <MainLayout>            
+                <ClasificadoresList />
+            </MainLayout>
+          }
+        />
+        </Route>
 
+        <Route element={<ProtectedRoute requiredRole={['super-admin', 'analista']} />}>
+        <Route
+          path="/presupuesto/ejecuciones"
+          element={
+            <MainLayout>
+                <EjecucionMensualList />
+            </MainLayout>
+          }
+        /> 
+        </Route>
+        {/* Manejo de Permisos
+        <Route element={<ProtectedRoute requiredPermissions={'ver-presupuesto'} />}>*/}
+        <Route element={<ProtectedRoute requiredRole={['super-admin', 'analista']} />}>
+        <Route
+          path="/presupuesto/resumen"
+          element={
+            <MainLayout>
+                <ResumenPresupuestoList />
+            </MainLayout>
+          }
+        />
+        </Route>
         <Route
           path="/direcciones-linea"
           element={

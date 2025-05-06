@@ -102,8 +102,8 @@ class AuthController extends Controller
         
         return response()->json([
             'user' => $user,
-            'roles' => $user->roles,
-            'permissions' => $this->getUserPermissions($user)
+            'roles' => $user->getRoleNames(), // Solo nombres: ["super-admin", "analista"]
+            'permissions' => $user->getPermissionNames(), // Solo nombres: ["gestionar-proyectos"]
         ]);
     }
     

@@ -10,9 +10,11 @@ import {
   FaCog,
   FaUsersCog,
   FaUserCircle,
-  FaMoneyBillWave
+  FaMoneyBillWave,
+  FaDatabase
 } from "react-icons/fa";
 import { MdFollowTheSigns, MdExpandMore } from "react-icons/md";
+import { FiHome, FiUsers, FiFileText, FiSettings, FiDollarSign, FiList, FiBarChart2, FiLayers } from 'react-icons/fi';
 
 // Importa tu componente Accordion (tu implementación)
 import Accordion from "./Accordion";
@@ -102,6 +104,17 @@ export default function Sidebar({ isOpen, onToggle }) {
             { href: "/presupuesto/importar", title: "Importar Presupuesto" },
           ],
         },
+        {
+          title: "Datos",
+          icon: <FaDatabase />,
+          subItems: [
+            { href: "/presupuesto/areas-ejecutoras", title: "Áreas Ejecutoras" },
+            { href: "/presupuesto/categorias", title: "Categorías" },
+            { href: "/presupuesto/clasificadores", title: "Clasificadores" },
+            { href: "/presupuesto/ejecuciones", title: "Ejecución Mensual" },
+            { href: "/presupuesto/resumen", title: "Resumen" },
+          ],
+        },
       ],
     },
     {
@@ -126,6 +139,8 @@ export default function Sidebar({ isOpen, onToggle }) {
       ],
     },
   ];
+
+
 
   /**
    * Navega a la ruta 'href' y cierra el sidebar en móvil.

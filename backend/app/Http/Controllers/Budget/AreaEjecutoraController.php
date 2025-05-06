@@ -42,7 +42,7 @@ class AreaEjecutoraController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'codigo' => 'required|integer|unique:mysql_budget.areas_ejecutoras,codigo',
-                'descripcion' => 'required|string|max:30',
+                'descripcion' => 'required|string|max:200',
             ]);
 
             if ($validator->fails()) {
@@ -106,7 +106,7 @@ class AreaEjecutoraController extends Controller
             
             $validator = Validator::make($request->all(), [
                 'codigo' => 'sometimes|required|integer|unique:mysql_budget.areas_ejecutoras,codigo,' . $id . ',id_ae',
-                'descripcion' => 'sometimes|required|string|max:30',
+                'descripcion' => 'sometimes|required|string|max:200',
             ]);
 
             if ($validator->fails()) {
