@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   FaTimes,
@@ -13,11 +13,34 @@ import {
   FaMoneyBillWave,
   FaDatabase
 } from "react-icons/fa";
-import { MdFollowTheSigns, MdExpandMore } from "react-icons/md";
+import { MdFollowTheSigns, MdExpandMore, MdExpandLess } from "react-icons/md";
 import { FiHome, FiUsers, FiFileText, FiSettings, FiDollarSign, FiList, FiBarChart2, FiLayers } from 'react-icons/fi';
 
-// Importa tu componente Accordion (tu implementación)
-import Accordion from "./Accordion";
+/**
+ * Componente Accordion personalizado con control de estado externo.
+ * 
+ * @param {Object} props - Propiedades del componente
+ * @param {React.ReactNode} props.summary - Contenido del encabezado del acordeón
+ * @param {React.ReactNode} props.children - Contenido que se muestra/oculta
+ * @param {boolean} props.isExpanded - Estado expandido controlado externamente
+ * @param {function} props.onToggle - Función para cambiar el estado
+ */
+const ControlledAccordion = ({ summary, children, isExpanded, onToggle }) => {
+  return (
+    <div className="mb-2">
+      <div className="cursor-pointer" onClick={onToggle}>
+        {summary}
+      </div>
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          isExpanded ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
 
 /**
  * Sidebar principal.
@@ -28,6 +51,10 @@ import Accordion from "./Accordion";
 export default function Sidebar({ isOpen, onToggle }) {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Estados para controlar qué menús están abiertos
+  const [openMenuIndex, setOpenMenuIndex] = useState(null);
+  const [openSubMenus, setOpenSubMenus] = useState({});
 
   // Menú principal con "Matriz" y "Configuración"
   // Se anidan submenús
@@ -141,7 +168,36 @@ export default function Sidebar({ isOpen, onToggle }) {
     },
   ];
 
+  /**
+   * Maneja el toggle de un menú principal
+   */
+  const handleMainMenuToggle = (index) => {
+    setOpenMenuIndex(openMenuIndex === index ? null : index);
+    // Al abrir un menú principal, cerramos todos los submenús
+    setOpenSubMenus({});
+  };
 
+  /**
+   * Maneja el toggle de un submenú
+   */
+  const handleSubMenuToggle = (mainIndex, subIndex) => {
+    setOpenSubMenus(prev => {
+      const key = `${mainIndex}-${subIndex}`;
+      const newState = { ...prev };
+      
+      // Cierra todos los demás submenús del mismo nivel
+      Object.keys(newState).forEach(k => {
+        if (k.startsWith(`${mainIndex}-`) && k !== key) {
+          delete newState[k];
+        }
+      });
+      
+      // Toggle el submenú actual
+      newState[key] = !prev[key];
+      
+      return newState;
+    });
+  };
 
   /**
    * Navega a la ruta 'href' y cierra el sidebar en móvil.
@@ -187,11 +243,15 @@ export default function Sidebar({ isOpen, onToggle }) {
    * Si tiene subItems, se muestra con un Accordion.
    * Si no, es solo un link.
    */
-  const renderLevel2Submenu = (submenu) => {
+  const renderLevel2Submenu = (submenu, mainIndex, subIndex) => {
     // Revisa si hay subItems
     if (submenu.subItems && submenu.subItems.length > 0) {
+      const isSubMenuExpanded = openSubMenus[`${mainIndex}-${subIndex}`] || false;
+      
       return (
-        <Accordion
+        <ControlledAccordion
+          isExpanded={isSubMenuExpanded}
+          onToggle={() => handleSubMenuToggle(mainIndex, subIndex)}
           summary={
             <div className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-slate-700 transition-colors">
               <div className="flex items-center gap-2">
@@ -200,12 +260,12 @@ export default function Sidebar({ isOpen, onToggle }) {
                 {/* Título del submenu */}
                 <span className="text-sm text-slate-200">{submenu.title}</span>
               </div>
-              {isOpen && <MdExpandMore className="text-slate-200" />}
+              {isOpen && (isSubMenuExpanded ? <MdExpandLess className="text-slate-200" /> : <MdExpandMore className="text-slate-200" />)}
             </div>
           }
         >
           {renderLevel3(submenu.subItems)}
-        </Accordion>
+        </ControlledAccordion>
       );
     }
 
@@ -263,15 +323,17 @@ export default function Sidebar({ isOpen, onToggle }) {
           {/* Contenido con scroll */}
           <div className="flex-1 overflow-y-auto p-2">
             {links.map((link, index) => (
-              <Accordion
+              <ControlledAccordion
                 key={index}
+                isExpanded={openMenuIndex === index}
+                onToggle={() => handleMainMenuToggle(index)}
                 summary={
                   <div className="flex items-center justify-between p-2 rounded-md bg-slate-800 hover:bg-slate-700 transition-colors">
                     <div className="flex items-center gap-2">
                       <span className="text-xl">{link.icon}</span>
                       {isOpen && <span className="font-medium">{link.title}</span>}
                     </div>
-                    {isOpen && <MdExpandMore className="text-slate-200" />}
+                    {isOpen && (openMenuIndex === index ? <MdExpandLess className="text-slate-200" /> : <MdExpandMore className="text-slate-200" />)}
                   </div>
                 }
               >
@@ -279,12 +341,12 @@ export default function Sidebar({ isOpen, onToggle }) {
                   <div className="ml-6 mt-2 space-y-1 border-l-2 border-slate-700 pl-2">
                     {link.subItems.map((subLink, subIndex) => (
                       <div key={subIndex} className="mb-2">
-                        {renderLevel2Submenu(subLink)}
+                        {renderLevel2Submenu(subLink, index, subIndex)}
                       </div>
                     ))}
                   </div>
                 )}
-              </Accordion>
+              </ControlledAccordion>
             ))}
           </div>
 
