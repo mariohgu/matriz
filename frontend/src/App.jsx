@@ -31,6 +31,7 @@ import ClasificadoresList from './components/presupuesto/ClasificadoresList';
 import EjecucionMensualList from './components/presupuesto/EjecucionMensualList';
 import ResumenPresupuestoList from './components/presupuesto/PresupuestosList';
 import DashboardPresupuestoAreas from './pages/DashboardPresupuestoAreas';
+import DashboardPresupuestoDetallado from './pages/DashboardPresupuestoDetallado';
 
 // Componentes comunes
 import Sidebar from './components/common/Sidebar';
@@ -184,6 +185,12 @@ function AppRoutes() {
               </MainLayout>
             }
           />
+
+          <Route 
+          path="/dashboard/presupuesto-detallado" 
+          element={<MainLayout>
+            <DashboardPresupuestoDetallado />
+            </MainLayout>} />
 
         {/* Ejemplos de Items */}
         <Route

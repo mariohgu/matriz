@@ -123,6 +123,7 @@ export default function Sidebar({ isOpen, onToggle }) {
           subItems: [
             { href: "/dashboard/presupuesto-areas", title: "Dashboard por Áreas" },
             { href: "/dashboard/presupuesto", title: "Dashboard Presupuestal" },
+            { href: "/dashboard/presupuesto-detallado", title: "Dashboard Presupuestal Detallado" },
           ],
         },
         {

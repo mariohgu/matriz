@@ -111,6 +111,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Nuevos endpoints optimizados para dashboard
         Route::get('dashboard/areas-resumen/{year}', [DashboardController::class, 'getAreasResumen']);
         Route::get('dashboard/resumen-global/{year}', [DashboardController::class, 'getResumenGlobal']);
+        Route::get('dashboard/reporte-detallado/{year}', [DashboardController::class, 'getReporteDetallado']);
     });
     
     // Rutas para el CRUD de Usuarios (solo accesible para administradores)
