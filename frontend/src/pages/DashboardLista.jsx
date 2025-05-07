@@ -134,24 +134,24 @@ const DashboardLista = () => {
       const eventosFiltrados = eventosMuni.filter(e => {
         if (!fechaInicio && !fechaFin) return true;
         const fechaEvento = new Date(e.fecha);
-        const inicio = fechaInicio ? new Date(fechaInicio) : new Date(0);
-        const fin = fechaFin ? new Date(fechaFin) : new Date();
+        const inicio = fechaInicio ? new Date(fechaInicio + 'T00:00:00') : new Date(0);
+        const fin = fechaFin ? new Date(fechaFin + 'T23:59:59') : new Date();
         return fechaEvento >= inicio && fechaEvento <= fin;
       });
 
       const estadosFiltrados = estadosMuni.filter(e => {
         if (!fechaInicio && !fechaFin) return true;
         const fechaEstado = new Date(e.fecha);
-        const inicio = fechaInicio ? new Date(fechaInicio) : new Date(0);
-        const fin = fechaFin ? new Date(fechaFin) : new Date();
+        const inicio = fechaInicio ? new Date(fechaInicio + 'T00:00:00') : new Date(0);
+        const fin = fechaFin ? new Date(fechaFin + 'T23:59:59') : new Date();
         return fechaEstado >= inicio && fechaEstado <= fin;
       });
 
       const conveniosFiltrados = conveniosMuni.filter(c => {
         if (!fechaInicio && !fechaFin) return true;
         const fechaConvenio = new Date(c.fecha_firma);
-        const inicio = fechaInicio ? new Date(fechaInicio) : new Date(0);
-        const fin = fechaFin ? new Date(fechaFin) : new Date();
+        const inicio = fechaInicio ? new Date(fechaInicio + 'T00:00:00') : new Date(0);
+        const fin = fechaFin ? new Date(fechaFin + 'T23:59:59') : new Date();
         return fechaConvenio >= inicio && fechaConvenio <= fin;
       });
       
