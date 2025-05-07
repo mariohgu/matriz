@@ -376,20 +376,27 @@ const DashboardLista = () => {
     let totalEventos = 0;
     let totalEstados = 0;
     let totalConvenios = 0;
+    let municipiosConSeguimiento = 0;
 
     entidadesConInteracciones.forEach(entidad => {
+      let tieneSeguimiento = false;
       entidad.interacciones.forEach(interaccion => {
         if (interaccion.isEvento) totalEventos++;
-        if (interaccion.isEstado) totalEstados++;
+        if (interaccion.isEstado) {
+          totalEstados++;
+          tieneSeguimiento = true;
+        }
         if (interaccion.isConvenio) totalConvenios++;
       });
+      if (tieneSeguimiento) municipiosConSeguimiento++;
     });
 
     return {
       totalEntidades: entidadesConInteracciones.length,
       totalEventos,
-      totalEstados,
-      totalConvenios
+      totalEstados: municipiosConSeguimiento,
+      totalConvenios,
+      totalSeguimientos: totalEstados
     };
   }, [entidadesConInteracciones]);
 
@@ -462,7 +469,10 @@ const DashboardLista = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Total Seguimientos</p>
-                <p className="text-2xl font-bold text-gray-900">{estadisticas.totalEstados}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {estadisticas.totalEstados}/{estadisticas.totalSeguimientos}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Municipalidades con al menos un seguimiento / Total de seguimientos</p>
               </div>
               <div className="bg-purple-100 p-3 rounded-full">
                 <FiEye className="h-6 w-6 text-purple-600" />

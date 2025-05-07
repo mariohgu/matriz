@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Bar, Pie, Line } from 'react-chartjs-2';
 import { api, authService } from '../services/authService';
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+import { Link } from 'react-router-dom';
 import autoTable from "jspdf-autotable";
 
 import { Chart as ChartJS, registerables } from 'chart.js';
@@ -14,7 +13,8 @@ import {
   FiFilter, 
   FiRefreshCw,
   FiPrinter,
-  FiEye
+  FiEye,
+  FiBarChart2
 } from 'react-icons/fi';
 
 import PeruMap from '../components/common/PeruMap';
@@ -899,6 +899,14 @@ const DashboardDepartamentos = () => {
           </div>
 
           <div className="w-full md:w-auto flex space-x-2">
+          <Link 
+            to="/dashboard/presupuesto-areas" 
+            className="px-4 py-1.5 bg-gray-600 text-white text-sm rounded-md flex items-center 
+                    hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
+          >
+            <FiBarChart2 className="mr-2" />
+            Ver Dashboard Presupuesto
+          </Link>
             {/* Filtro de Departamento */}
             <div className="relative">
               <select 

@@ -174,80 +174,143 @@ const DashboardPresupuestoAreas = () => {
   // Componente para termómetro de área
   const AreaTermometro = ({ area }) => {
     const porcentaje = area.porcentaje_ejecucion;
-    const color = getEjecucionColor(porcentaje);
-    
+    const [animPorcentaje, setAnimPorcentaje] = useState(0);
+    const [showTooltip, setShowTooltip] = useState(false);
+    const colorMercurio =
+      porcentaje < 25 ? '#dc2626' : porcentaje < 50 ? '#f97316' : porcentaje < 75 ? '#facc15' : '#16a34a';
+    const colorMercurioVivo =
+      porcentaje < 25 ? '#ff3b3b' : porcentaje < 50 ? '#ff9800' : porcentaje < 75 ? '#ffe066' : '#22c55e';
+
+    // Icono temático (caritas)
+    const icono = porcentaje < 25 ? '😟' : porcentaje < 50 ? '😐' : porcentaje < 75 ? '🙂' : '😃';
+
+    // Animación de subida del mercurio
+    useEffect(() => {
+      let start = 0;
+      const duration = 1200; // ms
+      const startTime = performance.now();
+      function animate(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        setAnimPorcentaje(progress * porcentaje);
+        if (progress < 1) requestAnimationFrame(animate);
+      }
+      requestAnimationFrame(animate);
+      // eslint-disable-next-line
+    }, [porcentaje]);
+
+    // Altura máxima del mercurio (en px)
+    const maxHeight = 140;
+    const mercurioHeight = (animPorcentaje / 100) * maxHeight;
+    const mercurioY = maxHeight - mercurioHeight;
+
+    // Resplandor animado para el bulbo
+    const resplandor = {
+      animation: 'halo-pulse 1.5s infinite',
+      transformOrigin: 'center center',
+      opacity: 0.5,
+      filter: `blur(2px)`
+    };
+
     return (
-      <div 
-        className="bg-white p-4 rounded-lg shadow-md flex flex-col items-center cursor-pointer"
+      <div
+        className="bg-white p-4 rounded-lg shadow-md flex flex-col items-center cursor-pointer relative"
         onClick={() => handleAreaClick(area)}
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
       >
         <h3 className="text-sm font-medium text-gray-800 mb-2 text-center h-10 line-clamp-2">
           {area.descripcion || 'Área sin nombre'}
         </h3>
-        
-        {/* Termómetro realista */}
         <div className="w-full flex justify-center my-2 relative h-48">
-          <div className="relative">
-            {/* Contenedor principal del termómetro */}
-            <div className="flex flex-col items-center">
-              {/* Tubo del termómetro */}
-              <div className="w-8 h-36 bg-white border-2 border-gray-400 rounded-t-md relative mb-0">
-                {/* Marcas de graduación */}
-                <div className="absolute left-0 right-0 top-0 bottom-0 flex flex-col justify-between">
-                  <div className="ml-1 mr-1 h-px bg-gray-300"></div>
-                  <div className="ml-1 mr-1 h-px bg-gray-300"></div>
-                  <div className="ml-1 mr-1 h-px bg-gray-300"></div>
-                  <div className="ml-1 mr-1 h-px bg-gray-300"></div>
-                  <div className="ml-1 mr-1 h-px bg-gray-300"></div>
-                </div>
-                
-                {/* Escala del termómetro */}
-                <div className="absolute left-full top-0 h-full ml-1 flex flex-col justify-between items-start text-[8px] text-gray-600">
-                  <span>100%</span>
-                  <span>75%</span>
-                  <span>50%</span>
-                  <span>25%</span>
-                  <span>0%</span>
-                </div>
-                
-                {/* Relleno rojo del termómetro */}
-                <div 
-                  className="absolute bottom-0 left-1 right-1 rounded-t-md transition-all duration-500 ease-out"
-                  style={{ 
-                    backgroundColor: color,
-                    height: `${Math.min(porcentaje, 100)}%`
-                  }}
-                ></div>
-              </div>
-              
-              {/* Conector entre tubo y bulbo */}
-              <div className="h-1 w-6 -mt-1 bg-white border-l-2 border-r-2 border-gray-400 z-10"></div>
-              
-              {/* Bulbo circular del termómetro */}
-              <div className="w-16 h-16 bg-white border-2 border-gray-400 rounded-full relative -mt-1">
-                {/* Relleno rojo del bulbo */}
-                <div 
-                  className="absolute top-0 left-0 w-full h-full rounded-full overflow-hidden"
-                  style={{ backgroundColor: color }}
-                >
-                  {/* Brillo para dar efecto 3D */}
-                  <div className="absolute top-2 left-3 w-4 h-4 bg-white opacity-40 rounded-full"></div>
-                </div>
+          <div className="relative flex flex-col items-center">
+            {/* SVG Termómetro */}
+            <svg width="170" height="300" viewBox="0 0 110 200">
+              {/* Resplandor animado en todo el tubo */}
+              <rect x="23" y="13" width="24" height={maxHeight + 44} rx="12" fill={colorMercurioVivo} style={resplandor} />
+              {/* Tubo */}
+              <rect x="30" y="20" width="10" height={maxHeight} rx="5" fill="#eee" stroke="#bbb" strokeWidth="2" />
+              {/* Brillo del tubo */}
+              <rect x="33" y="25" width="3" height={maxHeight-10} rx="2" fill="#fff" opacity="0.25" />
+              {/* Mercurio animado con gradiente y sombra */}
+              <rect
+                x="30"
+                y={20 + mercurioY}
+                width="10"
+                height={mercurioHeight}
+                rx="5"
+                fill={`url(#mercurioGradientVivo)`}
+                style={{ transition: 'y 0.5s, height 0.5s', filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.18))' }}
+              />
+              {/* Bulbo */}
+              <circle cx="35" cy={maxHeight + 30} r="25" fill="#fff" stroke="#bbb" strokeWidth="2" />
+              <circle cx="35" cy={maxHeight + 30} r="24" fill={colorMercurioVivo} style={resplandor} />
+              <circle cx="35" cy={maxHeight + 30} r="20" fill={colorMercurioVivo} style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.18))' }} />
+              {/* Brillo en el bulbo */}
+              <ellipse cx="28" cy={maxHeight + 20} rx="7" ry="3" fill="#fff" opacity="0.4" />
+              {/* Gradiente para el mercurio */}
+              <defs>
+                <linearGradient id="mercurioGradientVivo" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#fff" />
+                  <stop offset="30%" stopColor={colorMercurioVivo} />
+                  <stop offset="100%" stopColor={colorMercurio} />
+                </linearGradient>
+              </defs>
+              {/* Marcas y etiquetas */}
+              {[0, 25, 50, 75, 100].map((val) => (
+                <g key={val}>
+                  <line
+                    x1="42"
+                    x2="80"
+                    y1={20 + maxHeight - (val / 100) * maxHeight}
+                    y2={20 + maxHeight - (val / 100) * maxHeight}
+                    stroke="#888"
+                    strokeWidth="2"
+                  />
+                  <text
+                    x="90"
+                    y={24 + maxHeight - (val / 100) * maxHeight}
+                    fontSize="14"
+                    fill="#666"
+                    alignmentBaseline="middle"
+                    textAnchor="start"
+                  >
+                    {val}%
+                  </text>
+                </g>
+              ))}
+            </svg>
+            {/* Burbuja de valor animada */}
+            <div
+              className="absolute left-1/2 transform -translate-x-1/2"
+              style={{
+                top: `${30 + mercurioY}px`,
+                transition: 'top 0.5s',
+                zIndex: 10,
+              }}
+            >
+              <div className="bg-white shadow-lg rounded px-2 py-1 text-lg font-bold border border-gray-200 animate-bounce flex items-center" style={{ color: colorMercurioVivo }}>
+                <span className="mr-1">{icono}</span>
+                {animPorcentaje.toFixed(1)}%
               </div>
             </div>
-            
-            {/* Porcentaje grande */}
-            <div className="absolute top-1 right-1">
-              <div className="text-lg font-bold mr-1" style={{ color }}>
-                {porcentaje.toFixed(1)}%
+            {/* Tooltip */}
+            {showTooltip && (
+              <div className="absolute left-1/2 -translate-x-1/2 -top-10 bg-black text-white text-xs rounded px-2 py-1 shadow-lg z-20 whitespace-nowrap pointer-events-none opacity-90">
+                Porcentaje de ejecución: {porcentaje.toFixed(1)}%
               </div>
-            </div>
+            )}
           </div>
         </div>
-        
-        <div className="text-xs text-gray-500 text-center mt-3">
-          Ver detalles
-        </div>
+        <div className="text-xs text-gray-500 text-center mt-3">Ver detalles</div>
+        {/* Animación de pulso para el bulbo */}
+        <style>{`
+          @keyframes halo-pulse {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.25); opacity: 0.15; }
+            100% { transform: scale(1); opacity: 0.5; }
+          }
+        `}</style>
       </div>
     );
   };
@@ -335,11 +398,10 @@ const DashboardPresupuestoAreas = () => {
 
   return (
     <div className="container mx-auto p-6">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Dashboard de Ejecución Presupuestal por Áreas</h1>
-        
-        <div className="flex flex-wrap items-center gap-3 mt-4 md:mt-0">
-          {/* Enlace al Dashboard principal */}
+      {/* Fila principal: título y controles */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-2 gap-2">
+        <h1 className="text-2xl font-bold text-gray-800 mb-2 md:mb-0">Dashboard de Ejecución Presupuestal por Áreas</h1>
+        <div className="flex flex-row items-center gap-3 w-full md:w-auto">
           <Link 
             to="/dashboard/presupuesto" 
             className="px-4 py-1.5 bg-gray-600 text-white text-sm rounded-md flex items-center 
@@ -348,8 +410,6 @@ const DashboardPresupuestoAreas = () => {
             <FiBarChart2 className="mr-2" />
             Ver Dashboard General
           </Link>
-          
-          {/* Filtro por año */}
           <div className="inline-block min-w-[100px] relative">
             <select
               value={selectedYear}
@@ -369,7 +429,6 @@ const DashboardPresupuestoAreas = () => {
               </svg>
             </div>
           </div>
-          
           <button
             onClick={() => loadAreasDatos(true)} // Forzar refresco
             className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded-md flex items-center 
@@ -380,12 +439,22 @@ const DashboardPresupuestoAreas = () => {
           </button>
         </div>
       </div>
-      
-      {lastUpdateDate && (
-        <p className="text-sm text-gray-500 mb-4">
-          Última actualización: {lastUpdateDate.toLocaleString('es-ES')}
-        </p>
-      )}
+      {/* Fila: Última actualización a la izquierda, leyenda a la derecha */}
+      <div className="flex flex-col md:flex-row justify-between items-center mb-2 w-full">
+        <div className="w-full md:w-auto text-sm text-gray-500 mb-2 md:mb-0 flex-1">
+          {lastUpdateDate && (
+            <span>
+              Última actualización: {lastUpdateDate.toLocaleString('es-ES')}
+            </span>
+          )}
+        </div>
+        <div className="flex flex-col md:flex-row md:items-center md:space-x-4 text-xs md:text-right">
+          <span className="flex items-center mb-1 md:mb-0"><span className="inline-block w-4 h-2 rounded bg-[#dc2626] mr-2"></span>Menos de 25%</span>
+          <span className="flex items-center mb-1 md:mb-0"><span className="inline-block w-4 h-2 rounded bg-[#f97316] mr-2"></span>25% - 49%</span>
+          <span className="flex items-center mb-1 md:mb-0"><span className="inline-block w-4 h-2 rounded bg-[#facc15] mr-2"></span>50% - 74%</span>
+          <span className="flex items-center"><span className="inline-block w-4 h-2 rounded bg-[#16a34a] mr-2"></span>75% - 100%</span>
+        </div>
+      </div>
       
       {/* Leyenda de colores */}
       <div className="flex items-center gap-6 mb-6 flex-wrap">

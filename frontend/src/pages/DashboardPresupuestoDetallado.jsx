@@ -456,11 +456,7 @@ const DashboardPresupuestoDetallado = () => {
                 <React.Fragment key={categoria}>
                   {/* Fila de categoría principal (2.1, 2.3, etc.) con fondo amarillo */}
                   <tr className="bg-yellow-100 font-semibold border-b">
-                    <td className="py-1 px-1 text-left flex items-center">
-                      <span className="inline-block w-4">
-                        {/* Icono de expansión (puede implementarse funcionalidad de colapso) */}
-                        ⊟
-                      </span>
+                    <td className="py-1 px-1 text-left flex items-center">                      
                       {categoria}.{nombreCategoria}
                     </td>
                     <td className="py-1 px-1 text-right">{formatCurrency(totales.pim).replace('S/', '')}</td>
