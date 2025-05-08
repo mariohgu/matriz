@@ -449,10 +449,10 @@ const DashboardPresupuestoAreas = () => {
           )}
         </div>
         <div className="flex flex-col md:flex-row md:items-center md:space-x-4 text-xs md:text-right">
-          <span className="flex items-center mb-1 md:mb-0"><span className="inline-block w-4 h-2 rounded bg-[#dc2626] mr-2"></span>Menos de 25%</span>
-          <span className="flex items-center mb-1 md:mb-0"><span className="inline-block w-4 h-2 rounded bg-[#f97316] mr-2"></span>25% - 49%</span>
-          <span className="flex items-center mb-1 md:mb-0"><span className="inline-block w-4 h-2 rounded bg-[#facc15] mr-2"></span>50% - 74%</span>
-          <span className="flex items-center"><span className="inline-block w-4 h-2 rounded bg-[#16a34a] mr-2"></span>75% - 100%</span>
+          <span className="flex items-center mb-1 md:mb-0"><span className="inline-block w-4 h-2 rounded bg-[#dc2626] mr-2"></span>Menos de 25% 😟</span>
+          <span className="flex items-center mb-1 md:mb-0"><span className="inline-block w-4 h-2 rounded bg-[#f97316] mr-2"></span>25% - 49% 😐</span>
+          <span className="flex items-center mb-1 md:mb-0"><span className="inline-block w-4 h-2 rounded bg-[#facc15] mr-2"></span>50% - 74% 🙂</span>
+          <span className="flex items-center"><span className="inline-block w-4 h-2 rounded bg-[#16a34a] mr-2"></span>75% - 100% 😃</span>
         </div>
       </div>
       
