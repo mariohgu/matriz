@@ -193,6 +193,7 @@ function AppRoutes() {
             </MainLayout>} />
 
         {/* Ejemplos de Items */}
+        <Route element={<ProtectedRoute requiredRole={['super-admin', 'matriz-editor']} />}>
         <Route
           path="/municipalidades"
           element={
@@ -201,6 +202,8 @@ function AppRoutes() {
             </MainLayout>
           }
         />
+        </Route>
+        <Route element={<ProtectedRoute requiredRole={['super-admin', 'matriz-editor']} />}>
         <Route
           path="/contactos"
           element={
@@ -209,6 +212,8 @@ function AppRoutes() {
             </MainLayout>
           }
         />
+        </Route>
+        <Route element={<ProtectedRoute requiredRole={['super-admin', 'matriz-editor']} />}>
         <Route
           path="/tipos-reunion"
           element={
@@ -217,6 +222,8 @@ function AppRoutes() {
             </MainLayout>
           }
         />
+        </Route>
+        <Route element={<ProtectedRoute requiredRole={['super-admin', 'matriz-editor']} />}>
         <Route
           path="/estados"
           element={
@@ -225,7 +232,8 @@ function AppRoutes() {
             </MainLayout>
           }
         />
-
+        </Route>
+        <Route element={<ProtectedRoute requiredRole={['super-admin', 'matriz-editor']} />}>
         {/* Eventos */}
         <Route
           path="/eventos"
@@ -235,7 +243,8 @@ function AppRoutes() {
             </MainLayout>
           }
         />
-
+        </Route>
+        <Route element={<ProtectedRoute requiredRole={['super-admin', 'matriz-editor']} />}>
         {/* Seguimiento */}
         <Route
           path="/estado-seguimiento"
@@ -245,6 +254,7 @@ function AppRoutes() {
             </MainLayout>
           }
         />
+        </Route>
         <Route
           path="/oficios"
           element={
@@ -253,6 +263,7 @@ function AppRoutes() {
             </MainLayout>
           }
         />
+        <Route element={<ProtectedRoute requiredRole={['super-admin', 'matriz-editor']} />}>
         <Route
           path="/convenios"
           element={
@@ -261,7 +272,8 @@ function AppRoutes() {
             </MainLayout>
           }
         />
-        
+        </Route>
+        <Route element={<ProtectedRoute requiredRole={['super-admin', 'matriz-editor']} />}>
         <Route
           path="/estados-convenios"
           element={
@@ -270,7 +282,8 @@ function AppRoutes() {
             </MainLayout>
           }
         />
-
+        </Route>
+        <Route element={<ProtectedRoute requiredRole={['super-admin', 'matriz-editor']} />}>
         <Route
           path="/convenio-seguimiento"
           element={
@@ -279,7 +292,7 @@ function AppRoutes() {
             </MainLayout>
           }
         />
-
+        </Route>
         <Route
           path="/sectores"
           element={

@@ -274,9 +274,13 @@ class DashboardController extends Controller
                     'total_certificado' => 0,
                     'total_compromiso' => 0,
                     'total_devengado' => 0,
+                    'total_girado' => 0,
+                    'total_pagado' => 0,
                     'porcentaje_certificado' => 0,
                     'porcentaje_compromiso' => 0,
                     'porcentaje_devengado' => 0,
+                    'porcentaje_girado' => 0,
+                    'porcentaje_pagado' => 0,
                 ],
                 'ejecucion_mensual' => [],
                 'detalle_clasificadores' => [],
@@ -306,7 +310,9 @@ class DashboardController extends Controller
                 
                 // 2. Obtener el devengado total
                 $ejecucionQuery = EjecucionMensual::on('mysql_budget')->selectRaw('
-                    SUM(mto_devengado) as total_devengado
+                    SUM(mto_devengado) as total_devengado,
+                    SUM(mto_girado) as total_girado,
+                    SUM(mto_pagado) as total_pagado
                 ')
                 ->where('anio', $year);
                 
@@ -319,7 +325,9 @@ class DashboardController extends Controller
                 // 3. Obtener el resumen por mes
                 $ejecucionMensualQuery = EjecucionMensual::on('mysql_budget')->selectRaw('
                     mes,
-                    SUM(mto_devengado) as total_devengado
+                    SUM(mto_devengado) as total_devengado,
+                    SUM(mto_girado) as total_girado,
+                    SUM(mto_pagado) as total_pagado
                 ')
                 ->where('anio', $year);
                 
@@ -336,19 +344,27 @@ class DashboardController extends Controller
                 $totalCertificado = (float)($presupuesto->total_certificado ?? 0);
                 $totalCompromiso = (float)($presupuesto->total_compromiso ?? 0);
                 $totalDevengado = (float)($ejecucion->total_devengado ?? 0);
+                $totalGirado = (float)($ejecucion->total_girado ?? 0);
+                $totalPagado = (float)($ejecucion->total_pagado ?? 0);
                 
                 $porcentajeCertificado = $totalPIM > 0 ? ($totalCertificado / $totalPIM) * 100 : 0;
                 $porcentajeCompromiso = $totalPIM > 0 ? ($totalCompromiso / $totalPIM) * 100 : 0;
                 $porcentajeDevengado = $totalPIM > 0 ? ($totalDevengado / $totalPIM) * 100 : 0;
+                $porcentajeGirado = $totalPIM > 0 ? ($totalGirado / $totalPIM) * 100 : 0;
+                $porcentajePagado = $totalPIM > 0 ? ($totalPagado / $totalPIM) * 100 : 0;
                 
                 $respuesta['totales_generales'] = [
                     'total_pim' => round($totalPIM, 2),
                     'total_certificado' => round($totalCertificado, 2),
                     'total_compromiso' => round($totalCompromiso, 2),
                     'total_devengado' => round($totalDevengado, 2),
+                    'total_girado' => round($totalGirado, 2),
+                    'total_pagado' => round($totalPagado, 2),
                     'porcentaje_certificado' => round($porcentajeCertificado, 2),
                     'porcentaje_compromiso' => round($porcentajeCompromiso, 2),
                     'porcentaje_devengado' => round($porcentajeDevengado, 2),
+                    'porcentaje_girado' => round($porcentajeGirado, 2),
+                    'porcentaje_pagado' => round($porcentajePagado, 2),
                 ];
                 $respuesta['ejecucion_mensual'] = $ejecucionMensual;
             } catch (Exception $e) {
@@ -400,7 +416,9 @@ class DashboardController extends Controller
                             })
                             ->select(
                                 'em.mes',
-                                DB::raw('SUM(em.mto_devengado) as devengado')
+                                DB::raw('SUM(em.mto_devengado) as devengado'),
+                                DB::raw('SUM(em.mto_girado) as girado'),
+                                DB::raw('SUM(em.mto_pagado) as pagado')
                             )
                             ->where('em.anio', $year)
                             ->where('em.id_clasificador', $clasificador->id_clasificador)
@@ -414,12 +432,16 @@ class DashboardController extends Controller
                         
                         // Calcular ejecución total
                         $devengadoTotal = 0;
+                        $giradoTotal = 0;
+                        $pagadoTotal = 0;
                         $enero = 0;
                         $febrero = 0;
                         $marzo = 0;
                         
                         foreach ($ejecucionClasificador as $mes => $ejec) {
                             $devengadoTotal += $ejec->devengado;
+                            $giradoTotal += $ejec->girado;
+                            $pagadoTotal += $ejec->pagado;
                             
                             if ($mes == 1) $enero = $ejec->devengado;
                             if ($mes == 2) $febrero = $ejec->devengado;
@@ -435,10 +457,14 @@ class DashboardController extends Controller
                             'certificado' => round((float)$clasificador->certificado, 2),
                             'compromiso' => round((float)$clasificador->compromiso, 2),
                             'devengado_total' => round($devengadoTotal, 2),
+                            'girado_total' => round($giradoTotal, 2),
+                            'pagado_total' => round($pagadoTotal, 2),
                             'devengado_enero' => round($enero, 2),
                             'devengado_febrero' => round($febrero, 2),
                             'devengado_marzo' => round($marzo, 2),
-                            'saldo_devengar' => round((float)$clasificador->pim - $devengadoTotal, 2)
+                            'saldo_devengar' => round((float)$clasificador->pim - $devengadoTotal, 2),
+                            'saldo_girar' => round((float)$clasificador->pim - $giradoTotal, 2),
+                            'saldo_pagar' => round((float)$clasificador->pim - $pagadoTotal, 2)
                         ];
                     } catch (Exception $e) {
                         \Log::error('Error al procesar ejecución del clasificador ' . $clasificador->codigo_clasificador . ': ' . $e->getMessage());

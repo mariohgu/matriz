@@ -398,9 +398,6 @@ const DashboardPresupuestoDetallado = () => {
       certificado: 0,
       compromiso: 0,
       devengado_total: 0,
-      devengado_enero: 0,
-      devengado_febrero: 0,
-      devengado_marzo: 0,
       saldo_certificar: 0,
       saldo_devengar: 0
     };
@@ -412,9 +409,6 @@ const DashboardPresupuestoDetallado = () => {
       totalGeneral.certificado += totales.certificado;
       totalGeneral.compromiso += totales.compromiso;
       totalGeneral.devengado_total += totales.devengado_total;
-      totalGeneral.devengado_enero += totales.devengado_enero;
-      totalGeneral.devengado_febrero += totales.devengado_febrero;
-      totalGeneral.devengado_marzo += totales.devengado_marzo;
       totalGeneral.saldo_certificar += totales.saldo_certificar;
       totalGeneral.saldo_devengar += totales.saldo_devengar;
     });
@@ -436,10 +430,9 @@ const DashboardPresupuestoDetallado = () => {
               <th className="py-1 px-1 text-right">PIM</th>
               <th className="py-1 px-1 text-right">CERTIFICADO</th>
               <th className="py-1 px-1 text-right">COMPROMISO</th>
-              <th className="py-1 px-1 text-right">DEV<br/>ENERO</th>
-              <th className="py-1 px-1 text-right">DEV<br/>FEBRERO</th>
-              <th className="py-1 px-1 text-right">DEV<br/>MARZO</th>
-              <th className="py-1 px-1 text-right">DEVENGADO<br/>TOTAL</th>
+              <th className="py-1 px-1 text-right">DEVENGADO</th>
+              <th className="py-1 px-1 text-right">CER-DEV</th>
+              <th className="py-1 px-1 text-right">COM-DEV</th>
               <th className="py-1 px-1 text-right">SALDO X<br/>CERTIFICAR</th>
               <th className="py-1 px-1 text-right">SALDO X<br/>DEVENGAR</th>
             </tr>
@@ -462,11 +455,10 @@ const DashboardPresupuestoDetallado = () => {
                     <td className="py-1 px-1 text-right">{formatCurrency(totales.pim).replace('S/', '')}</td>
                     <td className="py-1 px-1 text-right">{formatCurrency(totales.certificado).replace('S/', '')}</td>
                     <td className="py-1 px-1 text-right">{formatCurrency(totales.compromiso).replace('S/', '')}</td>
-                    <td className="py-1 px-1 text-right">{formatCurrency(totales.devengado_enero).replace('S/', '')}</td>
-                    <td className="py-1 px-1 text-right">{formatCurrency(totales.devengado_febrero).replace('S/', '')}</td>
-                    <td className="py-1 px-1 text-right">{formatCurrency(totales.devengado_marzo).replace('S/', '')}</td>
                     <td className="py-1 px-1 text-right">{formatCurrency(totales.devengado_total).replace('S/', '')}</td>
-                    <td className="py-1 px-1 text-right">{formatCurrency(totales.saldo_certificar).replace('S/', '')}</td>
+                    <td className="py-1 px-1 text-right text-orange-500">{formatCurrency(totales.certificado - totales.devengado_total).replace('S/', '')}</td>
+                    <td className="py-1 px-1 text-right text-red-500">{formatCurrency(totales.compromiso - totales.devengado_total).replace('S/', '')}</td>
+                    <td className="py-1 px-1 text-right text-green-500">{formatCurrency(totales.saldo_certificar).replace('S/', '')}</td>
                     <td className="py-1 px-1 text-right">{formatCurrency(totales.saldo_devengar).replace('S/', '')}</td>
                   </tr>
                   
@@ -477,11 +469,10 @@ const DashboardPresupuestoDetallado = () => {
                       <td className="py-1 px-1 text-right">{formatCurrency(item.pim).replace('S/', '')}</td>
                       <td className="py-1 px-1 text-right">{formatCurrency(item.certificado).replace('S/', '')}</td>
                       <td className="py-1 px-1 text-right">{formatCurrency(item.compromiso).replace('S/', '')}</td>
-                      <td className="py-1 px-1 text-right">{formatCurrency(item.devengado_enero || item.enero || item.mto_devengado_enero || 0).replace('S/', '')}</td>
-                      <td className="py-1 px-1 text-right">{formatCurrency(item.devengado_febrero || item.febrero || item.mto_devengado_febrero || 0).replace('S/', '')}</td>
-                      <td className="py-1 px-1 text-right">{formatCurrency(item.devengado_marzo || item.marzo || item.mto_devengado_marzo || 0).replace('S/', '')}</td>
                       <td className="py-1 px-1 text-right">{formatCurrency(item.devengado_total).replace('S/', '')}</td>
-                      <td className="py-1 px-1 text-right">{formatCurrency(item.saldo_certificar).replace('S/', '')}</td>
+                      <td className="py-1 px-1 text-right text-orange-500">{formatCurrency(item.certificado - item.devengado_total).replace('S/', '')}</td>
+                      <td className="py-1 px-1 text-right text-red-500">{formatCurrency(item.compromiso - item.devengado_total).replace('S/', '')}</td>
+                      <td className="py-1 px-1 text-right text-green-500">{formatCurrency(item.saldo_certificar).replace('S/', '')}</td>
                       <td className="py-1 px-1 text-right">{formatCurrency(item.saldo_devengar).replace('S/', '')}</td>
                     </tr>
                   ))}
@@ -495,11 +486,10 @@ const DashboardPresupuestoDetallado = () => {
               <td className="py-1 px-1 text-right">{formatCurrency(totalGeneral.pim)}</td>
               <td className="py-1 px-1 text-right">{formatCurrency(totalGeneral.certificado)}</td>
               <td className="py-1 px-1 text-right">{formatCurrency(totalGeneral.compromiso)}</td>
-              <td className="py-1 px-1 text-right">{formatCurrency(totalGeneral.devengado_enero)}</td>
-              <td className="py-1 px-1 text-right">{formatCurrency(totalGeneral.devengado_febrero)}</td>
-              <td className="py-1 px-1 text-right">{formatCurrency(totalGeneral.devengado_marzo)}</td>
               <td className="py-1 px-1 text-right">{formatCurrency(totalGeneral.devengado_total)}</td>
-              <td className="py-1 px-1 text-right">{formatCurrency(totalGeneral.saldo_certificar)}</td>
+              <td className="py-1 px-1 text-right text-orange-500">{formatCurrency(totalGeneral.certificado - totalGeneral.devengado_total)}</td>
+              <td className="py-1 px-1 text-right text-red-500">{formatCurrency(totalGeneral.compromiso - totalGeneral.devengado_total)}</td>
+              <td className="py-1 px-1 text-right text-green-500">{formatCurrency(totalGeneral.saldo_certificar)}</td>
               <td className="py-1 px-1 text-right">{formatCurrency(totalGeneral.saldo_devengar)}</td>
             </tr>
           </tbody>
